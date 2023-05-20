@@ -30,8 +30,8 @@ if place_holder:
     MORALIS_ID = owner_parameters_dict.get('MORALIS_ID')
     MORALIS_APP_ID = owner_parameters_dict.get('MORALIS_APP_ID')
     DEBANK_API = owner_parameters_dict.get('DEBANK_API')
-
-    MAX_CONVERSATION_PER_MONTH = int(MAX_CONVERSATION_PER_MONTH)
+    MONTHLY_FEE = float(owner_parameters_dict.get('MONTHLY_FEE'))
+    REFILL_TEASER = owner_parameters_dict.get('REFILL_TEASER')
 
     # 查看当前目录并决定 TELEGRAM_BOT_RUNNING 的值
     TELEGRAM_BOT_RUNNING = BOT_TOKEN
@@ -44,6 +44,12 @@ if place_holder:
     ELEVENLABS_API = os.getenv("ELEVEN_API_KEY")
     BING_SEARCH_API_KEY = os.getenv("BING_SEARCH_API")
     STABILITY_URL = f"https://api.stability.ai/v1/"
+
+    ETHERSCAN_WALLET_URL_PREFIX = 'https://etherscan.io/address/'
+    ETHERSCAN_TX_URL_PREFIX = 'https://etherscan.io/tx/'
+    ETHERSCAN_TOKEN_URL_PREFIX = 'https://etherscan.io/token/'
+
+    BOTCREATER_TELEGRAM_HANDLE = '@laogege6'
 
     # Telegram base URL
     telegram_base_url = "https://api.telegram.org/bot" + TELEGRAM_BOT_RUNNING + "/"    
@@ -61,6 +67,16 @@ if place_holder:
     avatar_command_png = 'files/images/avatar_command.png'
     avatar_create = f"如果您也希望拥有一个像 @{TELEGRAM_BOT_NAME} 这样的 <AI分身> 来服务您的朋友们, 以您的语气陪他们/她们聊天, 帮他们完成 OpenAI 大语言模型可以做的一切任务, 可以点击 /more_information 了解, 非诚勿扰, 谢谢! 😋"
     avatar_more_information = "<AI分身> 电报机器人由酷爱 Python 的老哥哥 @laogege6 利用业余时间开发创造 😊:\n\n- 技术服务费: 100美金/月;\n- 支持 USDT 等各种付款方式;\n- 需要您提供自己的 OpenAI API;\n- 需要您在 @BotFather 开通机器人账号;\n- 您可以随时修改 <AI分身> 的人设背景;\n- 您可以自由修改 <AI分身> 的语调语气.\n\n详情邮件咨询:\nadmin@leonardohuang.com"
+
+def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):
+    utc_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+    utc_timezone = pytz.timezone('UTC')
+    local_timezone = pytz.timezone(local_time_zone)  # Replace with your local timezone
+
+    local_timestamp = utc_timezone.localize(utc_timestamp).astimezone(local_timezone)
+    formatted_timestamp = local_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+
+    return formatted_timestamp
 
 def bing_search(query, mkt='en-US'):
     '''
@@ -245,12 +261,27 @@ def hash_sha256(content):
     return hashed_content
 
 def is_english(text):
-    if debug: print(f"DEBUG: detect_english()")
     result = chardet.detect(text.encode())
     encoding = result['encoding']
     if encoding == 'ascii': return True
     lang = detect(text)
     if lang == 'en': return True
+
+def markdown_wallet_address(wallet_address):
+    markdown_address = f'[{wallet_address[:6]}...{wallet_address[-7:]}]({ETHERSCAN_WALLET_URL_PREFIX}{wallet_address})'
+    return markdown_address
+
+def markdown_transaction_hash(hash_tx):
+    markdown_tx = f'[{hash_tx[:6]}......{hash_tx[-7:]}]({ETHERSCAN_TX_URL_PREFIX}{hash_tx})'
+    return markdown_tx
+
+def markdown_token_address(token_address):
+    markdown_token = f'[{token_address[:6]}...{token_address[-7:]}]({ETHERSCAN_TOKEN_URL_PREFIX}{token_address})'
+    return markdown_token
+
+def markdown_tokentnxs(address):
+    markdown_token = f'[{address[:6]}...{address[-7:]}]({ETHERSCAN_TOKEN_URL_PREFIX}{address}#tokentxns)'
+    return markdown_token
 
 def chat_gpt_regular(prompt, chatgpt_key=OPENAI_API_KEY, use_model=OPENAI_MODEL):
     if not prompt: return
@@ -309,7 +340,6 @@ def chat_gpt_full(prompt, system_prompt='', user_prompt='', assistant_prompt='',
 def send_msg(message, chat_id, parse_mode='', base_url=telegram_base_url):
     if not message: return
     if not chat_id: return print(f"DEBUG: no chat_id, noly print:\n\n{message}")
-    if debug: print(f"DEBUG: send_msg() to {chat_id}, length: {len(message.split())}")
 
     url = base_url + "sendMessage"
     payload = {
@@ -324,6 +354,7 @@ def send_msg(message, chat_id, parse_mode='', base_url=telegram_base_url):
 
     try: requests.post(url, json=payload, headers=headers)
     except Exception as e: return print(f"ERROR: send_msg() failed for:\n{e}\n\nOriginal message:\n{message}")
+    if debug: print(f"DEBUG: send_msg(): {message}")
     return True
 
 def send_audio(audio_path, chat_id, base_url=telegram_base_url):
@@ -582,6 +613,67 @@ LLaMA 是 "Large Language Model Assistant（大型语言模型助手）" 的缩�
     
     return 
 
+'''
+    class UserPriority(Base):
+        __tablename__ = 'avatar_user_priority'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        user_from_id = Column(String(255), unique=True)
+        priority = Column(Integer, default=0)
+        is_blacklist = Column(Integer, default=0)
+        free_until = Column(DateTime, default=datetime.now())
+        is_admin = Column(Integer, default=0)
+        is_owner = Column(Integer, default=0)
+        is_vip = Column(Integer, default=0)
+        is_paid = Column(Integer, default=0)
+        is_active = Column(Integer, default=0)
+        is_deleted = Column(Integer, default=0)
+        update_time = Column(DateTime, default=datetime.now())
+        next_payment_time = Column(DateTime, default=datetime.now())
+        '''
+
+# Mark user is_paid
+def mark_user_is_paid(from_id, next_payment_time):
+    if not from_id: return
+    with Session() as session:
+        # 如果 fronm_id 不存在于表中，则插入新的数据；如果已经存在，则更新数据
+        user_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+        if not user_exists:
+            new_user = UserPriority(user_from_id=from_id, is_paid=1, next_payment_time=next_payment_time)
+            session.add(new_user)
+            session.commit()
+            print(f"DEBUG: mark_user_is_paid() {from_id} 已经插入到 avatar_user_priority 表中, is_paid = 1, next_payment_time = {next_payment_time}")
+            return True
+        session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({"is_paid": 1, "next_payment_time": next_payment_time})
+        session.commit()
+        print(f"DEBUG: mark_user_is_paid() {from_id} 已经更新到 avatar_user_priority 表中, is_paid = 1, next_payment_time = {next_payment_time}")
+        return True
+
+# Mark user is not paid
+def mark_user_is_not_paid(from_id):
+    if not from_id: return
+    with Session() as session:
+        # 如果 from_id 不存在于表中，则插入新的数据；如果已经存在，则更新数据
+        user_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+        if not user_exists:
+            new_user = UserPriority(user_from_id=from_id, is_paid=0)
+            session.add(new_user)
+            session.commit()
+            print(f"DEBUG: mark_user_is_not_paid() {from_id} 已经插入到 avatar_user_priority 表中, is_paid = 0")
+            return True
+        session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({"is_paid": 0})
+        session.commit()
+        print(f"DEBUG: mark_user_is_not_paid() {from_id} 已经更新到 avatar_user_priority 表中, is_paid = 0")
+        return True
+
+# 从 UserPriority 表中查询给定 from_id 的用户的优先级, 返回一个字典
+def get_user_priority(from_id):
+    if not from_id: return
+    user_priority = {}
+    try: user_priority = pd.read_sql_query(f'SELECT * FROM avatar_user_priority WHERE user_from_id = "{from_id}"', engine).iloc[0].to_dict()
+    except Exception as e: print(f"ERROR: get_user_priority() failed: \n{e}")
+    return user_priority
+
 # 从 Coinmarketcap 查询给定 token 的 cmc_rank、price、market_cap、volume_24h、 percent_change_24h、market_cap、fully_diluted_market_cap、circulating_supply、total_supply、last_updated 等数据, 返回一个字典
 def get_token_info_from_coinmarketcap_output_chinese(token_symbol):
     token_info = get_token_info_from_coinmarketcap(token_symbol)
@@ -601,89 +693,350 @@ def get_token_info_from_coinmarketcap_output_chinese(token_symbol):
     output_dict_str = '\n'.join([f"{k}: {v}" for k, v in output_dict.items()])
     return output_dict_str
 
+# 判断输入的 hash_tx 是否已经存在 avatar_crypto_payments 表中，如果不存在，则插入到表中
+def insert_into_avatar_crypto_payments(from_id, coin, to_address, value, timestamp, hash_tx, user_title):
+    if debug: print(f"DEBUG: insert_into_avatar_crypto_payments()")
+    hash_tx = hash_tx.lower()
+    coin = coin.upper()
+    if coin not in ['USDT', 'USDC']: return
+    # 如果 value 小于 1 则返回
+    value = float(value)
+    if value == 0:
+        # 先将 hash_tx 数据插入表中，以后再来更新 value 数据
+        with Session() as session:
+            # Query the table 'avatar_crypto_payments' to check if the hash_tx exists
+            hash_tx_exists = session.query(exists().where(CryptoPayments.Hash_id == hash_tx)).scalar()
+            if hash_tx_exists: 
+                print(f"DEBUG: hash_tx {hash_tx} 已经存在于 avatar_crypto_payments 表中, 但是 value 为 0, 不需要更新!")
+                return
 
-def get_transaction_hash_old(hash_tx, chain='eth'):
-    function_url = "https://deep-index.moralis.io/api/v2/"
-    method = "transaction/"
-    url = function_url + method + hash_tx
-    params = {"chain": chain}
-    headers = {"accept": "application/json", "X-API-Key": MORALIS_API}
-    r = requests.get(url, headers=headers, params=params)
-    if r.status_code == 200: return r.json()
-    else: return print(r.text)
+            update_time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+            new_crypto_payment = CryptoPayments(user_from_id=from_id, address=to_address, usdt_paid_in=0, usdc_paid_in=0, update_time=update_time, Hash_id=hash_tx)
+            session.add(new_crypto_payment)
+            session.commit()
+            print(f"DEBUG: hash_tx {hash_tx} 已经插入到 avatar_crypto_payments 表中, value 为 0, 需要下次更新!")
+            send_msg(f"亲爱的, 你的交易 Transaction Hash {markdown_transaction_hash(hash_tx)} 已经系统被记录下来了, 但是链上还没有确认成功, 请过几分钟等下你再点击 /check_payment 试试看, 谢谢亲! 如果系统查到链上已确认, 你就不会收到这条消息了。\n\n如果你看到链上确认成功了, 但是等了太久我都没有给你确认，或者你总是收到这条消息，请联系 {TELEGRAM_USERNAME} 手动帮你查看是否到账, 麻烦亲爱的了。😗", from_id, parse_mode='Markdown')
+        return 
+    
+    else:
+        # Create a new session
+        with Session() as session:
+            # Query the table 'avatar_crypto_payments' to check if the hash_tx exists
+            hash_tx_exists = session.query(exists().where(CryptoPayments.Hash_id == hash_tx)).scalar()
+            if hash_tx_exists: 
+                # 判断 usdt_paid_in 和 usdc_paid_in 是否已经存在, 并且有一个等于 value, 如果是则返回
+                crypto_payment = session.query(CryptoPayments).filter(CryptoPayments.Hash_id == hash_tx).first()
+                if crypto_payment.usdt_paid_in == value or crypto_payment.usdc_paid_in == value: 
+                    print(f"DEBUG: hash_tx {hash_tx} 已经存在于 avatar_crypto_payments 表中, 且记录的 value 和新输入的 value 相等: {value}, 不需要更新!")
+                    return
+                else:
+                    # 如果 usdt_paid_in 和 usdc_paid_in 都不等于 value, 则更新 usdt_paid_in 或 usdc_paid_in
+                    if coin == 'USDT': session.query(CryptoPayments).filter(CryptoPayments.Hash_id == hash_tx).update({CryptoPayments.usdt_paid_in: value})
+                    if coin == 'USDC': session.query(CryptoPayments).filter(CryptoPayments.Hash_id == hash_tx).update({CryptoPayments.usdc_paid_in: value})
+                    print(f"DEBUG: hash_tx {hash_tx} 已经存在于 avatar_crypto_payments 表中, 但是记录的 value 和新输入的 value 不相等: {value}, 表单已经更新!")
+            else:
+                update_time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+                # Insert the hash_tx into the table 'avatar_crypto_payments'
+                usdt_paid_in = value if coin == 'USDT' else 0
+                usdc_paid_in = value if coin == 'USDC' else 0
+
+                new_crypto_payment = CryptoPayments(user_from_id=from_id, address=to_address, usdt_paid_in=usdt_paid_in, usdc_paid_in=usdc_paid_in, update_time=update_time, Hash_id=hash_tx)
+                session.add(new_crypto_payment)
+                session.commit()
+                print(f"DEBUG: hash_tx {hash_tx} 已经插入到 avatar_crypto_payments 表中, value 为 {value}, 更新完毕!")
+
+            next_payment_time = update_time + timedelta(days=(value / MONTHLY_FEE) * 31)
+            if next_payment_time < datetime.now(): 
+                mark_user_is_not_paid(from_id)
+                return
+
+            elif mark_user_is_paid(from_id, next_payment_time):
+                send_msg(f"叮咚, {user_title} {from_id} 刚刚到账充值 {format_number(value)} {coin.lower()}\n\n充值地址: \n{markdown_wallet_address(to_address)}\n\n交易哈希:\n{markdown_transaction_hash(hash_tx)}", BOTOWNER_CHAT_ID, parse_mode='Markdown')
+                send_msg(f"亲爱的, 你交来的公粮够我一阵子啦 😍😍😍, 下次交公粮的时间是: \n\n{next_payment_time} \n\n你可别忘了哦, 反正到时候我会提醒你哒, 么么哒 😘", from_id)
+            
+                next_payment_time_dict = {'last_paid_usd_value': value, 'last_paid_time': update_time, 'next_payment_time': next_payment_time}
+                return next_payment_time_dict
+    return
+
+def check_incoming_transactions(wallet_address, token_address, chat_id, start_date=None):
+
+    token_address = web3.to_checksum_address(token_address)
+    wallet_address = web3.to_checksum_address(wallet_address)
+
+    # 从 CmcTotalSupply db_cmc_total_supply 读取 token_address 的信息
+    coin_list_df = get_token_info_from_db_cmc_total_supply(token_address)
+    if coin_list_df.empty: 
+        send_msg(f"抱歉, {token_address} 不在我的数据库里, 不清楚这是个什么币子, 无法查询. 😰", chat_id)
+        return
+    
+    token_address = coin_list_df.iloc[0]['token_address']
+    imple_address = coin_list_df.iloc[0]['imple_address']
+    coin = coin_list_df.iloc[0]['symbol']
+    decimals = int(coin_list_df.iloc[0]['decimals'])
+
+    # Dealing with erc20_symbol and ABI
+    ABI = get_token_abi(imple_address)
+    
+    # Create a contract instance for the ERC20 token
+    token_contract = web3.eth.contract(address=token_address, abi=ABI)
+    
+    if start_date: start_timestamp = int(datetime.strptime(start_date, '%Y-%m-%d').timestamp())
+    else: start_timestamp = int(datetime.now().timestamp())
+
+    # Get the latest block number
+    latest_block_number = web3.eth.block_number
+    
+    transactions = []
+    # Iterate through each block from the latest to the earliest
+    for block_number in range(latest_block_number):
+        print(f'DEBUG: checking block_number: {block_number} / {latest_block_number}')
+        block = web3.eth.get_block(block_number, full_transactions=True)
+        for transaction in block.transactions:
+            if transaction['to'] == wallet_address and transaction['input'] != '0x':
+                tx_receipt = web3.eth.get_transaction_receipt(transaction['hash'])
+                contract_address = tx_receipt['to']
+                if contract_address.lower() == '0xtoken_contract_address'.lower():
+                    input_data = transaction['input']
+                    method_id = input_data[:10]
+                    if method_id.lower() == '0xa9059cbb':  # Transfer method ID
+                        token_address = '0x' + input_data[34:74]
+                        if token_address.lower() == wallet_address.lower():
+                            token_amount = int(input_data[74:], 16) / 10 ** 18
+                            token_symbol = token_contract.functions.symbol().call()
+                            if token_symbol.lower() == coin.lower() and block.timestamp >= start_timestamp:
+                                transactions.append({
+                                    'token_amount': token_amount,
+                                    'block_number': block_number,
+                                    'from_address': transaction['from'],
+                                    'block_timestamp': block.timestamp,
+                                    'transaction_hash': transaction['hash']
+                                })
+    
+    return transactions
 
 
-import requests
+def get_internal_transactions(transaction_hash):
+    url = f"https://deep-index.moralis.io/api/v2/transaction/{transaction_hash}/internal-transactions?chain=eth"
+    headers = {
+        "accept": "application/json",
+        "X-API-Key": MORALIS_API
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        # Handle error case
+        return None
+
+''' return from get_internal_transactions()
+[
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "523700",
+        "gas_used": "29724",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da2000000000000000000000000f1837f9d36e2052496d0983ade9fdb4855d29aa6000000000000000000000000000000000000000000000000000000000bebc200",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "493825",
+        "gas_used": "27224",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da200000000000000000000000066e1ccd77ff59bd17379c895a2320ad0d8c7f127000000000000000000000000000000000000000000000000000000001dcd6500",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "466411",
+        "gas_used": "27224",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da2000000000000000000000000d74b5fdd0d8de1f1345f4d50a76b9303d85c12700000000000000000000000000000000000000000000000000000000013d92d40",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "438997",
+        "gas_used": "10124",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da20000000000000000000000001fe9613aa4d6600bd9133df9c9dc35db80dd74560000000000000000000000000000000000000000000000000000000005f5e100",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "428416",
+        "gas_used": "27224",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da2000000000000000000000000cb95b2cd2fcd8fd98a5d4dd7a618d834f0f66ebc0000000000000000000000000000000000000000000000000000000008954400",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "401002",
+        "gas_used": "10124",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da20000000000000000000000005e278a70193f214c3536fd6f1d298a5eaef5279500000000000000000000000000000000000000000000000000000000ee6b2800",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "390421",
+        "gas_used": "27224",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da2000000000000000000000000946bec3d83ace597d589b5b19dc447ddd69893b800000000000000000000000000000000000000000000000000000000f8e42020",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "363007",
+        "gas_used": "27224",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da20000000000000000000000005fa75f28ca27dad4220e4cf074cff75598fa81300000000000000000000000000000000000000000000000000000000087b64770",
+        "output": ""
+    },
+    {
+        "transaction_hash": "0x4916b179936f2a9cd9d65a3433b32ece96bfbe5cad81951763b20d366bbfc1fd",
+        "block_number": 17163179,
+        "block_hash": "0x2bf2019595a5b551820d28a045c0b533479689f4851ce60d7a6f4bd825947544",
+        "type": "CALL",
+        "from": "0xa4994144a9217e3779bda588798eff546b69defb",
+        "to": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "value": "0",
+        "gas": "335594",
+        "gas_used": "27224",
+        "input": "0x23b872dd0000000000000000000000001308e4e09ecdeea174a7e160e74da8dda41d1da2000000000000000000000000c46d4d0e6c8fd624b46d73ca88baef2903dbb7160000000000000000000000000000000000000000000000000000000069e89450",
+        "output": ""
+    }
+]
+'''
 
 def get_transaction_details(transaction_hash, chain='eth'):
     url = f'https://deep-index.moralis.io/api/v2/transaction/{transaction_hash}?chain={chain}'
     headers = {'accept': 'application/json', 'X-API-Key': MORALIS_API}
     response = requests.get(url, headers=headers)
-    
+    # print(response.status_code, response.text)
     if response.status_code == 200:
         return response.json()
     else:
         print(f'Request failed with status code: {response.status_code}')
         return None
 
-'''return
-{'block_hash': '0x76f7106dcecd0487db6c9179137671545faf6d8264853d5aeed3ab1f8a4b2883',
- 'block_number': '15754667',
- 'block_timestamp': '2022-10-15T16:19:11.000Z',
- 'from_address': '0x5e278a70193f214c3536fd6f1d298a5eaef52795',
- 'gas': '89000',
- 'gas_price': '31000000000',
- 'hash': '0x2f2aee699508938bcedda3a618bf753d1c7d54add00d8535c396d55faf6bf60f',
- 'input': '0xa9059cbb000000000000000000000000376fa5c248eecb0110023efadd8317691b07ede10000000000000000000000000000000000000000000000000000000a8d949d40',
- 'logs': [{'address': '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-           'block_hash': '0x76f7106dcecd0487db6c9179137671545faf6d8264853d5aeed3ab1f8a4b2883',
-           'block_number': '15754667',
-           'block_timestamp': '2022-10-15T16:19:11.000Z',
-           'data': '0x0000000000000000000000000000000000000000000000000000000a8d949d40',
-           'log_index': '66',
-           'topic0': '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-           'topic1': '0x0000000000000000000000005e278a70193f214c3536fd6f1d298a5eaef52795',
-           'topic2': '0x000000000000000000000000376fa5c248eecb0110023efadd8317691b07ede1',
-           'topic3': None,
-           'transaction_hash': '0x2f2aee699508938bcedda3a618bf753d1c7d54add00d8535c396d55faf6bf60f',
-           'transaction_index': '43',
-           'transaction_value': '0',
-           'transfer_index': [15754667, 43, 66]}],
- 'nonce': '10',
- 'receipt_contract_address': None,
- 'receipt_cumulative_gas_used': '2818433',
- 'receipt_gas_used': '48537',
- 'receipt_root': None,
- 'receipt_status': '1',
- 'to_address': '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
- 'transaction_index': '43',
- 'transfer_index': [15754667, 43],
- 'value': '0'}'''
-
+''' get_transaction_details() 返回的数据结构
+{"hash":"0x85f32cce4fb8f21bbe47ee2605cfb61f0832c9a758e7c12d536d05cc2afe9ac5","nonce":"0","transaction_index":"140","from_address":"0x4408d8991d9f4419a53487fe2027223ba5cf2207","to_address":"0xdac17f958d2ee523a2206206994597c13d831ec7","value":"0","gas":"69163","gas_price":"33573951716","input":"0xa9059cbb000000000000000000000000c635eabcf791bc8226ba0a76dce2cae061745bfe00000000000000000000000000000000000000000000000000000012a05f2000","receipt_cumulative_gas_used":"10476207","receipt_gas_used":"46109","receipt_contract_address":null,"receipt_root":null,"receipt_status":"1","block_timestamp":"2023-05-19T05:38:23.000Z","block_number":"17291516","block_hash":"0x4cfb8c2b10460f05a05583df7fa2247b6dccc42852e48dfa22022340245805d8","transfer_index":[17291516,140],"logs":[{"log_index":"274","transaction_hash":"0x85f32cce4fb8f21bbe47ee2605cfb61f0832c9a758e7c12d536d05cc2afe9ac5","transaction_index":"140","transaction_value":"0","address":"0xdac17f958d2ee523a2206206994597c13d831ec7","data":"0x00000000000000000000000000000000000000000000000000000012a05f2000","topic0":"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef","topic1":"0x0000000000000000000000004408d8991d9f4419a53487fe2027223ba5cf2207","topic2":"0x000000000000000000000000c635eabcf791bc8226ba0a76dce2cae061745bfe","topic3":null,"block_timestamp":"2023-05-19T05:38:23.000Z","block_number":"17291516","block_hash":"0x4cfb8c2b10460f05a05583df7fa2247b6dccc42852e48dfa22022340245805d8","transfer_index":[17291516,140,274]}]}'''
 
 # 通过 hash_tx 查询转账信息
-def get_transactions_info_by_hash_tx(hash_tx, chat_id, chain='eth'):
+def get_transactions_info_by_hash_tx(hash_tx, chat_id, user_title, chain='eth'):
     hash_tx = str(hash_tx).lower()
     if not hash_tx.startswith('0x') and len(hash_tx) == 64: hash_tx = '0x' + hash_tx
-    if len(hash_tx) != 66: return send_msg(f"输入的 hash_tx 长度不对, 请回复正确的 Transaction_Hash: 0x开头, 一共 66 位字符 😃", chat_id)
+    if len(hash_tx) != 66: 
+        return send_msg(f"输入的 hash_tx 长度不对, 请回复正确的 Transaction_Hash: 0x开头, 一共 66 位字符 😃", chat_id)
     trans_info = get_transaction_details(hash_tx, chain=chain)
-    
-    if debug: print(f"DEBUG: get_transaction_hash() 执行完毕, trans_info: \n\n{trans_info}")
-    if not trans_info: return send_msg(f"抱歉, 无法查询到 {hash_tx} 的转账信息, 请检查输入是否正确.", chat_id)
 
-    if not trans_info.get('input'): return send_msg(f"抱歉, 插到的信息有问题, 无法正确读取.", chat_id)
-    if trans_info.get('value') != '0': return send_msg(f"抱歉, 这是一笔 ETH 转账, 不是 ERC20 代币转账.\n{hash_tx}", chat_id)
+    if not trans_info: 
+        send_msg(f"抱歉, 无法查询到 {hash_tx} 的转账信息, 请检查输入是否正确. 😰", chat_id)
+        return 
+    if not trans_info.get('input'): 
+        send_msg(f"抱歉, 查到的信息有问题, 无法正确读取. 😰", chat_id)
+        return 
+    if trans_info.get('value') != '0': 
+
+        '''
+            {
+                "hash": "0x76e669a454257ac506d62ef55b6123b7a6c592b276922aa051eac5b00a9dad97",
+                "nonce": "92",
+                "transaction_index": "113",
+                "from_address": "0x5e278a70193f214c3536fd6f1d298a5eaef52795",
+                "to_address": "0x4408d8991d9f4419a53487fe2027223ba5cf2207",
+                "value": "7800000000000000000",
+                "gas": "21000",
+                "gas_price": "16198064885",
+                "input": "0x",
+                "receipt_cumulative_gas_used": "14258140",
+                "receipt_gas_used": "21000",
+                "receipt_contract_address": null,
+                "receipt_root": null,
+                "receipt_status": "1",
+                "block_timestamp": "2023-03-24T23:33:11.000Z",
+                "block_number": "16900645",
+                "block_hash": "0xa9adb1f2efa884db49704aaa4067c52dd8987b454074476f4e6eb0da0b0c2bce",
+                "transfer_index": [
+                    16900645,
+                    113
+                ],
+                "logs": [],
+                "decoded_call": null
+            }
+            '''
+
+        eth_value = int(trans_info.get('value')) / 1_000_000_000_000_000_000
+        send_msg(f"亲爱的, 这是一笔 ETH 转账 🤩:\n\n转账数额: {format_number(eth_value)} eth\n转账地址: {markdown_wallet_address(trans_info.get('from_address'))}\n收款地址: {markdown_wallet_address(trans_info.get('to_address'))}\n交易确认: {markdown_transaction_hash(hash_tx)}", chat_id, parse_mode='Markdown', base_url=telegram_base_url)
+
+        return 
+    
     token_address = trans_info.get('to_address')
     
     # 从 CmcTotalSupply db_cmc_total_supply 读取 token_address 的信息
     coin_list_df = get_token_info_from_db_cmc_total_supply(token_address)
-    if coin_list_df.empty: return send_msg(f"抱歉, {token_address} 不在我的数据库里, 不清楚这是个什么币子, 无法查询. 😰", chat_id)
+    if coin_list_df.empty: 
+
+        internal_trans_list = get_internal_transactions(hash_tx)
+        if type(internal_trans_list) != list: 
+            send_msg(f"抱歉, {markdown_token_address(token_address)} 不在我的数据库里, 不清楚这是个什么币子, 无法查询. 😰", chat_id, parse_mode='Markdown')
+            return
+        # 将 internal_trans_list 保存为 Json 文件, 在 files/transactions 文件夹下保存文件, filename=hash_tx.json, 并用 send_file 发给用户
+        file_path = f"files/transactions/{hash_tx}.json"
+        with open(file_path, 'w') as f: json.dump(internal_trans_list, f, indent=2)
+        send_file(chat_id, file_path)
+        send_msg(f"亲爱的, 发的的这个看起来是一个智能合约交互的记录, 有点复杂, 我保存下来发给你看看吧. 我也看不明白, 建议你可以点击下面的链接去 Etherscan 页面上看看, 那边的解读清晰一点哈 😅, 抱歉我帮不了你啊, 我还不够厉害, 我还要继续学习, 继续努力。不行你把文件内容拷贝黏贴给 ChatGPT, 让他帮你解读一下这个智能合约的交互怎么回事, 是什么样的交互, 交易金额多大。\n\n{markdown_transaction_hash(hash_tx)}", chat_id, parse_mode='Markdown', base_url=telegram_base_url)
+        return 
+    
     token_address = coin_list_df.iloc[0]['token_address']
     imple_address = coin_list_df.iloc[0]['imple_address']
     coin = coin_list_df.iloc[0]['symbol']
     decimals = int(coin_list_df.iloc[0]['decimals'])
 	
-    if debug: print(f"DEBUG: get_token_info_from_db_cmc_total_supply() 执行完毕, token_address: {token_address}, coin: {coin}, decimals: {decimals}")
+    if debug: print(f"DEBUG: 找到输入的 HashId 交易的币种是: {coin}, decimals: {decimals}")
 
     # Dealing with erc20_symbol and ABI
     ABI = get_token_abi(imple_address)
@@ -694,12 +1047,9 @@ def get_transactions_info_by_hash_tx(hash_tx, chat_id, chain='eth'):
     from_addr_balance = float(from_addr_balance_wei / 10 ** decimals)
     func_obj, func_params = contract.decode_function_input(trans_info.get('input'))
     '''return : {'to': '0x376FA5C248EECB0110023efADD8317691B07EDe1', 'value': 56195000000}'''
-    # df = pd.read_sql_query(f"SELECT * FROM db_token_symbol_and_price WHERE coin='ETH'", engine)
-    # eth_price = float(df.iloc[0]['price']) if not df.empty else gp('ETH').get('price')
     try:
         func_params['value'] = func_params.get('amount') if 'amount' in func_params else func_params.get('_value') if '_value' in func_params else func_params.get('value')
         func_params['to'] = func_params.get('recipient') if 'recipient' in func_params else func_params.get('_to') if '_to' in func_params else func_params.get('to')
-
         func_params['value'] = float(float(func_params.get('value')) / (10 ** decimals)) if func_params.get('value') else 0
         func_params['status'] = True if trans_info.get('receipt_status') == '1' else False
         func_params['data'] = trans_info.get('input')
@@ -712,23 +1062,154 @@ def get_transactions_info_by_hash_tx(hash_tx, chat_id, chain='eth'):
         func_params['block_timestamp'] = trans_info['block_timestamp']
         to_address = func_params.get('to')
         if chat_id:
-            df_taged_address = pd.read_sql_query(f"SELECT address, tag FROM db_address_tag_record", engine)
-            from_address_tag = df_taged_address.loc[df_taged_address['address']==from_address.lower()]
-            to_address_tag = df_taged_address.loc[df_taged_address['address']==to_address.lower()]
             r = {
                 '转账通证': coin,
                 '转账金额': format_number(func_params['value']),
-                '发出地址': f"{from_address[:5]}...{from_address[-6:]}" if from_address_tag.empty else from_address_tag.iloc[0]['tag'],
-                '目标地址': f"{to_address[:5]}...{to_address[-6:]}" if to_address_tag.empty else to_address_tag.iloc[0]['tag'],
+                '发出地址': markdown_wallet_address(from_address),
+                '目标地址': markdown_wallet_address(to_address),
                 '确认时间': ' '.join(str(trans_info['block_timestamp']).split('.')[0].split('T'))
                 }
             # 用 '\n' join k: v from r
             r = '\n'.join([f"{k}: {v}" for k, v in r.items()])
-            send_msg(r, chat_id)
-        return func_params
+            send_msg(r, chat_id, parse_mode='Markdown')
+
+        # 检查 to_address 是否在 table avatar_eth_wallet, 如果在, 说明这是用户的充值地址, 需要本次交易的信息写入 avatar_crypto_payments
+        from_id = get_from_id_by_eth_address(to_address)
+        if from_id and from_id in [chat_id] + BOT_OWNER_LIST:
+
+            '''func_params:
+            {"to": "0x5e278a70193F214C3536FD6f1D298a5eaeF52795", "value": 100.0, "status": true, "data": "0xa9059cbb0000000000000000000000005e278a70193f214c3536fd6f1d298a5eaef527950000000000000000000000000000000000000000000000000000000005f5e100", "from_address": "0xb411B974c0ac75C88E5039ea0bf63a84aa7B5377", "from_addr_balance": 2512.718824, "token_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "decimals": 6, "coin": "USDC", "block_timestamp": "2023-03-11T22:25:59.000Z"}'''
+
+            '''class CryptoPayments(Base):
+                    __tablename__ = 'avatar_crypto_payments'
+
+                    id = Column(Integer, primary_key=True, autoincrement=True)
+                    user_from_id = Column(String(255))
+                    address = Column(String(255))
+                    usdt_paid_in = Column(Float, default=0)
+                    usdc_paid_in = Column(Float, default=0)
+                    eth_paid_in = Column(Float, default=0)
+                    update_time = Column(DateTime)
+                    Hash_id = Column(Text)
+            '''
+
+            # 将最新获取的交易信息写入 avatar_crypto_payments
+            try: 
+                func_params['value'] = 0 if not func_params['status'] else func_params['value']
+                next_payment_time_dict= insert_into_avatar_crypto_payments(from_id, coin, to_address, func_params['value'], func_params['block_timestamp'], hash_tx, user_title)
+            except Exception as e: print(f"ERROR: insert_into_avatar_crypto_payments() failed: \n{e}")
+            
+        return next_payment_time_dict
     except Exception as e: print('DEBUG: get_transactions_info_by_hash_tx() error: ', e)
     return
 
 
+# 计算用户下次需要续费的时间是哪天, 返回一个 datetime 对象
+def update_user_next_payment_date(user_from_id, user_title):
+    if debug: print(f"DEBUG: update_user_next_payment_date()")
+    # Create a new session
+    with Session() as session:
+        # 用 pandas 从表单中读出 from_id 对应最后一笔 crypto payment 的数据, 判断 usdt_paid_in 和 usdc_paid_in 哪个不是 0, 并将不为零的 value 和 update_time 读出一并返回
+        crypto_payments = session.query(CryptoPayments).filter(CryptoPayments.user_from_id == user_from_id).order_by(CryptoPayments.id.desc()).first()
+        if crypto_payments:
+            value = crypto_payments.usdt_paid_in if crypto_payments.usdt_paid_in else crypto_payments.usdc_paid_in if crypto_payments.usdc_paid_in else 0
+            if value:  
+                # 计算下次下次缴费时间
+                x = value / MONTHLY_FEE
+                next_payment_time = crypto_payments.update_time + timedelta(days=x * 31)
+                if next_payment_time > datetime.now():
+                    next_payment_time_dict = {'last_paid_usd_value': value, 'last_paid_time': crypto_payments.update_time, 'next_payment_time': next_payment_time}
+                    return next_payment_time_dict
+            if crypto_payments.Hash_id: return get_transactions_info_by_hash_tx(crypto_payments.Hash_id, user_from_id, user_title, chain='eth')
+    return 
+    
+        
+
+def get_outgoing_transactions_from_address_in_24h(wallet_address):
+    url = f"https://deep-index.moralis.io/api/v2/{wallet_address}/verbose"
+    
+    # Get the date and time 24 hours ago
+    from_date = datetime.now() - timedelta(days=1)
+    from_date_formatted = datetime.strftime(from_date, "%Y-%m-%dT%H:%M:%S")
+
+    headers = {
+        'accept': 'application/json',
+        'X-API-Key': MORALIS_API,
+    }
+    
+    params = {
+        'chain': 'eth',
+        'from_date': from_date_formatted
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+    
+    if response.status_code == 200: return response.json()
+    else: return None
+
+
+def read_outgoing_transaction_in_24h_result(wallet_address):
+    result = get_outgoing_transactions_from_address_in_24h(wallet_address)
+
+    transaction_list = []
+    
+    for transaction in result['result']:
+        if not transaction.get('logs'): continue
+
+        decoded_event = transaction['logs'][0]['decoded_event']
+        token_address = transaction['logs'][0]['address']
+        if token_address.lower() not in [USDT_ERC20.lower(), USDC_ERC20.lower()]: continue
+
+        token_name = 'USDT' if token_address.lower() == USDT_ERC20.lower() else 'USDC'
+
+        transfer_info = {}
+        for param in decoded_event['params']:
+            transfer_info[param['name']] = param['value']
+
+        timestamp = convert_to_local_timezone(transaction['block_timestamp'])
+
+        transaction_info = {
+            '币种名称': token_name,  # Replace with your function to retrieve the token name
+            '发起地址': markdown_wallet_address(transfer_info['from']),
+            '收币地址': markdown_wallet_address(transfer_info['to']),
+            '转账数量': format_number(int(transfer_info['value']) / (10 ** USDT_ERC20_DECIMALS)),  # Replace with your function to retrieve the token decimals
+            '西岸时间': timestamp,
+        }
+        
+        transaction_list.append(transaction_info)
+
+    return transaction_list
+
+def read_and_send_24h_outgoing_trans(wallet_address, chat_id):
+    # wallet_address = web3.to_checksum_address(wallet_address)
+    transaction_list =  read_outgoing_transaction_in_24h_result(wallet_address)
+    if not transaction_list: return
+
+    total_transactions_count = len(transaction_list)
+    msg_info = f"亲爱的, {wallet_address[:5]}...{wallet_address[-5:]} 钱包地址 24 小时内一共有 {total_transactions_count} 笔 USDT/USDC 转出记录😍, 倒序排列如下: "
+    send_msg(msg_info, chat_id)
+    if total_transactions_count > 10: transaction_list = transaction_list[:10]
+    i = 0
+    for transaction in transaction_list:
+        i += 1
+        r = '\n'.join([f"{k}: {v}" for k, v in transaction.items()])
+        send_msg(f"第{i}笔:\n{r}", chat_id, parse_mode='Markdown', base_url=telegram_base_url)
+    if total_transactions_count > 10: send_msg(f"还有 {total_transactions_count - 10} 笔转账记录, 请到 Etherscan 上查看哈:\n{markdown_wallet_address(wallet_address)}", chat_id, parse_mode='Markdown', base_url=telegram_base_url)
+    return
+
 if __name__ == '__main__':
     print(f"tvariables.py is running...")
+    if BOTOWNER_CHAT_ID == BOTCREATER_CHAT_ID:
+        try: 
+            user_title = 'Laogege'
+            coin = 'USDT'
+            to_address = '0x3E711058491fB0723c6De9fD7E0c1b6635DE4A57'
+            hash_tx = '0x109b661b1025c8a2a34c4633e283970608745c0f64d6dc0f0976fb92b18c234e'
+            time_stamp = '2023-03-11T22:25:59.000Z'
+            value = 20000
+            r = insert_into_avatar_crypto_payments(BOTOWNER_CHAT_ID, coin, to_address, value, time_stamp, hash_tx, user_title)
+            if r: 
+                send_msg(f"叮咚, {user_title} {BOTOWNER_CHAT_ID} 刚刚充值 {format_number(value)} {coin.lower()}\n\n充值地址: \n{markdown_wallet_address(to_address)}\n\n交易哈希:\n{markdown_transaction_hash(hash_tx)}", BOTOWNER_CHAT_ID, parse_mode='Markdown')
+                next_payment_time_dict = update_user_next_payment_date(BOTOWNER_CHAT_ID, user_title)
+                send_msg(f"亲爱的, 你交来的公粮够我一阵子啦 😍😍😍, 下次交公粮的时间是: \n\n{next_payment_time_dict['next_payment_time']} \n\n你可别忘了哦, 反正到时候我会提醒你哒, 么么哒 😘", BOTOWNER_CHAT_ID)
+        except Exception as e: print(f"ERROR: insert_into_avatar_crypto_payments() failed: \n{e}")

@@ -3,13 +3,14 @@
 debug = True
 place_holder = True
 if place_holder:
-    import os, re, json, base64, hashlib, math, string, time, uuid, time, urllib, imaplib, email, random, requests, chardet, subprocess, xlrd
+    import os, re, json, base64, hashlib, math, string, time, uuid, time, urllib, imaplib, email, random, requests, chardet, subprocess, xlrd, pytz
     import azure.cognitiveservices.speech as speechsdk
     from pydub import AudioSegment
     from sqlalchemy import DateTime, Table, create_engine, insert, update, Column, Integer, String, Text, Float, text, Boolean, exists, inspect
     from sqlalchemy.orm import declarative_base, Session
     from sqlalchemy.schema import MetaData
     from sqlalchemy.orm import sessionmaker
+    from sqlalchemy import func, exists, and_, or_, not_, select
 
     from datetime import datetime, timedelta, date
     from urllib.parse import urlencode
@@ -63,13 +64,17 @@ if place_holder:
     CMC_PA_API = os.getenv('CMC_PA_API')
     MORALIS_API = os.getenv('MORALIS_API')
     ETHERSCAN_API = os.getenv('ETHERSCAN_API')
+    MONTHLY_FEE = float(os.getenv('MONTHLY_FEE'))
+    BOTOWNER_CHAT_ID = os.getenv('BOTOWNER_CHAT_ID')
+    BOTCREATER_CHAT_ID = os.getenv('BOTCREATER_CHAT_ID')
+
+    BOT_OWNER_LIST = [BOTOWNER_CHAT_ID, BOTCREATER_CHAT_ID]
 
     INFURA = "https://mainnet.infura.io/v3/" + INFURA_KEY
     web3 = Web3(Web3.HTTPProvider(INFURA))
 
     USER_TELEGRAM_LINK = os.getenv("USER_TELEGRAM_LINK")
     TELEGRAM_USERNAME = USER_TELEGRAM_LINK.split('/')[-1]
-    MAX_CONVERSATION_PER_MONTH =  os.getenv("MAX_CONVERSATION_PER_MONTH")
 
     ETH_REGEX = r'0x[a-fA-F0-9]{40}'
     TRX_REGEX = r'T[1-9A-HJ-NP-Za-km-z]{33}'
@@ -78,8 +83,10 @@ if place_holder:
     USDT_ERC20 = '0xdAC17F958D2ee523a2206206994597C13D831ec7'
     USDT_ERC20_DECIMALS = 6
 
-    USDC_ERC20 = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+    USDC_ERC20 = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
     USDC_ERC20_DECIMALS = 6
+
+    REFILL_TEASER = "亲爱的, 该交公粮咯, 不过现在我们也还没分手, 所以你还可以继续用我, 就像其他免费用户一样; 如果想要我继续为你贴身服务, 请点击 /pay 获得独享的充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
 
     # 连接本地数据库
     engine = create_engine(f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}', pool_pre_ping=True)
@@ -151,6 +158,24 @@ if place_holder:
         eth_paid_in = Column(Float, default=0)
         update_time = Column(DateTime)
         Hash_id = Column(Text)
+    
+    # Define the table `avatar_user_priority`, `id` is the primary key autoincrement, INT; `user_from_id` is varchar(255), `priority` is TINYINT, `is_blacklist` is TINYINT, `free_until` is DateTime, `is_admin` is TINYINT, `is_owner` is TINYINT, `is_vip` is TINYINT, `is_paid` is TINYINT, `is_active` is TINYINT, `is_deleted` is TINYINT, `update_time` is DateTime, `next_payment_time` is DateTime, all the default value is 0; make sure user_from_id can not be duplicated, need to be unique
+    class UserPriority(Base):
+        __tablename__ = 'avatar_user_priority'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        user_from_id = Column(String(255), unique=True)
+        priority = Column(Integer, default=0)
+        is_blacklist = Column(Integer, default=0)
+        free_until = Column(DateTime, default=datetime.now())
+        is_admin = Column(Integer, default=0)
+        is_owner = Column(Integer, default=0)
+        is_vip = Column(Integer, default=0)
+        is_paid = Column(Integer, default=0)
+        is_active = Column(Integer, default=0)
+        is_deleted = Column(Integer, default=0)
+        update_time = Column(DateTime, default=datetime.now())
+        next_payment_time = Column(DateTime, default=datetime.now())
 
     '''mysql> DESCRIBE db_cmc_total_supply;
     +-----------------------+---------------+------+-----+---------+-------+
@@ -301,6 +326,56 @@ if place_holder:
                 List of relevant documents
             """
 
+# def update avatar_user_priority table, input include (from_id, which_key='', key_value='', update_time=datetime.now()), check if the from_id exists, if exists then update the key_value, if not exists then insert the from_id and key_value
+def update_user_priority(from_id, which_key='', key_value='', update_time=datetime.now()):
+    if debug: print(f"DEBUG: update_user_priority()")
+    # Create a new session
+    with Session() as session:
+        # Query the table 'avatar_user_priority' to check if the from_id exists
+        from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+        if from_id_exists:
+            # Update the key_value
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({which_key: key_value, UserPriority.update_time: update_time})
+        else:
+            # Insert the from_id and key_value
+            new_user_priority = UserPriority(user_from_id=from_id, update_time=update_time)
+            setattr(new_user_priority, which_key, key_value)
+            session.add(new_user_priority)
+        # Commit the session
+        session.commit()
+    return True
+
+# Use update_user_priority() function to set a from_id to bliacklist
+def set_user_blacklist(from_id):
+    if debug: print(f"DEBUG: set_user_blacklist()")
+    try: return update_user_priority(from_id, 'is_blacklist', 1)
+    except: return False
+
+# Use update_user_priority() function to remove a from_id from bliacklist
+def remove_user_blacklist(from_id):
+    if debug: print(f"DEBUG: remove_user_blacklist()")
+    try: return update_user_priority(from_id, 'is_blacklist', 0)
+    except: return False
+
+# initiate the avatar_user_priority table, set BOT_OWNER_ID as the owner, set BOT_OWNER_ID as the admin, set BOT_OWNER_ID as the vip, set BOT_OWNER_ID as the paid, set BOT_OWNER_ID as the active, set BOT_OWNER_ID as the deleted, set BOT_OWNER_ID as the priority 100, set BOT_OWNER_ID as the free_until 2099-12-31 23:59:59
+def initialize_user_priority_table():
+    if debug: print(f"DEBUG: initialize_user_priority_table()")
+    # Create a new session
+    with Session() as session:
+        for from_id in BOT_OWNER_LIST:
+            # Query the table 'avatar_user_priority' to check if the from_id exists
+            from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+            if from_id_exists:
+                # Update the key_value
+                session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({UserPriority.is_admin: 1, UserPriority.is_owner: 1, UserPriority.is_vip: 1, UserPriority.is_paid: 1, UserPriority.is_active: 1, UserPriority.priority: 100, UserPriority.free_until: datetime(2099, 12, 31, 23, 59, 59)})
+            else:
+                # Insert the from_id and key_value
+                new_user_priority = UserPriority(user_from_id=from_id, is_admin=1, is_owner=1, is_vip=1, is_paid=1, is_active=1, priority=100, free_until=datetime(2099, 12, 31, 23, 59, 59), update_time=datetime.now())
+                session.add(new_user_priority)
+            # Commit the session
+            session.commit()
+    return True
+
 
 def initialize_owner_parameters_table():
     if debug: print(f"DEBUG: initialize_owner_parameters_table()")
@@ -372,7 +447,6 @@ def insert_system_prompt(system_prompt):
 
 # 读取 files/system_prompt.txt 并插入到 system_prompt 表中
 def insert_system_prompt_from_file(file_path='files/system_prompt.txt'):
-    if debug: print(f"DEBUG: insert_system_prompt_from_file()")
     # Read files/system_prompt.txt
     with open(file_path, 'r') as f: system_prompt = f.read()
 
@@ -386,7 +460,6 @@ def insert_system_prompt_from_file(file_path='files/system_prompt.txt'):
 
 # 读出 system_prompt 表中的 最后一个（最新的）system_prompt, 并返回一个 string
 def get_system_prompt():
-    if debug: print(f"DEBUG: get_system_prompt()")
     # Create a new session
     with Session() as session:
         # Query the table 'avatar_system_prompt' to get the last system_prompt
@@ -452,10 +525,8 @@ def insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls'):
                 session.commit()
     return True
 
-
 # 读取 dialogue_tone 中最大的 tone_id 并将对应的 role 和 content 返回为一个 string 形式的对话列表, 用 \n 换行, 类似 Samples of files/dialogue_tone.xls:
 def get_dialogue_tone():
-    if debug: print(f"DEBUG: get_dialogue_tone()")
     # Create a new session
     with Session() as session:
         # Query the table 'avatar_dialogue_tone' to get the last tone_id
@@ -516,7 +587,7 @@ def generate_eth_address(user_from_id):
         # Add the new eth wallet into the session
         session.add(new_eth_wallet)
         # Create a new crypto payment
-        new_crypto_payment = CryptoPayments(user_from_id=user_from_id, address=address, usdt_balance=0, usdc_balance=0, eth_balance=0, update_time=datetime.now())
+        new_crypto_payment = CryptoPayments(user_from_id=user_from_id, address=address, usdt_paid_in=0, usdc_paid_in=0, eth_paid_in=0, update_time=datetime.now(), Hash_id='')
         # Add the new crypto payment into the session
         session.add(new_crypto_payment)
         # Commit the session
@@ -525,7 +596,15 @@ def generate_eth_address(user_from_id):
     # Return the generated address, private key, and mnemonic phrase
     return address
 
-# 检查输入的 eth address 是否有新的 USDC 或者 USDT 转账记录, 如果有则返回 True, 否则返回 False
+# 通过输入的 eth address 从数据库中查找是否存在，如果存在则返回 from_id, 如果不存在则返回空字符串, 输入的 eth address 已经是 checksum address
+def get_from_id_by_eth_address(eth_address):
+    if debug: print(f"DEBUG: get_from_id_by_eth_address()")
+    # Create a new session
+    with Session() as session:
+        # Query the table 'avatar_eth_wallet' to get the last tone_id
+        eth_wallet = session.query(EthWallet).filter(EthWallet.address == eth_address).first()
+        if eth_wallet: return eth_wallet.user_from_id
+        else: return ''
 
 # check eth balance of a given address and convert the balance from wei to eth
 def check_eth_balance(address):
@@ -589,28 +668,7 @@ def check_address_balance(address):
     return {'ETH': eth_balance, 'USDT': usdt_balance, 'USDC': usdc_balance}
 
 
-def get_user_balances(user_from_id):
-    if debug: print(f"DEBUG: get_crypto_payments()")
-    # Create a new session
-    with Session() as session:
-        # 用 pandas 从表单中读出 from_id 对应的所有 crypto payments, 生成一个 DataFrame, 然后 计算 usdt_paid_in 总和, usdc_paid_in 总和, eth_paid_in 总和, 以及update_time 最大值 最近一次的 hash_id
-        df = pd.read_sql(session.query(CryptoPayments).filter(CryptoPayments.user_from_id == user_from_id).statement, session.bind)
-        if df.empty: return {}
-        # 将 df 按照 update_time 降序排列
-        df = df.sort_values(by='update_time', ascending=False)
-        # Calculate the sum of usdt_paid_in, usdc_paid_in, eth_paid_in
-        usdt_balance = df['usdt_paid_in'].sum()
-        usdc_balance = df['usdc_paid_in'].sum()
-        eth_balance = df['eth_paid_in'].sum()
-        # Get latest update_time
-        update_time = df['update_time'].iloc[0]
-        # Get latest hash_id
-        hash_id = df['Hash_id'].iloc[0]
-        # Get the address
-        address = df['address'].iloc[0]
-        return {'address': address, 'usdt_balance': usdt_balance, 'usdc_balance': usdc_balance, 'eth_balance': eth_balance, 'update_time': update_time, 'hash_id': hash_id}
-
-'''
+''' COINMARKETCAP DATA SAMPLE:
 {
     "id": 1027,
     "name": "Ethereum",
@@ -726,32 +784,6 @@ def get_token_info_from_coinmarketcap(token_symbol):
         return token_info
     return
 
-# check if user's new payments is credited, if yes, update the balance in the table 'avatar_crypto_payments'
-def check_new_payments(user_from_id):
-    if debug: print(f"DEBUG: check_new_payments()")
-    # Get previous_balances from table 'avatar_crypto_payments'
-    previous_balances = get_user_balances(user_from_id)
-    if not previous_balances: 
-        address = generate_eth_address(user_from_id)
-        usdt_balance = 0
-        usdc_balance = 0
-        eth_balance = 0
-        last_update_time = datetime.now()
-        hash_id = ''
-    else:
-        address = previous_balances.get('address')
-        usdt_balance = previous_balances.get('usdt_balance')
-        usdc_balance = previous_balances.get('usdc_balance')
-        eth_balance = previous_balances.get('eth_balance')
-        last_update_time = previous_balances.get('update_time')
-        hash_id = previous_balances.get('hash_id')
-
-    # 从 token_info 中获取 token 的价格
-    token_info = get_token_info_from_coinmarketcap('ETH')
-    eth_price = token_info['quote']['USD']['price']
-
-    return 
-
 # Check if a given symbol is in CmcTotalSupply : db_cmc_total_supply's symbol column, if yes, return True, else return False
 def check_token_symbol_in_db_cmc_total_supply(token_symbol):
     if debug: print(f"DEBUG: check_token_symbol_in_db_cmc_total_supply()")
@@ -767,7 +799,7 @@ def get_token_info_from_db_cmc_total_supply(token_address):
     # Create a new session
     with Session() as session:
         # Query the table 'db_cmc_total_supply' to get the token_info
-        df = pd.read_sql(session.query(CmcTotalSupply).filter(CmcTotalSupply.address == token_address).statement, session.bind)
+        df = pd.read_sql(session.query(CmcTotalSupply).filter(CmcTotalSupply.token_address == token_address).statement, session.bind)
         return df
 
 def etherscan_make_api_url(module, action, **kwargs):
@@ -822,5 +854,8 @@ if __name__ == '__main__':
     user_from_id='2118900665'
     address = generate_eth_address(user_from_id)
     print(f"{user_from_id} ETH Address: {address}")
+
+    print(f"\nSTEP 9: 初始化用户状态列表 ...")
+    initialize_user_priority_table()
 
     print(f"\nTELEGRAM_BOT initialing for {TELEGRAM_USERNAME} finished!")

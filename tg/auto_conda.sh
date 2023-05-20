@@ -119,6 +119,10 @@ yes | pip install eth-account
 echo "正在安装 web3..."
 yes | pip install web3
 
+# pip install moralis
+echo "正在安装 moralis..."
+yes | pip install moralis
+
 echo "Python 依赖包安装完毕..."
 
 # Function to change the server timezone

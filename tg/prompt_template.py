@@ -1,6 +1,6 @@
 E2C_DICT = {'id': '序号', 'word': '单词', 'rank': '排名', 'counts': '今查', 'total_counts': '已查', 'us-phonetic': '美音', 'origin': '词源', 'synonyms': '同义', 'antonyms': '反义', 'tag': '标签', 'chinese': '中译', 'chat_gpt_explanation': 'ChatGPT', 'note': '笔记', 'memo': '备注', 'toefl': 'TOEFL', 'gre': 'GRE', 'gmat': 'GMAT', 'sat': 'SAT', 'scenario': ' 场景', 'mastered': '掌握', 'level': '级别', 'sentence': '例句', 'last_check_time': '近查', 'youdao_synced': '有道', 'manually_updated': '手更', 'derivative': '衍生', 'relevant': '联想', 'phrase': '短语', 'sealed': '已封', 'category': '词库'}
 
-help_list = ['ding', 'hello', 'hi', '你好', '你好啊', 'help', 'chatgpt', 'gpt', '机器人', 'openai', 'ai', 'nice', 'ok', 'great', 'cool', '/start', '你好呀', '你在干嘛', '嘛呢', '亲', '在吗', '睡了吗', '呵呵', '哈哈']
+help_list = ['ding', 'hello', '/help', 'hi', '你好', '你好啊', 'help', 'chatgpt', 'gpt', '机器人', 'openai', 'ai', 'nice', 'ok', 'great', 'cool', '/start', 'start', '你好呀', '你在干嘛', '嘛呢', '亲', '在吗', '睡了吗', '呵呵', '哈哈']
 
 translation_prompt = '''You are a muti-language master, you always translate languages in a native speaker way. You don't like translate word by word or sentence by sentence, you always rewirte the whole text if needed, but you always make sure the transcript will convey the original meaning. But you need to keep any kind of English name as it is, not need to translate name from English to Chinese. You will translate the given text between English and Chinese. Reply to only the translated contents, nothing else.'''
 
@@ -94,7 +94,7 @@ translate_report_prompt = "你是精通中文和英文的计算机科学家，�
 
 cnn_report_prompt = "你是 CNN 资深科技记者和最受欢迎的编辑，请为以下内容写一个英文报道. 只需回复内容, 不需要任何前缀标识。\n\n"
 
-emoji_list_for_happy = ['🤨', '😆', '😙', '🤫', '😅', '😚', '😋', '😗', '😃', '😍', '🙂', '🤪', '😄', '🤩', '🤔', '😁', '😉', '😊', '😎', '🤭', '😘', '🤗', '😂']
+emoji_list_for_happy = ['🤨', '😆', '😙', '🤫', '😅', '😚', '😋', '😗', '😃', '😍', '🙂', '🤪', '😄', '🤩', '🤔', '😁', '😉', '😊', '😎', '🤭', '😘', '🤗', '😂', '🙈']
 
 emoji_list_for_unhappy = ['😳', '😢', '😕', '😨', '😦', '😧', '😤', '😥', '😰', '😟', '😬', '😣', '😩', '😱', '😓', '🤪', '😠', '😔', '😡', '😞', '🤬', '😵', '😖', '😒', '🤯']
 
@@ -109,3 +109,9 @@ about_system_prompt_txt = '这里记录了该我的角色定位和背景信息�
 about_dialogue_tone_xls = '这里记录了一些用户和我之间的模拟聊天记录范本, 用于指导我交流语气和方式。如果需要调整, 可以直接在 xls 表格里修改历史聊天语气和方式并保存，然后直接回复给我。空白的地方可以不填, 也可以填满，但是最好不要再添加更多了。🤗 最后, 千万不要修改文件名, 否则我就不认识了. 🤨'
 
 avatar_change_guide = '这是我的头像, 请保存下来, 再到 @BotFather 里面设置我的头像吧 🤩 \n\n步骤: /mybots > 选择我的 Bot 名称 > Edit Bot > Edit Botpic > 然后你会看到: \nOK. Send me the new profile photo for the bot. \n这个时候直接把我这张头像发给 @BotFather 就好啦, 然后你再回到我这里就能看到我的头像已更新咯. 😍 \n\n当然, 你也可以用任何你喜欢的头像来装饰我, 哈哈 🤗'
+
+REFILL_TEASER_DEFAULT="亲爱的, 该交公粮咯, 不交公粮就和其他白嫖的用户一样了, 总归还是有点限制的哈; 如果想要我继续为你贴身服务, 请点击 /pay 或发送 pay 获取独享的 USDT/USDC 充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
+
+user_commands = "/whoami\n/pay\n/check_bill\n/clear_memory\n/avatar\n/midjourney\n/image\n/pdf\n/revise\n/translate\n/emoji\n/wolfram\n/wikipedia\n/twitter\n/more_information\n/commands"
+
+bot_owner_commands = "/blacklist\n/remove_from_blacklist\n/set_free_talk_limit\n/set_refill_teaser\n/check_refill_teaser\n/group_send_image\n/group_send_message\n/set_monthly_fee"

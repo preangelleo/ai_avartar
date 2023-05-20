@@ -1,0 +1,59 @@
+# 请将以下参数名等号（=）后面的值改为您的值
+
+# 1
+USER_AVATAR_NAME='preangelleo'
+# 英文小写名称, 尽量不要太长，这个名称尽可能和您想要注册的域名一致（不一样也可以，主要用来生成文件夹区分其他 bot 程序）
+
+# 2
+DOMAIN_NAME=''
+# 可以在 https://domains.google.com/ 购买
+
+# 3
+UBUNTU_SERVER_IP_ADDRESS='52.196.107.11'
+
+# 4
+UBUNTU_SERVER_ROOT_PASSWORD='3syEFvzt95yqQN6V'
+# 去亚马逊云 https://lightsail.aws.amazon.com/ls/webapp/create/instance?region=ap-northeast-1 登录后进入这个链接, 注册一个实例 Instance, 服务器可以选择日本或者美国, 选择 10美金/月的配置（新用户可以免费三个月）。注册云主机后在网站页面找到 Terminal 链接打开, 进入黑色的 Terminal 终端命令行界面。在当前用户名（ubuntu）下输入 sudo -i, 进入到 root 用户后输入 passwd , 然后系统提示输入新密码, （输入后系统不会显示）, 回车后系统要求再次输入密码, 再次输入密码并回车, 如果没有报错, root 密码就设置好了，请把密码贴在上面，否则我登录不了你的服务器后台。
+# 接下来还要把以下三段代码分别拷贝黏贴到 Terminal 终端，激活 root 远程登录
+# sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+# sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+# systemctl restart sshd
+
+# 5
+OPENAI_API_KEY='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'
+# 去 https://platform.openai.com/account/api-keys 获取，前面的'sk-'一定要保留。
+
+# 6
+WEBSITE_PASSWORD=''
+# 可以留空由程序随机生成
+
+# 7
+DB_PASSWORD=''
+# 可以留空由程序随机生成
+
+# 8
+BOT_USERNAME='preangel_bot'
+BOT_TOKEN='5808241965:AAFGxm4xAGeAndPj2l_E-raK7W8qN7c0Fw0'
+# Telegram 搜索 @BotFather 注册获取
+
+# 9
+BOTOWNER_CHAT_ID='2118900665'
+USER_TELEGRAM_LINK=https://t.me/laogege6
+# 发送 whoami （或者 who am i） 给 @leonardo_huang_bot 获取
+
+# 10
+OPENAI_MODEL=gpt-3.5-turbo
+# 如果 API 有 gpt-4 白名单则可以改为 gpt-4
+
+# 11
+REPLICATE_KEY=''
+# https://replicate.com/account/api-tokens 去这里申请, 也可以留空, 不提供这个功能
+
+# 12
+STABILITY_API_KEY=''
+# https://beta.dreamstudio.ai/account 去这里申请, 也可以留空, 不提供这个功能
+
+# 13
+WOLFRAM_ALPHA_APPID=''
+# https://developer.wolframalpha.com/portal/myapps/ 去这里申请, 也可以留空, 不提供这个功能
+

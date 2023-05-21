@@ -4,7 +4,7 @@
 base_dir="/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive"
 
 # Define the source directory for rsync
-source_dir="/Users/lgg/coding/preangelleo/tg"
+source_dir="/Users/lgg/coding/preangelleo/ai_avartar/tg"
 
 # Use find command to list all the directories under the base directory
 target_folder_name_list=$(find "$base_dir" -type d)
@@ -12,11 +12,6 @@ target_folder_name_list=$(find "$base_dir" -type d)
 # Loop over each directory in the list
 for folder_name in $target_folder_name_list
 do
-
-    # 检查 folder_name 是否是 '/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive/tb', 如果是tb则跳过
-    if [ "$folder_name" == "/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive/tb" ]; then
-        continue
-    fi
 
     # Check if the 'tg' folder exists within the current directory
     if [ ! -d "$folder_name/tg" ]; then

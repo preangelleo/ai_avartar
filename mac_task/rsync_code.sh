@@ -13,6 +13,16 @@ target_folder_name_list=$(find "$base_dir" -type d)
 for folder_name in $target_folder_name_list
 do
 
+    # 检查 folder_name 是否是 '/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive/kk', 如果是则跳过
+    if [ "$folder_name" == "/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive/kk" ]; then
+        continue
+    fi
+
+    # 检查 folder_name 是否是 '/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive/yudun', 如果是则跳过
+    if [ "$folder_name" == "/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive/yudun" ]; then
+        continue
+    fi
+
     # Check if the 'tg' folder exists within the current directory
     if [ ! -d "$folder_name/tg" ]; then
         # If not, skip to the next iteration of the loop

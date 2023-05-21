@@ -8,6 +8,7 @@
 
 3) sz (source ~/.zshrc), 用 {USER_AVATAR_NAME} 别名快速登录 {UBUNTU_SERVER_IP_ADDRESS} 激活 Public Key Login, 登录后黏贴以下代码
 
+
 sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
 sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 sudo sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/g' /etc/ssh/sshd_config
@@ -52,3 +53,4 @@ systemctl restart ssh
 
 用户需要把这两个文件修改好并直接发给已经上线的 Telegram bot, 然后就会开启新的角色和聊天语气。
 P.S. 请不要修改文件名和文件格式，否则 Bot 就不认了！
+

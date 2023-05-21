@@ -301,23 +301,11 @@ def chat_gpt_regular(prompt, chatgpt_key=OPENAI_API_KEY, use_model=OPENAI_MODEL)
 
     return reply
 
-def chat_gpt_full(prompt, system_prompt='', user_prompt='', assistant_prompt='', dynamic_model='', chatgpt_key=''):
-    if not prompt:
-        return
-
-    if not dynamic_model:
-        dynamic_model = "gpt-3.5-turbo"
-    if not system_prompt:
-        system_prompt = "You are a very knowledgeable sage, and well-informed. You often help people to solve problems and answer questions, and people gain valuable information from your answers, which have a great impact on their lives and work."
-    if not user_prompt:
-        user_prompt = "Who won the world series in 2020?"
-    if not assistant_prompt:
-        assistant_prompt = "The Los Angeles Dodgers won the World Series in 2020."
-    if not chatgpt_key:
-        chatgpt_key = OPENAI_API_KEY
-
-    if debug:
-        print(f"DEBUG: chat_gpt() prompt length: {len(prompt.split())}")
+def chat_gpt_full(prompt, system_prompt='', user_prompt='', assistant_prompt='', dynamic_model=OPENAI_MODEL, chatgpt_key=OPENAI_API_KEY):
+    if not prompt: return
+    if not system_prompt: system_prompt = "You are a very knowledgeable sage, and well-informed. You often help people to solve problems and answer questions, and people gain valuable information from your answers, which have a great impact on their lives and work."
+    if not user_prompt: user_prompt = "Who won the world series in 2020?"
+    if not assistant_prompt: assistant_prompt = "The Los Angeles Dodgers won the World Series in 2020."
 
     # Load your API key from an environment variable or secret management service
     openai.api_key = chatgpt_key
@@ -613,25 +601,6 @@ LLaMA 是 "Large Language Model Assistant（大型语言模型助手）" 的缩�
     
     return 
 
-'''
-    class UserPriority(Base):
-        __tablename__ = 'avatar_user_priority'
-
-        id = Column(Integer, primary_key=True, autoincrement=True)
-        user_from_id = Column(String(255), unique=True)
-        priority = Column(Integer, default=0)
-        is_blacklist = Column(Integer, default=0)
-        free_until = Column(DateTime, default=datetime.now())
-        is_admin = Column(Integer, default=0)
-        is_owner = Column(Integer, default=0)
-        is_vip = Column(Integer, default=0)
-        is_paid = Column(Integer, default=0)
-        is_active = Column(Integer, default=0)
-        is_deleted = Column(Integer, default=0)
-        update_time = Column(DateTime, default=datetime.now())
-        next_payment_time = Column(DateTime, default=datetime.now())
-        '''
-
 # Mark user is_paid
 def mark_user_is_paid(from_id, next_payment_time):
     if not from_id: return
@@ -814,7 +783,6 @@ def check_incoming_transactions(wallet_address, token_address, chat_id, start_da
     
     return transactions
 
-
 def get_internal_transactions(transaction_hash):
     url = f"https://deep-index.moralis.io/api/v2/transaction/{transaction_hash}/internal-transactions?chain=eth"
     headers = {
@@ -962,9 +930,6 @@ def get_transaction_details(transaction_hash, chain='eth'):
         print(f'Request failed with status code: {response.status_code}')
         return None
 
-''' get_transaction_details() 返回的数据结构
-{"hash":"0x85f32cce4fb8f21bbe47ee2605cfb61f0832c9a758e7c12d536d05cc2afe9ac5","nonce":"0","transaction_index":"140","from_address":"0x4408d8991d9f4419a53487fe2027223ba5cf2207","to_address":"0xdac17f958d2ee523a2206206994597c13d831ec7","value":"0","gas":"69163","gas_price":"33573951716","input":"0xa9059cbb000000000000000000000000c635eabcf791bc8226ba0a76dce2cae061745bfe00000000000000000000000000000000000000000000000000000012a05f2000","receipt_cumulative_gas_used":"10476207","receipt_gas_used":"46109","receipt_contract_address":null,"receipt_root":null,"receipt_status":"1","block_timestamp":"2023-05-19T05:38:23.000Z","block_number":"17291516","block_hash":"0x4cfb8c2b10460f05a05583df7fa2247b6dccc42852e48dfa22022340245805d8","transfer_index":[17291516,140],"logs":[{"log_index":"274","transaction_hash":"0x85f32cce4fb8f21bbe47ee2605cfb61f0832c9a758e7c12d536d05cc2afe9ac5","transaction_index":"140","transaction_value":"0","address":"0xdac17f958d2ee523a2206206994597c13d831ec7","data":"0x00000000000000000000000000000000000000000000000000000012a05f2000","topic0":"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef","topic1":"0x0000000000000000000000004408d8991d9f4419a53487fe2027223ba5cf2207","topic2":"0x000000000000000000000000c635eabcf791bc8226ba0a76dce2cae061745bfe","topic3":null,"block_timestamp":"2023-05-19T05:38:23.000Z","block_number":"17291516","block_hash":"0x4cfb8c2b10460f05a05583df7fa2247b6dccc42852e48dfa22022340245805d8","transfer_index":[17291516,140,274]}]}'''
-
 # 通过 hash_tx 查询转账信息
 def get_transactions_info_by_hash_tx(hash_tx, chat_id, user_title, chain='eth'):
     hash_tx = str(hash_tx).lower()
@@ -1103,7 +1068,6 @@ def get_transactions_info_by_hash_tx(hash_tx, chat_id, user_title, chain='eth'):
     except Exception as e: print('DEBUG: get_transactions_info_by_hash_tx() error: ', e)
     return
 
-
 # 计算用户下次需要续费的时间是哪天, 返回一个 datetime 对象
 def update_user_next_payment_date(user_from_id, user_title):
     if debug: print(f"DEBUG: update_user_next_payment_date()")
@@ -1123,8 +1087,6 @@ def update_user_next_payment_date(user_from_id, user_title):
             if crypto_payments.Hash_id: return get_transactions_info_by_hash_tx(crypto_payments.Hash_id, user_from_id, user_title, chain='eth')
     return 
     
-        
-
 def get_outgoing_transactions_from_address_in_24h(wallet_address):
     url = f"https://deep-index.moralis.io/api/v2/{wallet_address}/verbose"
     
@@ -1146,7 +1108,6 @@ def get_outgoing_transactions_from_address_in_24h(wallet_address):
     
     if response.status_code == 200: return response.json()
     else: return None
-
 
 def read_outgoing_transaction_in_24h_result(wallet_address):
     result = get_outgoing_transactions_from_address_in_24h(wallet_address)
@@ -1196,6 +1157,123 @@ def read_and_send_24h_outgoing_trans(wallet_address, chat_id):
         send_msg(f"第{i}笔:\n{r}", chat_id, parse_mode='Markdown', base_url=telegram_base_url)
     if total_transactions_count > 10: send_msg(f"还有 {total_transactions_count - 10} 笔转账记录, 请到 Etherscan 上查看哈:\n{markdown_wallet_address(wallet_address)}", chat_id, parse_mode='Markdown', base_url=telegram_base_url)
     return
+
+def microsoft_azure_tts(text, voice='zh-CN-YunxiNeural', output_filename='output.wav'):
+    # This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"
+    speech_config = speechsdk.SpeechConfig(subscription=os.getenv('SPEECH_KEY'), region=os.getenv('SPEECH_REGION'))
+    audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=True, filename=output_filename)
+
+    # The language of the voice that speaks.
+    speech_config.speech_synthesis_voice_name = voice
+    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+    speech_synthesis_result = speech_synthesizer.speak_text_async(text).get()
+
+    if speech_synthesis_result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted: return output_filename
+    return False
+
+def eleven_labs_tts(content, tts_file_name, voice_id='YEhWVRrlzrtA9MzdS8vE'):
+    if TELEGRAM_BOT_NAME not in ['leowang_bot']: return 
+
+    if debug: print(f"DEBUG: eleven_labs_tts() voice_id: {voice_id}")
+    API_URL = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+
+    headers = {"xi-api-key": ELEVEN_API_KEY}
+    data = {
+        "text": content,
+        "voice_settings": {
+            "stability": 0.95,
+            "similarity_boost": 0.95
+        }
+    }
+    response = requests.post(API_URL, headers=headers, json=data)
+    if response.status_code == 200:
+        try:
+            with open(tts_file_name, "wb") as f:
+                f.write(response.content)
+            return tts_file_name
+        except Exception as e: print(f"ERROR : wring response.content to tts_file_name FAILED.\response.reason:{response.reason}\ntts_file_name:{tts_file_name}\nerror: {e}")
+    return False
+
+def create_news_podcast(filepath = '', prompt = '', openai_model=OPENAI_MODEL):
+    if not filepath and not prompt: return 
+
+    if filepath and not prompt: 
+        with open(filepath, 'r') as f: prompt = f.read()
+
+    if not prompt: return
+
+    message = chat_gpt_full(prompt, new_reporter_system_prompt, new_reporter_user_prompt, new_reporter_assistant_prompt, openai_model, OPENAI_API_KEY)
+
+    filepath_news = filepath.replace('_snippet.txt', '_news.txt')
+    with open(filepath_news, 'w') as f: f.write(message)
+
+    filepath_news_mp3 = filepath_news.replace('.txt', '.mp3')
+    if filepath_news: filepath_news_mp3 = microsoft_azure_tts(message, 'en-US-JaneNeural', filepath_news_mp3)
+
+    return filepath_news_mp3
+
+# 通过 ffmpeg 合并英文语音文件和中文语音文件
+def merge_audio_files(audio_files):
+    if len(audio_files) == 1: return audio_files[0]
+    if len(audio_files) == 0: return None
+    merged_audio = audio_files[0].replace('.mp3', '_merged.mp3')
+    cmd = f"ffmpeg -i {audio_files[0]} -i {audio_files[1]} -filter_complex '[0:a][1:a]concat=n=2:v=0:a=1[out]' -map '[out]' {merged_audio}"
+    os.system(cmd)
+    return merged_audio
+
+def create_news_and_audio_from_bing_search(query, chat_id, parse_mode='', base_url=telegram_base_url):
+    filepath = bing_search(query, mkt='en-US')
+
+    snippet_total = [f"Today's top news about {query}\n\n"]
+    with open(filepath, 'r') as file:
+        i = 1
+        for line in file:
+            if 'SNIPPET: ' in line: 
+                snippet_total.append(line.replace('-','').replace('SNIPPET: ', f'{str(i)}. '))
+                i += 1
+
+    snippet_text_filepath = filepath.replace('.txt', '_snippet.txt')
+    with open(snippet_text_filepath, 'w') as file:
+        for line in snippet_total:
+            file.write(line + '\n')
+
+    filepath_news_mp3 = create_news_podcast(snippet_text_filepath, prompt = '')
+    filepath_news_txt = filepath_news_mp3.replace('.mp3', '.txt')
+    with open(filepath_news_txt, 'r') as f: text_contents = f.read()
+
+    send_msg(text_contents, chat_id, parse_mode, base_url)
+
+    # filepath_news_txt_cn = filepath_news_txt.replace('.txt', '_cn.txt')
+    text_cn = chat_gpt_regular(f"{translate_report_prompt}{text_contents}", OPENAI_API_KEY, OPENAI_MODEL)
+
+    # 将中文文本添加至英文文本的末尾
+    with open(filepath_news_txt, 'a') as file: file.write(text_cn)
+    # with open(filepath_news_txt_cn, 'w') as file: file.write(text_cn)
+    send_msg(text_cn, chat_id, parse_mode=parse_mode, base_url=base_url)
+    send_file(chat_id, filepath_news_txt, description='中英文内容 Text 文件', base_url=base_url)
+
+    filepath_news_mp3_cn = filepath_news_mp3.replace('.mp3', '_cn.mp3')
+    filepath_news_mp3_cn = microsoft_azure_tts(text_cn, 'zh-CN-YunxiNeural', filepath_news_mp3_cn)
+
+    merged_audio = merge_audio_files([filepath_news_mp3, filepath_news_mp3_cn])
+    send_audio(merged_audio, chat_id, base_url=base_url)
+
+    # 基于 text_contents 写一段 英文 Tweet 和一段中文 Tweet
+    tweet_content = chat_gpt_regular(f"{tweet_pre_prompt_for_report}{text_contents}")
+    send_msg(tweet_content, chat_id, parse_mode=parse_mode, base_url=base_url)
+
+    return
+
+# 定义一个TTS 函数，判断输入的内容是中文还是英文，然后调用不同的 TTS API 创建并返回filepath, 如果提供了 chat_id, 则将 filepath send_audio 给用户
+def create_audio_from_text(text, chat_id=''):
+    if not text: return 
+    filepath = f"files/audio/{chat_id}_{text[:10]}.mp3" if chat_id else f"files/audio/no_chat_id_{text[:10]}.mp3"
+
+    if is_english(text):  new_filepath = microsoft_azure_tts(text, 'en-US-JennyNeural', filepath)
+    else:  new_filepath = microsoft_azure_tts(text, 'zh-CN-YunxiNeural', filepath)
+    if new_filepath and os.path.isfile(new_filepath): 
+        send_audio(new_filepath, chat_id)
+        return new_filepath
 
 if __name__ == '__main__':
     print(f"tvariables.py is running...")

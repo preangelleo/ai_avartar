@@ -123,6 +123,10 @@ yes | pip install web3
 echo "正在安装 moralis..."
 yes | pip install moralis
 
+# pip install azure-core
+echo "正在安装 azure-core..."
+yes | pip install azure-core
+
 echo "Python 依赖包安装完毕..."
 
 # Function to change the server timezone

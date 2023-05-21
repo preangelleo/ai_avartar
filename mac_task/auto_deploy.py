@@ -1,17 +1,21 @@
 ## 这是需要在我的 Mac 本地运行的Python脚本，用于自动化部署<AI 分身>Bot和网站
-from main import *
+import json
+import os
+import random
+import shutil
+import string
 
+# TODO: Customize the path
 vairables_file_name = 'user_input_variables.txt'
-working_folder = '/Users/lgg/Downloads'
+working_folder = '/Users/yudun/ai_avartar/download'
 user_variables_file = f'{working_folder}/{vairables_file_name}'
 archive_folder = f'{working_folder}/Create_AI_Avatar/Users_Archive'
-coding_folder = '/Users/lgg/coding/preangelleo/ai_avartar'
-
+coding_folder = '/Users/yudun/ai_avartar'
 configuration_file_name = 'configuration.json'
-mac_aliases = '/Users/lgg/.bash_aliases'
-
+mac_aliases = '/Users/yudun/ai_avartar/.bash_aliases'
 on_going_file_name = 'on_going_process.json'
-bot_owner_chat_id_json = '/Users/lgg/coding/preangelleo/ai_avartar/tg/files/bot_owner_chat_id.json'
+bot_owner_chat_id_json = '/Users/yudun/ai_avartar/tg/files/bot_owner_chat_id.json'
+# END TODO
 
 if __name__ == '__main__':
     # 判断用户提供的变量文件是否存在

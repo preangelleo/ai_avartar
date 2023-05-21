@@ -1,4 +1,6 @@
 ## 这是需要在我的 Mac 本地运行的Python脚本，用于自动化部署<AI 分身>Bot和网站
+import subprocess
+
 from auto_deploy import *
 
 # 判断 f'{working_folder}/{on_going_file_name}' 文件是否存在

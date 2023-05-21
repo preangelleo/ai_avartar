@@ -5,9 +5,7 @@ vairables_file_name = 'user_input_variables.txt'
 working_folder = '/Users/lgg/Downloads'
 user_variables_file = f'{working_folder}/{vairables_file_name}'
 archive_folder = f'{working_folder}/Create_AI_Avatar/Users_Archive'
-coding_folder_1 = '/Users/lgg/coding/preangelleo'
-coding_folder_2 = '/Users/lgg/coding/preangelleo/async'
-coding_folder_3 = '/Users/lgg/coding/preangelleo/ai_avartar'
+coding_folder = '/Users/lgg/coding/preangelleo/ai_avartar'
 
 configuration_file_name = 'configuration.json'
 mac_aliases = '/Users/lgg/.bash_aliases'
@@ -20,14 +18,6 @@ if __name__ == '__main__':
     # 判断用户提供的变量文件是否存在
     if not os.path.exists(user_variables_file): exit(f"ERROR: {user_variables_file} 不存在, 请用户提供该文件并放入 Downloads 文件夹整后再运行.")
 
-    # 选择源代码 coding_folder
-    coding_folder_info = f'''请选择源代码文件夹:\n1. 主文件夹 {coding_folder_1}\n2. 异步处理文件夹 {coding_folder_2}\n3. Github同步文件夹 {coding_folder_3}\n您的选择是: '''
-    
-    coding_folder_choice = input(coding_folder_info)
-    coding_folder_choice = str(coding_folder_choice).strip()
-    if not coding_folder_choice or coding_folder_choice not in ['1', '2', '3']: exit(f"ERROR: 退出程序, 请重新运行并输入正确的选项.")
-    coding_folder = coding_folder_1 if coding_folder_choice == '1' else coding_folder_2 if coding_folder_choice == '2' else coding_folder_3
-    
     sample_aliases_for_ubuntu = f'{coding_folder}/tg/.bash_aliases'
 
     # 让用户输入变量，1. 只生成 Telegram Bot AI 分身; 2. 只生成 AI 分身网站; 3. 两者都生成

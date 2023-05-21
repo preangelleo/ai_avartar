@@ -48,7 +48,7 @@ if __name__ == '__main__':
     DB_HOST='localhost'
     DB_PORT=3306
     DB_USER='master'
-    DB_PASSWORD='VBoSe1hmaqxx6NFbaeCU'
+    DB_PASSWORD='VBoSe1hmaqxx6NFbaeCU' if UBUNTU_SERVER_IP_ADDRESS != '192.168.13.100' else 'lpJyjWGM'
     DB_NAME='avatar'
     BOTCREATER_CHAT_ID=2118900665
     REPLICATE_KEY='c72192ecb136caafa562ff2ccf1035ef93d649b5'
@@ -67,6 +67,9 @@ if __name__ == '__main__':
     MORALIS_APP_ID='LuqQgGIT8g5KPSx7KcnWOJKQUxoFXkrIHdv2GFDQ'
     DEBANK_API='66851eb001290da8bdc25434cb78c5bc495da2dd'
     MONTHLY_FEE=20
+    BING_SEARCH_API='411a9fd2a8e9487a90073880cb14a5b9'
+    SPEECH_KEY='1c7e1fa0721844649a2eee2bc162426b'
+    SPEECH_REGION='westus2'
 
     VARIABLES_DIC = {
         "USER_AVATAR_NAME": USER_AVATAR_NAME,
@@ -100,6 +103,9 @@ if __name__ == '__main__':
         "DB_USER": DB_USER,
         "DB_NAME": DB_NAME,
         "BOTCREATER_CHAT_ID": BOTCREATER_CHAT_ID,
+        "BING_SEARCH_API": BING_SEARCH_API, 
+        "SPEECH_KEY": SPEECH_KEY,
+        "SPEECH_REGION": SPEECH_REGION,
         "Transaction_hash": Transaction_hash
     }
 
@@ -167,6 +173,9 @@ if __name__ == '__main__':
             elif line.startswith('MORALIS_APP_ID'): lines[i] = f'MORALIS_APP_ID={MORALIS_APP_ID}\n'
             elif line.startswith('DEBANK_API'): lines[i] = f'DEBANK_API={DEBANK_API}\n'
             elif line.startswith('MONTHLY_FEE'): lines[i] = f'MONTHLY_FEE={MONTHLY_FEE}\n'
+            elif line.startswith('BING_SEARCH_API'): lines[i] = f'BING_SEARCH_API={BING_SEARCH_API}\n'
+            elif line.startswith('SPEECH_KEY'): lines[i] = f'SPEECH_KEY={SPEECH_KEY}\n'
+            elif line.startswith('SPEECH_REGION'): lines[i] = f'SPEECH_REGION={SPEECH_REGION}\n'
             elif line.startswith('DB_HOST'): lines[i] = f'DB_HOST={DB_HOST}\n'
             elif line.startswith('DB_PORT'): lines[i] = f'DB_PORT={DB_PORT}\n'
             elif line.startswith('DB_USER'): lines[i] = f'DB_USER={DB_USER}\n'

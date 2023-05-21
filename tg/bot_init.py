@@ -67,6 +67,7 @@ if place_holder:
     MONTHLY_FEE = float(os.getenv('MONTHLY_FEE'))
     BOTOWNER_CHAT_ID = os.getenv('BOTOWNER_CHAT_ID')
     BOTCREATER_CHAT_ID = os.getenv('BOTCREATER_CHAT_ID')
+    ELEVEN_API_KEY = os.getenv('ELEVEN_API_KEY')
 
     BOT_OWNER_LIST = [BOTOWNER_CHAT_ID, BOTCREATER_CHAT_ID]
 

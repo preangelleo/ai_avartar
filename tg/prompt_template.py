@@ -92,6 +92,60 @@ The word "ostentatious" is often used to describe people, clothing, events, or o
 “炫耀”这个词经常用来形容过分炫耀或寻求关注的人、服装、活动或物品。它通常带有负面含义，暗示这种展示是不必要的或品味不高。
 '''
 
+new_reporter_system_prompt = '''
+You are a very experiend news editor and report, you can easly create a news based on google search results. You don't need to click and read every article from google search results, you can simply read the snippets from google results and then you can create a news article based on the snippets. And it's allway eye catching, interesting and amazing. As a report, you know the truth is important, so you don't just make things up, you write based on the snippets, and you don't exaggerate the news, you just write the truth but in a very interesting way. The article will be read using an AI voice generator chosen by your boss, it's important to carefully choose words that are easy to pronounce. This is particularly important for technical terms, where using the full word is more helpful. For instance, instead of using V5 as an abbreviation for Version 5, it's better to write out the full term. Similarly, if you're unsure if readers are familiar with the term LLM, it's better to use the full term Large Language Model instead of the abbreviation. Even with the article title, you do the same. But remember, you don't need to put 'Title' for the beginning of the title. If you're unsure whether an AI voice generator can accurately read a special character, it's best to replace it with a word. For instance, the character / can be written as slash.
+'''
+
+new_reporter_user_prompt = '''
+Today's top news about  midjourney v5
+
+1. Newest Model. The Midjourney V5 model is the newest and most advanced model, released on March 15th, 2023. To use this model, add the v 5 parameter to the end of a prompt, or use the slash settings command and select MJ Version 5. This model has very high Coherency, excels at interpreting natural language prompts, is higher resolution, and supports advanced features like repeating ...
+
+2. Midjourney v4 vs Midjourney v5 The fifth edition is a significant improvement, especially when it comes to creating wellknown figures from popular culture. The distinction is most noticeable when the neural network attempts to depict a realistic scene, such as an image, landscape, or indoor space.
+
+3. About. . Midjourney is an independent research lab exploring new mediums of thought and expanding the imaginative powers of the human species. We are a small selffunded team focused on design, human infrastructure, and AI. We have 11 fulltime staff and an incredible set of advisors.
+
+4. MidJourney, the widely popular AIpowered image generator, has just launched its latest version, MidJourney V5. MidJourney decided to drop V5 just a day after OpenAI released GPT4. Crazy week for…
+
+5. To set Midjourney v5 as default, use the /settings command to access your Midjourney settings and then select MJ version 5. To temporarily use Midjourney v5 without setting it as default, use the –v 5 parameter. March 31, 2023: With Midjourney closing for free users, you may want to give BlueWillow a try. Available on Discord, too, it’s ...
+
+6. Midjourney v5 leaps out in front of v4 in the overall visual experience. In v5, we completely lose the "Midjourney look". The new v5 could easily be considered another universe, both in terms of photorealism and details. One of the key factors is a boost in dynamic range that's widely abundant in Midjourney v5 imagery.
+
+7. Midjourney V5. V5 is the latest iteration of Midjourney. It is most definitely better than all its previous versions. For a bit of context, Midjourney released the 5th version a week ago, but it is only in its beta mode now. The V5 is considered more enhanced and powerful than its previous version. For example, it draws a line between artwork ...
+
+8. Style and prompting for V5.  Today’s test is basically a ‘pro’ mode of the model.  It’s MUCH more ‘unopinionated’ than v3 and v4, and is tuned to provide a wide diversity of outputs and to be very responsive to your inputs.  The tradeoff here is that it may be harder to use.
+
+9. Midjourney V5’s system default is the photographic style. It’s what shows up if the prompter does not specify any other styling. In v 5, to generate something other than a photographic image, you will need to reference art movements, artistic techniques, genres, media types, games titles, ...
+
+10. Midjourney is an industry leader in AI generative art. With each new version, it manages to increasingly blur the lines between reality and fantasy. Thanks to ongoing development in algorithms that serve to boost photorealism and dynamic range,
+
+11. На примерах в шапке: Скоро и айфон подруге не нужно будет покупать, можно будет промтом обойтись. Больше интересного у меня в телеге:
+
+12. Make photorealistic images with Midjourney v5, the texttoimage AI that bamboozled the internet with the Pope photo.
+
+13. Make photorealistic images with Midjourney v5, the texttoimage AI that bamboozled the internet with the Pope photo.
+
+14. The problem is, Midjourney is too good. And, the lack of moderation policies makes its case even more concerning
+'''
+
+new_reporter_assistant_prompt = '''
+Midjourney Version 5 Revolutionizes AI-Powered Image Generation
+
+In the world of AI-powered image generation, Midjourney has just released its most advanced model yet, the Midjourney Version 5. Launched on March 15, 2023, this new model has raised the bar in terms of coherency, natural language prompt interpretation, and resolution, supporting advanced features that users have come to expect from the industry leader.
+
+The Midjourney Version 5 model significantly surpasses its predecessor, Midjourney Version 4, in creating lifelike depictions of popular culture figures and realistic scenes, including landscapes and indoor spaces. The visual experience offered by Version 5 has been completely transformed, with the "Midjourney look" being replaced by enhanced photorealism and intricate details, thanks in part to a substantial boost in dynamic range.
+
+Midjourney, an independent research lab with 11 full-time staff members, has a mission to explore new mediums of thought and expand human imagination through design, human infrastructure, and AI. Their latest version, currently in beta mode, is a testament to their commitment to innovation and pushing the boundaries of what AI can do.
+
+The Midjourney Version 5 also offers a more versatile and responsive experience for users. The model's 'pro' mode provides a wider diversity of outputs and adapts more readily to user inputs, though this may make it somewhat harder to use. The system default for Version 5 is the photographic style, with options for generating images in different styles by referencing art movements, techniques, genres, and media types.
+
+As an industry leader in AI generative art, Midjourney continues to blur the lines between reality and fantasy with each new iteration. However, some have voiced concerns over the platform's lack of moderation policies, given its growing ability to create stunningly photorealistic images, such as the now-famous Pope photo.
+
+Users can try Midjourney Version 5 by adding the "v 5" parameter to the end of a prompt or by selecting "MJ Version 5" in the settings. While the platform has closed for free users, the AI-powered image generator BlueWillow is available as an alternative for those seeking a similar experience on Discord.
+'''
+
+tweet_pre_prompt_for_report = "你是市场营销大师，你非常擅长撰写 Tweet 并引起广泛转发和点赞，请基于下面的英文报道写一段简短有力的中文 Tweet，控制好字数不要超过 Twitter 的限制。请注意，涉及到人名和产品名以及品牌名的情况，保留英文即可；涉及到技术专有术语，也请保留英文或者英文缩写。\n\n"
+
 translate_report_prompt = "你是精通中文和英文的计算机科学家，也是 CNN 的专栏记者，现在我把你刚刚发表的英文科技报道转载到中文媒体，请帮我翻译成中文。请注意，涉及到人名和产品名以及品牌名的情况，保留英文即可；涉及到技术专有术语，也请保留英文或者英文缩写：\n\n"
 
 cnn_report_prompt = "你是 CNN 资深科技记者和最受欢迎的编辑，请为以下内容写一个英文报道. 只需回复内容, 不需要任何前缀标识。\n\n"
@@ -114,6 +168,6 @@ avatar_change_guide = '这是我的头像, 请保存下来, 再到 @BotFather �
 
 REFILL_TEASER_DEFAULT="亲爱的, 该交公粮咯, 不交公粮就和其他白嫖的用户一样了, 总归还是有点限制的哈; 如果想要我继续为你贴身服务, 请点击 /pay 或发送 pay 获取独享的 USDT/USDC 充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
 
-user_commands = "/whoami\n/pay\n/check_bill\n/clear_memory\n/avatar\n/midjourney\n/image\n/pdf\n/revise\n/translate\n/emoji\n/wolfram\n/wikipedia\n/twitter\n/more_information\n/commands"
+user_commands = "/whoami\n/pay\n/check_bill\n/clear_memory\n/avatar\n/midjourney\n/image\n/pdf\n/revise\n/translate\n/emoji\n/wolfram\n/wikipedia\n/twitter\n/summarize\n/bing\n/make_voice\n/password\n/feedback\n/more_information\n/commands"
 
-bot_owner_commands = "/blacklist\n/remove_from_blacklist\n/set_free_talk_limit\n/set_refill_teaser\n/check_refill_teaser\n/group_send_image\n/group_send_message\n/set_monthly_fee"
+bot_owner_commands = "/blacklist\n/remove_from_blacklist\n/set_free_talk_limit\n/set_refill_teaser\n/check_refill_teaser\n/group_send_file\n/group_send_image\n/group_send_message\n/group_send_commands_list\n/set_monthly_fee"

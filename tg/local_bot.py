@@ -319,9 +319,11 @@ def local_bot_msg_command(tg_msg):
     global qa
     global last_word_checked
 
+    # 通过 from_id 判断用户的状态，免费还是付费，是不是黑名单用户，是不是过期用户，是不是 owner，admin，vip
     from_id = str(tg_msg['message']['from']['id'])
     if not user_is_legit(from_id): return 
 
+    # 从 tg_msg 里读出 chat_id, username, first_name, last_name, msg_text
     chat_id = str(tg_msg['message']['chat']['id'])
     username = tg_msg['message']['from'].get('username', 'User')
     first_name = tg_msg['message']['from'].get('first_name', 'User_first_name')
@@ -329,6 +331,7 @@ def local_bot_msg_command(tg_msg):
     msg_text = tg_msg['message'].get('text', '')
     user_title = ' '.join([v for v in [username, first_name, last_name] if 'User' not in v])
 
+    # 判断是私聊还是群聊
     is_private = True if tg_msg['message']['chat']['type'] == 'private' else False
     
     # if debug: print(json.dumps(tg_msg, indent=2))
@@ -475,21 +478,26 @@ def local_bot_msg_command(tg_msg):
 
         if 'sticker' in tg_msg['message']:  tg_msg['message']['text'] = tg_msg['message']['sticker']['emoji']
     
-    
-    msg_text = tg_msg['message'].get('text', '')
+    # 如果消息是 reply_to_message, 则将 reply_to_message 的 text 加到 msg_text 里
     msg_text = ' '.join([tg_msg['message'].get('text', ''), tg_msg['message']['reply_to_message'].get('text')]) if 'reply_to_message' in tg_msg['message'] else msg_text
     
     if not msg_text: return 
 
+    # 如果是群聊就要在回复的前缀 亲爱的后面加上 user_title
     user_nick_name = dear_user if is_private else f"{dear_user} @{user_title} "
 
+    # 如果是群聊但是没有 at 机器人, 则先标记好，后面打印完消息后直接返回
     will_ignore = True if not is_private and TELEGRAM_BOT_NAME not in msg_text else False
+
+    # 如果 at 了机器人, 则将机器人的名字去掉
     msg_text = msg_text.replace(f'@{TELEGRAM_BOT_NAME}', '')
     alert_will_ignore_or_not = f"IGNORE: {user_title} {from_id}: {msg_text}" if will_ignore else f"LEGIT: {user_title} {from_id}: {msg_text}"
     print(alert_will_ignore_or_not)
 
+    # 如果是群聊但是没有 at 机器人, 则在此处返回
     if will_ignore: return
 
+    # 判断用户发来的消息是不是不合规的，如果骂人就拉黑
     if msg_is_inproper(msg_text): 
         # 从 emoji_list_for_unhappy 随机选出一个 emoji 回复
         reply = random.choice(emoji_list_for_unhappy)

@@ -4,7 +4,7 @@
 base_dir="/Users/lgg/Downloads/Create_AI_Avatar/Users_Archive"
 
 # Define the source directory for rsync
-source_dir="/Users/lgg/coding/preangelleo/tg"
+source_dir="/Users/lgg/coding/preangelleo/ai_avartar/tg"
 
 # Use find command to list all the directories under the base directory
 target_folder_name_list=$(find "$base_dir" -type d)

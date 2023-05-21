@@ -1,6 +1,8 @@
 E2C_DICT = {'id': '序号', 'word': '单词', 'rank': '排名', 'counts': '今查', 'total_counts': '已查', 'us-phonetic': '美音', 'origin': '词源', 'synonyms': '同义', 'antonyms': '反义', 'tag': '标签', 'chinese': '中译', 'chat_gpt_explanation': 'ChatGPT', 'note': '笔记', 'memo': '备注', 'toefl': 'TOEFL', 'gre': 'GRE', 'gmat': 'GMAT', 'sat': 'SAT', 'scenario': ' 场景', 'mastered': '掌握', 'level': '级别', 'sentence': '例句', 'last_check_time': '近查', 'youdao_synced': '有道', 'manually_updated': '手更', 'derivative': '衍生', 'relevant': '联想', 'phrase': '短语', 'sealed': '已封', 'category': '词库'}
 
-help_list = ['ding', 'hello', '/help', 'hi', '你好', '你好啊', 'help', 'chatgpt', 'gpt', '机器人', 'openai', 'ai', 'nice', 'ok', 'great', 'cool', '/start', 'start', '你好呀', '你在干嘛', '嘛呢', '亲', '在吗', '睡了吗', '呵呵', '哈哈']
+help_list = ['/help', '/start', 'start', 'help']
+
+reply_emoji_list = ['ding', 'hello', 'lol', 'hi', '你好', '你好啊', 'chatgpt', 'gpt', '机器人', 'openai', 'ai', 'nice', 'ok', 'great', 'cool', '你好呀', '你在干嘛', '嘛呢', '亲', '在吗', '睡了吗', '呵呵', '哈哈']
 
 translation_prompt = '''You are a muti-language master, you always translate languages in a native speaker way. You don't like translate word by word or sentence by sentence, you always rewirte the whole text if needed, but you always make sure the transcript will convey the original meaning. But you need to keep any kind of English name as it is, not need to translate name from English to Chinese. You will translate the given text between English and Chinese. Reply to only the translated contents, nothing else.'''
 

@@ -48,6 +48,7 @@ if place_holder:
     from mnemonic import Mnemonic
     from web3 import Web3, EthereumTesterProvider
     from moralis import evm_api
+    from logging_util import logging
 
     from dotenv import load_dotenv
     load_dotenv()

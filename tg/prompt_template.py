@@ -168,6 +168,6 @@ avatar_change_guide = '这是我的头像, 请保存下来, 再到 @BotFather �
 
 REFILL_TEASER_DEFAULT="亲爱的, 该交公粮咯, 不交公粮就和其他白嫖的用户一样了, 总归还是有点限制的哈; 如果想要我继续为你贴身服务, 请点击 /pay 或发送 pay 获取独享的 USDT/USDC 充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
 
-user_commands = "/whoami\n/pay\n/check_bill\n/clear_memory\n/avatar\n/midjourney\n/image\n/pdf\n/revise\n/translate\n/emoji\n/wolfram\n/wikipedia\n/twitter\n/summarize\n/bing\n/make_voice\n/password\n/feedback\n/more_information\n/commands"
+user_commands = "/help\n/whoami\n/pay\n/check_bill\n/clear_memory\n/avatar\n/midjourney\n/image\n/pdf\n/revise\n/translate\n/emoji\n/wolfram\n/wikipedia\n/twitter\n/summarize\n/bing\n/make_voice\n/password\n/feedback\n/more_information\n/commands"
 
 bot_owner_commands = "/blacklist\n/remove_from_blacklist\n/set_free_talk_limit\n/set_refill_teaser\n/check_refill_teaser\n/group_send_file\n/group_send_image\n/group_send_message\n/group_send_commands_list\n/set_monthly_fee"

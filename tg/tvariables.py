@@ -597,7 +597,7 @@ LLaMA 是 "Large Language Model Assistant（大型语言模型助手）" 的缩�
         reply = reply.strip('\n').strip()
         return reply
     
-    except Exception as e: print(f"DEBUG: Amy the English teacher length: {len(prompt.split())} ERROR: \n\n{e}")
+    except Exception as e: logging.error(f"Amy the English teacher length: {len(prompt.split())} ERROR: \n\n{e}") 
     
     return 
 

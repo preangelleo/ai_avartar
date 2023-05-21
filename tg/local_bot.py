@@ -1,6 +1,6 @@
 from tvariables import *
 import threading
-from logging_util import logging
+
 
 if place_holder:
     qa = ''
@@ -843,7 +843,8 @@ def local_bot_msg_command(tg_msg):
         return
 
     # 查询以太坊地址余额
-    elif msg_lower.startswith('0x') and len(msg_text) == 42:
+    elif (msg_lower.startswith('0x') and len(msg_text) == 42) or (msg_lower.startswith('/0x') and len(msg_text) == 43):
+        msg_text = msg_text.replace('/', '')
         # eth_address = msg_text, 查询 eth_address 的 USDT, USDC 和 ETH 余额
         try:
             # 将 msg_text 转换为 CheckSum 格式
@@ -856,8 +857,8 @@ def local_bot_msg_command(tg_msg):
         return
     
     # 查询以太坊链上交易 Transaction Hash
-    elif msg_lower.startswith('0x') and len(msg_text) == 66:
-        hash_tx = msg_text
+    elif (msg_lower.startswith('0x') and len(msg_text) == 66) or (msg_lower.startswith('/0x') and len(msg_text) == 67):
+        hash_tx = msg_text.replace('/', '')
         try:
             r = get_transactions_info_by_hash_tx(hash_tx, chat_id, user_title, chain='eth')
             if r: send_msg(r, chat_id, parse_mode='', base_url=telegram_base_url)
@@ -956,25 +957,8 @@ def local_bot_msg_command(tg_msg):
             send_msg(f"{user_nick_name}, 你要群发文件, 请直接将文件拖拽给我或者发给我, 但是切记发送前一定要在文件 caption 里填写 /group_send_file 或者简写 /gsf , 这样我才知道这个文件是要求我依次轮询发给所有用户的。不知道 caption 怎么填写可以参考 /group_send_image 的帮助图片哈, 都一样的 😋", chat_id)
             return
 
-    # 如果用户发了一个简单的 2 个字节的词, 那就随机回复一个表示开心的 emoji
-    if len(msg_text) <= 2 or msg_text in reply_emoji_list:
-        reply = random.choice(emoji_list_for_happy)
-        send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url)
-        return
-
-    # 如果用户发来一个英语单词，小于等于 4 个字符，那就当做 token symble 处理，查询 coinmarketcap
-    elif len(msg_text.split()) == 1 and len(msg_text) <= 4 and is_english(msg_text): 
-        msg_text = msg_text.replace('/', '').upper()
-        r = check_token_symbol_in_db_cmc_total_supply(msg_text)
-        if not r: return
-        try:
-            r = get_token_info_from_coinmarketcap_output_chinese(msg_text)
-            send_msg(r, chat_id, parse_mode='', base_url=telegram_base_url)
-        except Exception as e: logging.error(f"local_bot_msg_command() get_token_info_from_coinmarketcap_output_chinese() FAILED: \n\n{e}")
-        return
-
     # 英语查单词和 英语老师 Amy
-    elif len(msg_text.split()) == 1 and not msg_text.lower().startswith('0x') and len(msg_text) > 4 and len(msg_text) < 46 and is_english(msg_text): 
+    if len(msg_text.split()) == 1 and not msg_text.lower().startswith('0x') and len(msg_text) > 4 and len(msg_text) < 46 and is_english(msg_text): 
         msg_lower = msg_text.lower()
         is_amy_command = True if msg_lower.startswith('/') else False
         msg_lower = msg_lower.replace('/', '')
@@ -1005,10 +989,27 @@ def local_bot_msg_command(tg_msg):
         send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url)
         return 
 
+    msg_text = msg_text.replace('/', '', 1) if MSG_SPLIT[0].startswith('/') else msg_text
+
+    # 如果用户发了一个简单的 2 个字节的词, 那就随机回复一个表示开心的 emoji
+    if len(msg_text) <= 2 or msg_text in reply_emoji_list:
+        reply = random.choice(emoji_list_for_happy)
+        send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url)
+        return
+    
+    # 如果用户发来一个英语单词，小于等于 4 个字符，那就当做 token symble 处理，查询 coinmarketcap
+    if len(msg_text.split()) == 1 and len(msg_text) <= 4 and is_english(msg_text): 
+        msg_text = msg_text.replace('/', '').upper()
+        r = check_token_symbol_in_db_cmc_total_supply(msg_text)
+        if not r: return
+        try:
+            r = get_token_info_from_coinmarketcap_output_chinese(msg_text)
+            send_msg(r, chat_id, parse_mode='', base_url=telegram_base_url)
+        except Exception as e: logging.error(f"local_bot_msg_command() get_token_info_from_coinmarketcap_output_chinese() FAILED: \n\n{e}")
+        return
+
     # 如果是群聊但是没有 at 机器人, 则在此处返回
     if will_ignore: return
-
-    msg_text = msg_text.replace('/', '', 1) if MSG_SPLIT[0].startswith('/') else msg_text
 
     try: save_avatar_chat_history(msg_text, chat_id, from_id, username, first_name, last_name)
     except Exception as e: return logging.error(f"save_avatar_chat_history() failed: {e}")
@@ -1042,7 +1043,7 @@ if __name__ == '__main__':
     i = 0
     while True:
         i += 1
-        if debug: logging.debug(f"loop {i}")
+        if debug and (i % 100 == 0): logging.debug(f"loop {i}")
         try:
             # Create an instance of the update thread
             update_thread = threading.Thread(target=check_local_bot_updates)

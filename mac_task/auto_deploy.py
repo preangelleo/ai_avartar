@@ -2,18 +2,25 @@
 
 # from main import *
 import os, sys, json, shutil, random, string, subprocess
+from dotenv import load_dotenv
+load_dotenv()
 
 # TODO: Customize the path
+OPERATION_USER = os.getenv('OPERATION_USER')
+
+root_folder = '/Users/lgg' if OPERATION_USER == 'LEO' else '/home/lgg' if OPERATION_USER == 'YUNDUN' else '/root'
+second_folder = 'coding/preangelleo' if OPERATION_USER == 'LEO' else '/home/lgg' if OPERATION_USER == 'YUNDUN' else '/root'
+
 vairables_file_name = 'user_input_variables.txt'
-working_folder = '/Users/yudun/ai_avartar/download'
+working_folder = f'{root_folder}/Downloads'
 user_variables_file = f'{working_folder}/{vairables_file_name}'
-archive_folder = f'{working_folder}/Create_AI_Avatar/Users_Archive'
-coding_folder = '/Users/yudun/ai_avartar'
+archive_folder = f'{working_folder}/Create_AI_Avatar/Users_Archive' if OPERATION_USER == 'LEO' else '/home/lgg' if OPERATION_USER == 'YUNDUN' else '/root'
+coding_folder = f'{root_folder}/{second_folder}/ai_avartar' 
 configuration_file_name = 'configuration.json'
-mac_aliases = '/Users/yudun/ai_avartar/.bash_aliases'
+mac_aliases = f'{root_folder}/.bash_aliases'
 on_going_file_name = 'on_going_process.json'
 
-bot_owner_chat_id_json = '/Users/lgg/coding/preangelleo/ai_avartar/tg/files/bot_owner_chat_id.json'
+bot_owner_chat_id_json = f'{root_folder}/{second_folder}/ai_avartar/tg/files/bot_owner_chat_id.json'
 ubuntu_bash_aliases = '/root/.bash_aliases'
 source_aliases_for_ubuntu = f"{coding_folder}/tg/.bash_aliases"
 
@@ -52,7 +59,7 @@ if __name__ == '__main__':
     DB_HOST='localhost'
     DB_PORT=3306
     DB_USER='master'
-    DB_PASSWORD='VBoSe1hmaqxx6NFbaeCU' if UBUNTU_SERVER_IP_ADDRESS != '192.168.13.100' else 'lpJyjWGM'
+    DB_PASSWORD='QqBZX1yV' # GPTDAO 的 IMAGE 里面的默认密码
     DB_NAME='avatar'
     BOTCREATER_CHAT_ID=2118900665
     REPLICATE_KEY='c72192ecb136caafa562ff2ccf1035ef93d649b5'

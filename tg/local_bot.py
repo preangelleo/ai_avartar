@@ -54,6 +54,47 @@ def clear_chat_history(chat_id, message_id):
         if response.status_code == 200: send_msg(f"成功删除用户 giiitte < chat_id: {chat_id} > 的聊天记录 message_id: {i}", BOTOWNER_CHAT_ID)
     return
 
+'''
+
+    class ChatHistory(Base):
+        __tablename__ = 'avatar_chat_history'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        first_name = Column(String(255))
+        last_name = Column(String(255))
+        username = Column(String(255))
+        from_id = Column(String(255))
+        chat_id = Column(String(255))
+        update_time = Column(DateTime)
+        msg_text = Column(Text)
+        black_list = Column(Integer, default=0)
+        '''
+# 从 ChatHistory 到处 Unique from_id 到一个 python list
+def get_unique_from_id_list():
+    try: df = pd.read_sql_query(f"SELECT DISTINCT `from_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
+    except Exception as e: return logging.error(f"get_unique_from_id_list() read_sql_query() failed: \n\n{e}")
+    return df['from_id'].tolist()
+
+def get_user_chat_history(from_id):
+    SAVE_FOLDER = 'files/chat_history'
+    if not os.path.isdir(SAVE_FOLDER): os.mkdir(SAVE_FOLDER)
+    # 从数据库中查询 from_id 的聊天历史记录
+    with Session() as session:
+        # 用 pandas 从数据库中查询 from_id = from_id or chat_id = from_id 的聊天历史记录, 并按照时间顺序排序
+        df = pd.read_sql(session.query(ChatHistory).filter(or_(ChatHistory.from_id == from_id, ChatHistory.chat_id == from_id)).order_by(ChatHistory.update_time).statement, session.bind)
+        # 如果查询结果不为空
+        if not df.empty:
+            # 将用户的聊天记录逐行写入 txt 文档
+            for i in range(df.shape[0]):
+                username = df.iloc[i]['username'] if df.iloc[i]['username'] else 'User'
+                update_time = df.iloc[i]['update_time']
+                msg_text = df.iloc[i]['msg_text']
+                with open(f'{SAVE_FOLDER}/{from_id}.txt', 'a') as f:
+                    f.write(f"{username} said ({update_time}):\n{msg_text}\n\n")
+    # 将 txt 文件名返回
+    return f'{SAVE_FOLDER}/{from_id}.txt'
+
+
 # Get updates from telegram server
 def local_bot_getUpdates(previous_update_id):
     method = "getUpdates?"
@@ -107,23 +148,23 @@ def check_this_month_total_conversation(from_id, offset=0):
 
             # Check if the row count exceeds the threshold
             if (row_count - offset) > MessageThread.free_user_free_talk_per_month:
-                send_msg(f"{user_nick_name}，你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {MessageThread.free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。再这么聊下去, 老板要扣我工资了, 我现在要去开会了, 吼吼 😘。\n\n宝贝, 如果想超越白撸用户的限制, 请回复或点击 /pay , 我会给你生成一个独享的 ERC20 充值地址, 你把 {MONTHLY_FEE} USDT/USDC 转到充值地址, 我就会把你加入 VIP 会员, 享受贴身服务, 你懂的 😉", from_id)
+                send_msg(f"{user_nick_name}, 你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {MessageThread.free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。再这么聊下去, 老板要扣我工资了, 我现在要去开会了, 吼吼 😘。\n\n宝贝, 如果想超越白撸用户的限制, 请回复或点击 /pay , 我会给你生成一个独享的 ERC20 充值地址, 你把 {MONTHLY_FEE} USDT/USDC 转到充值地址, 我就会把你加入 VIP 会员, 享受贴身服务, 你懂的 😉", from_id)
                 return 
             else: return True
     except Exception as e: logging.error(f"check_this_month_total_conversation() 2 read_sql_query() failed:\n\n{e}")
     return
 
-'''定义一个功能，检查后判断是否要继续为用户服务：通过 给定的 from_id 从 UserPriority 表中查询用户的优先级, 返回一个字典; 如果用户是黑名单用户, 这直接返回 False, 如果用户是 free_until 用户, 则判断此刻有没有过期, 如果没有过期则返回 True, 如果过期了则继续下面的代码; 检查用户最新一次 usdt_paid_in 或者 usdt_paid_in 是 {MONTHLY_FEE} 的 x 倍, 再判断上一次付费到现在是一个月的 y 倍, 如果如果 x > y 则返回 True, 否则返回 False
+'''定义一个功能, 检查后判断是否要继续为用户服务：通过 给定的 from_id 从 UserPriority 表中查询用户的优先级, 返回一个字典; 如果用户是黑名单用户, 这直接返回 False, 如果用户是 free_until 用户, 则判断此刻有没有过期, 如果没有过期则返回 True, 如果过期了则继续下面的代码; 检查用户最新一次 usdt_paid_in 或者 usdt_paid_in 是 {MONTHLY_FEE} 的 x 倍, 再判断上一次付费到现在是一个月的 y 倍, 如果如果 x > y 则返回 True, 否则返回 False
 '''
 
 def user_is_legit(from_id):
     if not from_id: return
     user_priority = get_user_priority(from_id)
     if  user_priority:  
-        # 如果是 is_owner or is_admin or is_vip 则直接返回 True，黑名单对三者没有意义
+        # 如果是 is_owner or is_admin or is_vip 则直接返回 True, 黑名单对三者没有意义
         if user_priority.get('is_owner') or user_priority.get('is_admin') or user_priority.get('is_vip'): return True
         
-        # 付费用户在到期前都是可以继续使用的，到期后可以在每月免费聊天次数内继续使用，超过免费聊天次数后则不再提供服务，有效期内黑名单对付费用户无意义
+        # 付费用户在到期前都是可以继续使用的, 到期后可以在每月免费聊天次数内继续使用, 超过免费聊天次数后则不再提供服务, 有效期内黑名单对付费用户无意义
         if user_priority.get('is_paid'):
             next_payment_time = user_priority.get('next_payment_time', None)
             if next_payment_time and next_payment_time > datetime.now(): return True
@@ -131,7 +172,7 @@ def user_is_legit(from_id):
                 if mark_user_is_not_paid(from_id): send_msg(MessageThread.refill_teaser, from_id)
                 return check_this_month_total_conversation(from_id, offset=MessageThread.free_user_free_talk_per_month)
 
-        # 非 owner，admin，vip，有效期内的 paid 用户，如果是黑名单用户则直接返回 False
+        # 非 owner, admin, vip, 有效期内的 paid 用户, 如果是黑名单用户则直接返回 False
         if user_priority.get('is_blacklist'): return False
 
     return check_this_month_total_conversation(from_id)
@@ -141,7 +182,7 @@ def local_chatgpt_to_reply(msg_text, from_id, chat_id):
     openai.api_key = OPENAI_API_KEY
     reply = ''
 
-    try: df = pd.read_sql_query(f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 5) sub ORDER BY `id` ASC", engine)
+    try: df = pd.read_sql_query(f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC", engine)
     except Exception as e: return logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
 
     try: 
@@ -195,126 +236,96 @@ def local_chatgpt_to_reply(msg_text, from_id, chat_id):
     return reply
 
 # 从 avatar_chat_history 读出 Unique 的 from_id 并群发 files/images/avatar_command.png Image 给他们
-def send_img_to_all(img_file, description='', send_from='None'):
+def send_img_to_all(img_file, description='', bot_owner_chat_id=BOTOWNER_CHAT_ID):
     if not os.path.isfile(img_file): return
     if debug: logging.debug(f"send_img_to_all()")
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `from_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
+    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
     except Exception as e: return logging.error(f"send_img_to_all() read_sql_query() failed: \n\n{e}")
     
     if debug: logging.debug(f"totally {df.shape[0]} users to send image")
     
     # create a list of from_id from df
-    from_ids = df['from_id'].tolist()
-
-    leonardo_from_ids = [
-        1699390662,
-        5520380749,
-        6274029029,
-        5298305555,
-        5015427542,
-        5106438350,
-        502095251,
-        5739582631,
-        5778568683,
-        5177152210,
-        479863277,
-        945627166,
-        1724774841,
-        1254512621,
-        1231757393,
-        415690541,
-        777211824,
-        5553033704,
-        398491396,
-        5349871209,
-        576633792,
-        5905861067,
-        1275892393,
-        5224842822,
-        6130944672,
-        268874407,
-        2046694565,
-        2118900665,
-        1800879778
-    ]
-
-    if str(send_from) == str(BOTCREATER_CHAT_ID): from_ids = list(set(from_ids + leonardo_from_ids))
+    from_ids = df['chat_id'].tolist()
 
     # 向 from_ids 里的所有用户发送 img_file 图片
     try:
-        send_msg(f"{user_nick_name}, 我要开始群发图片了, 一共有 {len(from_ids)} 个用户, 需要一个一个发给他们, 请耐心等待哈 😘", BOTOWNER_CHAT_ID)
+        send_msg(f"{user_nick_name}, 我要开始群发图片了, 一共有 {len(from_ids)} 个用户, 需要一个一个发给他们, 请耐心等待哈 😘", bot_owner_chat_id)
         for i in range(len(from_ids)):
             from_id = from_ids[i]
             if not from_id: continue
-            if from_id == BOTOWNER_CHAT_ID: continue
+            if from_id == bot_owner_chat_id: continue
 
             if debug: logging.debug(f"send_img_to_all() {i}/{len(from_ids)} to: {from_id}")
             try: send_img(from_id, img_file, description)
             except Exception as e: logging.error(f"send_img_to_all() send_img() failed: \n\n{e}")
         # 通知 bot owner 发送成功
-        send_msg(f"亲爱的, 我已经把图片发送给所有 {len(from_ids)} 个用户了啦, 使命必达, 欧耶 😎!", BOTOWNER_CHAT_ID)
+        send_msg(f"亲爱的, 我已经把图片发送给所有 {len(from_ids)} 个用户了啦, 使命必达, 欧耶 😎!", bot_owner_chat_id)
     except Exception as e: logging.error(f"send_img_to_all() failed: \n\n{e}")
     return
 
 # 从 avatar_chat_history 读出 Unique 的 from_id 并群发 msg_text 消息给他们
-def send_msg_to_all(msg_text):
+def send_msg_to_all(msg_text, bot_owner_chat_id=BOTOWNER_CHAT_ID):
     if debug: logging.debug(f"send_msg_to_all()")
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `from_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
+    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
     except Exception as e: return logging.error(f"send_msg_to_all() read_sql_query() failed: \n\n{e}")
     
     if debug: logging.debug(f"totally {df.shape[0]} users to send message")
 
     try:
         for i in range(df.shape[0]):
-            from_id = df.iloc[i]['from_id']
-            if from_id == BOTOWNER_CHAT_ID: continue
+            from_id = df.iloc[i]['chat_id']
+            if from_id == bot_owner_chat_id: continue
+
             if debug: logging.debug(f"send_msg_to_all() {i}/{df.shape[0]} to: {from_id}")
             send_msg(msg_text, from_id)
         # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把以下消息发送给所有 {df.shape[0]-1} 个用户了, 消息原文:\n\n{msg_text}", BOTOWNER_CHAT_ID)
+        send_msg(f"{user_nick_name}, 我已经把以下消息发送给所有 {df.shape[0]-1} 个用户了, 消息原文:\n\n{msg_text}", bot_owner_chat_id)
     except Exception as e: logging.error(f"end_msg_to_all() failed: \n\n{e}")
     return
 
 # 群发文件给数据库中所有的 from_id
-def send_file_to_all(file):
+def send_file_to_all(file, bot_owner_chat_id=BOTOWNER_CHAT_ID):
     if not os.path.isfile(file): return
     if debug: logging.debug(f"send_file_to_all()")
     # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `from_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
+    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
     except Exception as e: return logging.error(f"send_file_to_all() read_sql_query() failed: \n\n{e}")
     
     if debug: logging.debug(f"totally {df.shape[0]} users to send file")
 
     try:
         for i in range(df.shape[0]):
-            from_id = df.iloc[i]['from_id']
-            if from_id == BOTOWNER_CHAT_ID: continue
+            from_id = df.iloc[i]['chat_id']
+            if from_id == bot_owner_chat_id: continue
+
             if debug: logging.debug(f"send_file_to_all() {i}/{df.shape[0]} to: {from_id}")
             send_file(from_id, file)
         # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把 {file} 发送给所有 {df.shape[0]-1} 个用户了.", BOTOWNER_CHAT_ID)
+        send_msg(f"{user_nick_name}, 我已经把 {file} 发送给所有 {df.shape[0]-1} 个用户了.", bot_owner_chat_id)
     except Exception as e: logging.error(f"send_file_to_all() failed: \n\n{e}")
     return
 
 # 群发音频给数据库中所有的 from_id
-def send_audio_to_all(audio_file):
+def send_audio_to_all(audio_file, bot_owner_chat_id=BOTOWNER_CHAT_ID):
     if not os.path.isfile(audio_file): return
     if debug: logging.debug(f"send_audio_to_all()")
     # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `from_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
+    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
     except Exception as e: return logging.error(f"send_audio_to_all() read_sql_query() failed: \n\n{e}")
     
     if debug: logging.debug(f"totally {df.shape[0]} users to send audio")
 
     try:
         for i in range(df.shape[0]):
-            from_id = df.iloc[i]['from_id']
+            from_id = df.iloc[i]['chat_id']
             if not from_id: continue
+            if from_id == bot_owner_chat_id: continue
+
             if debug: logging.debug(f"send_audio_to_all() {i}/{df.shape[0]} to: {from_id}")
             try: send_audio(audio_file, from_id)
             except Exception as e: logging.error(f"send_audio_to_all() send_audio() failed: \n\n{e}")
         # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把 {audio_file} 发送给所有 {df.shape[0]} 个用户了.", BOTOWNER_CHAT_ID)
+        send_msg(f"{user_nick_name}, 我已经把 {audio_file} 发送给所有 {df.shape[0]} 个用户了.", bot_owner_chat_id)
     except Exception as e: logging.error(f"send_audio_to_all() failed: \n\n{e}")
     return
 
@@ -324,7 +335,7 @@ def local_bot_msg_command(tg_msg):
     global last_word_checked
     global dear_user
 
-    # 通过 from_id 判断用户的状态，免费还是付费，是不是黑名单用户，是不是过期用户，是不是 owner，admin，vip
+    # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
     from_id = str(tg_msg['message']['from']['id'])
     if not user_is_legit(from_id): return 
 
@@ -370,7 +381,7 @@ def local_bot_msg_command(tg_msg):
                 if caption and caption.split()[0].lower() in ['group_send_file', 'gsf', 'group send file']: 
                     description = ' '.join(caption.split()[1:])
                     send_msg(f'{user_nick_name}我收到了你发来的文件, 请稍等 1 分钟, 我马上把这个文件发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
-                    send_file_to_all(save_file_path)
+                    send_file_to_all(save_file_path, bot_owner_chat_id=chat_id)
                     return
 
                 loader = ''
@@ -410,7 +421,7 @@ def local_bot_msg_command(tg_msg):
             if debug: logging.debug(f"photo in tg message")
             # 读出 Photo 的caption, 如果有的话
             caption = tg_msg['message'].get('caption', '')
-            if caption and caption.split()[0].lower() in ['group_send_image', 'gsi', 'group send image']: 
+            if caption and caption.split()[0].lower() in ['group_send_image', 'gsi', 'group send image'] and chat_id in BOT_OWNER_LIST: 
                 group_send_image = True
                 description = ' '.join(caption.split()[1:])
                 send_msg(f'{user_nick_name}我收到了你发来的图片, 请稍等 1 分钟, 我马上把这张图片发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
@@ -443,7 +454,7 @@ def local_bot_msg_command(tg_msg):
                 logging.error(f"photo get file_content failed: \n\n{e}")
                 return
             
-            if group_send_image: return send_img_to_all(save_path, description, send_from=from_id)
+            if group_send_image: return send_img_to_all(save_path, description, chat_id)
 
             img_caption = replicate_img_to_caption(save_path)
             if 'a computer screen' in img_caption: return
@@ -476,6 +487,12 @@ def local_bot_msg_command(tg_msg):
             return 
 
         if 'voice' in tg_msg['message']: 
+            voice_caption = tg_msg['message'].get('caption', '')
+            if voice_caption and voice_caption.split()[0].lower() in ['group_send_audio', 'gsa', 'group send audio'] and chat_id in BOT_OWNER_LIST:
+                description = ' '.join(voice_caption.split()[1:])
+                send_msg(f'{user_nick_name}我收到了你发来的语音, 请稍等 1 分钟, 我马上把这个语音发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
+                send_audio_to_all(file_path, bot_owner_chat_id=chat_id)
+                return
             send_msg(f'{user_nick_name}我收到了你发来的语音, 稍等我 1 分钟, 我马上戴上耳机听一下你说的什么 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
             tg_msg['message']['text'] = deal_with_voice_to_text(file_id=tg_msg['message']['voice'].get('file_id'), file_unique_id=tg_msg['message']['voice'].get('file_unique_id'))
 
@@ -486,10 +503,10 @@ def local_bot_msg_command(tg_msg):
     
     if not msg_text: return 
 
-    # 如果是群聊但是没有 at 机器人, 则先标记好，后面打印完消息后直接返回
+    # 如果是群聊但是没有 at 机器人, 则先标记好, 后面打印完消息后直接返回
     will_ignore = True if not is_private and TELEGRAM_BOT_NAME not in msg_text else False
 
-    # 判断用户发来的消息是不是不合规的，如果骂人就拉黑
+    # 判断用户发来的消息是不是不合规的, 如果骂人就拉黑
     if msg_is_inproper(msg_text): 
         # 从 emoji_list_for_unhappy 随机选出一个 emoji 回复
         reply = random.choice(emoji_list_for_unhappy)
@@ -559,7 +576,15 @@ def local_bot_msg_command(tg_msg):
 
         except Exception as e: send_msg(f"对不起{user_nick_name}, 你发来的链接我看不了 💦", chat_id)
         return
-        
+
+    # 用户可以通过 save_chat_history /from_id 指令来保存聊天记录
+    elif MSG_SPLIT[0] in ['save_chat_history', '/save_chat_history', 'sch', '/sch'] or msg_text == f"/{from_id}":
+        file_path = get_user_chat_history(from_id)
+        help_info = f'{user_nick_name} 你可以随时发送 /{from_id} 或者 /Save_Chat_History (or /sch) 给我来保存咱俩的聊天记录哈. 😘'
+        if os.path.isfile(file_path): send_file(chat_id, file_path, description=f"咱俩之间的聊天记录 😁", base_url=telegram_base_url)
+        else: send_msg(f"{user_nick_name}, 我没有找到你的聊天记录, , 你应该从来没跟我好好聊过吧 😅\n\nP.S. {help_info}", chat_id)
+        return
+
     # Welcome and help
     elif MSG_SPLIT[0] in help_list: 
         send_msg(avatar_first_response, chat_id, parse_mode='', base_url=telegram_base_url)
@@ -621,10 +646,10 @@ def local_bot_msg_command(tg_msg):
     elif MSG_SPLIT[0] in ['password', '/password']:
         # 生成一个长度为 1 位的随机英文字符
         password_prefix = ''.join(random.sample(string.ascii_letters, 1))
-        # 生成一个长度为 16 位的随机密码，不包括特殊字符
+        # 生成一个长度为 16 位的随机密码, 不包括特殊字符
         password_temp = ''.join(random.sample(string.ascii_letters + string.digits, 15))
         password = password_prefix + password_temp
-        # 生成一个长度为 18 位的随机密码，包括特殊字符, 开头一定要用英文字符，特殊字符只能在中间，数字放在结尾
+        # 生成一个长度为 18 位的随机密码, 包括特殊字符, 开头一定要用英文字符, 特殊字符只能在中间, 数字放在结尾
         special_password_temp = ''.join(random.sample(string.ascii_letters + string.digits + '@$-%^&_*', 17))
         special_password = password_prefix + special_password_temp
         send_msg(f"{user_nick_name}, 我为你生成了两个密码:\n\n16位不包含特殊字符密码: \n{password}\n\n18位包含特殊字符密码是: \n{special_password}\n\n请记住你的密码, 你可以把它们复制下来, 然后把这条消息删除, 以免被别人看到哈 😘", chat_id, parse_mode='', base_url=telegram_base_url)
@@ -651,13 +676,13 @@ def local_bot_msg_command(tg_msg):
 
         except Exception as e: send_msg(f"ERROR: local_bot_msg_command() create_midjourney_prompt() FAILED: \n\n{e}")
         return 
-    
+
     # 发送 feedback 给 bot owner
-    elif MSG_SPLIT[0] in ['feedback', '/feedback']:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要给我的老板反馈信息或者提意见, 请在命令后面的空格后再加上你要反馈的信息, 比如: \n\nfeedback 你好, 我是你的粉丝, 我觉得你的机器人很好用, 但是我觉得你的机器人还可以加入xxx功能, 这样就更好用了。\n\n这样我就会把你的反馈信息转发给我老板哈 😋。\n\n当然, 你也可以跟他私聊哦 @{TELEGRAM_USERNAME}", chat_id)
+    elif MSG_SPLIT[0] in ['feedback', '/feedback', '/owner', 'owner']:
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要给我的老板反馈信息或者提意见, 请在命令后面的空格后再加上你要反馈的信息, 比如: \n\nfeedback 你好, 我是你的粉丝, 我觉得你的机器人很好用, 但是我觉得你的机器人还可以加入xxx功能, 这样就更好用了。\n\n这样我就会把你的反馈信息转发给我老板哈 😋。另外 /feedback 和 /owner 通用\n\n当然, 你也可以跟他私聊哦 @{TELEGRAM_USERNAME}", chat_id)
         feedback = ' '.join(MSG_SPLIT[1:])
-        send_msg(f"收到, {user_nick_name}, 我马上把你的反馈信息转发给我老板哈 😋。", chat_id, parse_mode='', base_url=telegram_base_url)
-        feed_back_info = f"来自 @{user_title} {from_id} 的反馈信息:\n\n{feedback}"
+        send_msg(f"收到, {user_nick_name}, 我马上把你的反馈信息转发给我老板哈 😋。你要反馈的信息如下:\n\n{feedback}", chat_id, parse_mode='', base_url=telegram_base_url)
+        feed_back_info = f"来自 @{user_title} /{from_id} 的反馈信息:\n\n{feedback}\n\n如需回复, 请用 /{from_id} 加上你要回复的内容即可。如果发送 /{from_id} 但后面没有任何内容, 我会把 @{user_title} 和我的聊天记录以 TXT 文档形式发给你参考。"
         for owner_chat_id in set(BOT_OWNER_LIST): send_msg(feed_back_info, owner_chat_id, parse_mode='', base_url=telegram_base_url)
         return
 
@@ -687,7 +712,7 @@ def local_bot_msg_command(tg_msg):
         return 
 
     elif MSG_SPLIT[0] in ['revise', 'rv', '/revise', '/rv']:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 请在命令后面的空格后加上你要改写的内容, 比如: \n\nrevise 这里贴上你要改写的内容。\n\n这样我就会把上面你贴给我的内容用更优雅地方式改写好。中文就改写为中文；英文改写后还是英文。这不是翻译，是校对和改写。\n\nP.S. /revise 也可以换做 /rv", chat_id)
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 请在命令后面的空格后加上你要改写的内容, 比如: \n\nrevise 这里贴上你要改写的内容。\n\n这样我就会把上面你贴给我的内容用更优雅地方式改写好。中文就改写为中文；英文改写后还是英文。这不是翻译, 是校对和改写。\n\nP.S. /revise 也可以换做 /rv", chat_id)
         prompt = ' '.join(MSG_SPLIT[1:])
         try:
             reply = chat_gpt_regular(f"Please help me to revise below text in a more native and polite way, reply with the same language as the text:\n{prompt}", chatgpt_key=OPENAI_API_KEY, use_model=OPENAI_MODEL)
@@ -697,7 +722,7 @@ def local_bot_msg_command(tg_msg):
     
     # emoji translate function
     elif MSG_SPLIT[0] in ['emoji', 'emj', 'emo', '/emoji', '/emj', '/emo']:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想把你发给我的内容翻译成 emoji, 请在命令后面的空格后加上你的内容, 比如: \n\nemoji 今晚不回家吃饭了，但是我会想你的。\n\n这样我就会把上面你贴给我的内容用 emoji 来描述。\n\nP.S. /emoji 也可以换做 /emj 或者 /emo", chat_id)
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想把你发给我的内容翻译成 emoji, 请在命令后面的空格后加上你的内容, 比如: \n\nemoji 今晚不回家吃饭了, 但是我会想你的。\n\n这样我就会把上面你贴给我的内容用 emoji 来描述。\n\nP.S. /emoji 也可以换做 /emj 或者 /emo", chat_id)
         prompt = ' '.join(MSG_SPLIT[1:])
         try:
             new_prompt = f"You know exactly what each emoji means and where to use. I want you to translate the sentences I wrote into suitable emojis. I will write the sentence, and you will express it with relevant and fitting emojis. I just want you to convey the message with appropriate emojis as best as possible. I dont want you to reply with anything but emoji. My first sentence is ( {prompt} ) "
@@ -715,7 +740,7 @@ def local_bot_msg_command(tg_msg):
         prompt = ' '.join(MSG_SPLIT[1:])
 
         user_prompt='''Dillon Reeves, a seventh grader in Michigan, is being praised as a hero for preventing his school bus from crashing after his bus driver lost consciousness. Reeves was seated about five rows back when the driver experienced "some dizziness" and passed out, causing the bus to veer into oncoming traffic. Reeves jumped up from his seat, threw his backpack down, ran to the front of the bus, grabbed the steering wheel and brought the bus to a stop in the middle of the road. Warren police and fire departments responded to the scene within minutes and treated the bus driver, who is now stable but with precautions and is still undergoing testing and observation in the hospital. All students were loaded onto a different bus to make their way home. Reeves' parents praised their son and called him \'our little hero.\''''
-        assistant_prompt='''Dillon Reeves 是一名来自 Michigan 的七年级学生，因为在校车司机失去意识后成功阻止了校车发生事故而被称为英雄。当时，司机出现了"一些眩晕"并昏倒，导致校车偏离行驶道驶入迎面驶来的交通流中。当时 Reeves 坐在车子后面大约五排的位置，他迅速从座位上站起来, 扔掉背包并跑到车前, 抓住方向盘, 让校车在道路中间停了下来。Warren 警察和消防部门在几分钟内赶到现场, 对校车司机进行救治。司机目前已经稳定下来, 但仍需密切观察并在医院接受检查。所有学生后来被安排上另一辆校车回家。Reeves 的父母赞扬了儿子，并称他是"我们的小英雄".'''
+        assistant_prompt='''Dillon Reeves 是一名来自 Michigan 的七年级学生, 因为在校车司机失去意识后成功阻止了校车发生事故而被称为英雄。当时, 司机出现了"一些眩晕"并昏倒, 导致校车偏离行驶道驶入迎面驶来的交通流中。当时 Reeves 坐在车子后面大约五排的位置, 他迅速从座位上站起来, 扔掉背包并跑到车前, 抓住方向盘, 让校车在道路中间停了下来。Warren 警察和消防部门在几分钟内赶到现场, 对校车司机进行救治。司机目前已经稳定下来, 但仍需密切观察并在医院接受检查。所有学生后来被安排上另一辆校车回家。Reeves 的父母赞扬了儿子, 并称他是"我们的小英雄".'''
 
         try: reply = chat_gpt_full(prompt, system_prompt = translation_prompt, user_prompt=user_prompt, assistant_prompt=assistant_prompt, dynamic_model= OPENAI_MODEL, chatgpt_key = OPENAI_API_KEY)
         except Exception as e: return send_msg(f"{user_nick_name}对不起, 刚才断线了, 你可以再发一次吗 😂", chat_id)
@@ -755,7 +780,7 @@ def local_bot_msg_command(tg_msg):
         return 
     
     elif MSG_SPLIT[0] in ['twitter', 'tw', 'tweet', 'tt', '/twitter', '/tw', '/tweet', '/tt']:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想让我把一段文章内容精简成一个可以发 Twitter 的一句话, 请在命令后面的空格后加上你要发推的内容, 比如: \n\ntwitter 据塔斯社报道，根据日本外务省20日发表的声明，美国总统拜登19日在参观广岛和平纪念馆时，并没有在纪念馆的留言簿上为美国曾向日本广岛投放原子弹道歉。报道称，拜登当时在留言簿上写道，“愿这座纪念馆的故事提醒我们所有人，我们有义务建设一个和平的未来。让我们携手共进，朝着世界核武器终将永远消除的那一天迈进。”\n\n这样我就要 Twitter 去发推。\n\nP.S. /twitter 也可以换做 /tw 或者 /tweet 或者 /tt", chat_id)
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想让我把一段文章内容精简成一个可以发 Twitter 的一句话, 请在命令后面的空格后加上你要发推的内容, 比如: \n\ntwitter 据塔斯社报道, 根据日本外务省20日发表的声明, 美国总统拜登19日在参观广岛和平纪念馆时, 并没有在纪念馆的留言簿上为美国曾向日本广岛投放原子弹道歉。报道称, 拜登当时在留言簿上写道, “愿这座纪念馆的故事提醒我们所有人, 我们有义务建设一个和平的未来。让我们携手共进, 朝着世界核武器终将永远消除的那一天迈进。”\n\n这样我就要 Twitter 去发推。\n\nP.S. /twitter 也可以换做 /tw 或者 /tweet 或者 /tt", chat_id)
         msg_text = ' '.join(MSG_SPLIT[1:])
         prompt = f"请为以下内容写一个精简有趣的中文 Tweet. 只需回复内容, 不需要任何前缀标识。\n\n{msg_text}"
         try:
@@ -765,7 +790,7 @@ def local_bot_msg_command(tg_msg):
         return
 
     elif MSG_SPLIT[0] in ['summarize', '/summarize', 'smrz', '/smrz']:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 如果你想让我帮你总结一段文字, 请在命令后面的空格后加上你要总结的内容, 比如: \n\nsummarize 据塔斯社报道，根据日本外务省20日发表的声明，美国总统拜登19日在参观广岛和平纪念馆时，并没有在纪念馆的留言簿上为美国曾向日本广岛投放原子弹道歉。报道称，拜登当时在留言簿上写道，“愿这座纪念馆的故事提醒我们所有人，我们有义务建设一个和平的未来。让我们携手共进，朝着世界核武器终将永远消除的那一天迈进。\n\n这样我就会用精简的语言来帮你总结一下。\n\nP.S. /summarize 也可以换做 /smrz", chat_id)
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 如果你想让我帮你总结一段文字, 请在命令后面的空格后加上你要总结的内容, 比如: \n\nsummarize 据塔斯社报道, 根据日本外务省20日发表的声明, 美国总统拜登19日在参观广岛和平纪念馆时, 并没有在纪念馆的留言簿上为美国曾向日本广岛投放原子弹道歉。报道称, 拜登当时在留言簿上写道, “愿这座纪念馆的故事提醒我们所有人, 我们有义务建设一个和平的未来。让我们携手共进, 朝着世界核武器终将永远消除的那一天迈进。\n\n这样我就会用精简的语言来帮你总结一下。\n\nP.S. /summarize 也可以换做 /smrz", chat_id)
         msg_text = ' '.join(MSG_SPLIT[1:])
         prompt = f"请用精简有力的语言总结以下内容, 并提供中英文双语版本:\n\n{msg_text}"
         try:
@@ -775,7 +800,7 @@ def local_bot_msg_command(tg_msg):
         return
     
     elif MSG_SPLIT[0] in ['bing', '/bing']:
-        if MSG_LEN == 1: return send_msg(f"{user_nick_name}, 你如果想用 Bing 搜索引擎来搜索关键词并让我按照搜索结果写一篇中英文报道, 请在命令后面的空格后加上你要搜索关键词, 比如: \n\nbing Pinecone just raised 100 million\n\n这样我就会用 Bing 去搜索并基于搜索结果创作科技新闻报道。我会按顺序一次发给你:\n\n1) 英文报道; \n2) \n中文报道; \n3) 英文和中文语音播报; \n4) Twitter 精简短内容!", chat_id)
+        if MSG_LEN == 1: return send_msg(f"{user_nick_name}, 你如果想用 Bing 搜索引擎来搜索关键词并让我按照搜索结果写一篇中英文报道, 请在命令后面的空格后加上你要搜索关键词, 比如: \n\nbing Pinecone just raised 100 million\n\n这样我就会用 Bing 去搜索并基于搜索结果创作科技新闻报道。我会按顺序一次发给你:\n\n1) 英文报道; \n2) 中文报道; \n3) 英文和中文语音播报; \n4) Twitter 精简短内容!", chat_id)
         query = ' '.join(MSG_SPLIT[1:])
         send_msg(f"好嘞 {user_nick_name}, 我帮你去 Bing 搜索一下 「{query}」, 然后再基于搜索结果帮你写一篇英文报道、一篇中文报道、一个推特短语还有一段英文+中文的语音 Podcast, 请稍等 2 分钟哦 😁", chat_id)
         try: create_news_and_audio_from_bing_search(query, chat_id, parse_mode='', base_url=telegram_base_url)
@@ -786,7 +811,7 @@ def local_bot_msg_command(tg_msg):
     elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier-investor', 'outlierinvestor', 'ol', '/outlier', '/oi', '/outlier-investor', '/outlierinvestor', '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and TELEGRAM_BOT_NAME.lower() in ['leonardo_huang_bot']:
         if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想让了解我写的《投资异类》里的内容, 请在命令后面的空格后加上你想了解的内容, 比如: \n\n投资异类 天使投资人最喜欢什么样的创业者\n\n这样我就会去《投资异类》里查找相关内容并提炼总结给你。\n\nP.S. /投资异类 也可以换做 /outlier 或者 /oi 或者 /outlier-investor 或者 /outlierinvestor 或者 /ol", chat_id)
         query = ' '.join(MSG_SPLIT[1:])
-        send_msg("WoW, 你想了解我写的《投资异类》啊, 真是感动. 稍等 1 分钟，你问的问题我认真写给你, 哈哈哈 😁", chat_id)
+        send_msg("WoW, 你想了解我写的《投资异类》啊, 真是感动. 稍等 1 分钟, 你问的问题我认真写给你, 哈哈哈 😁", chat_id)
         try: 
             index_name = 'outlier-investor'
             # docsearch = Pinecone.from_texts([t.page_content for t in texts], embeddings, index_name=index_name)
@@ -814,7 +839,7 @@ def local_bot_msg_command(tg_msg):
                     stmt = update(ChatHistory).values(msg_text=None)
                     session.execute(stmt)
                     session.commit()
-                    send_msg(f"{user_nick_name}，我已经删除所有用户的聊天记录，大家可以重新开始跟我聊天了。😘", chat_id)
+                    send_msg(f"{user_nick_name}, 我已经删除所有用户的聊天记录, 大家可以重新开始跟我聊天了。😘", chat_id)
             except Exception as e: logging.error(f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}")
             return 
 
@@ -824,13 +849,13 @@ def local_bot_msg_command(tg_msg):
                 stmt = update(ChatHistory).values(msg_text=None).where(ChatHistory.from_id == from_id)
                 session.execute(stmt)
                 session.commit()
-                send_msg(f"{user_nick_name}，我已经删除你的聊天记录，你可以重新开始跟我聊天了。😘", chat_id)
+                send_msg(f"{user_nick_name}, 我已经删除你的聊天记录, 你可以重新开始跟我聊天了。😘", chat_id)
         except Exception as e: logging.error(f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}")
         return
 
     # 为用户输入的内容生成音频并发送
     elif MSG_SPLIT[0] in ['make_voice', '/make_voice', 'generate_audio', '/generate_audio', 'gv', '/gv', 'make_audio', '/make_audio', 'ma', '/ma', 'mv', '/mv', 'ga', '/ga', 'generate_voice', '/generate_voice']:
-        if MSG_LEN == 1: return send_msg(f"{user_nick_name}, 你如果想让我把一段文字内容转换成语音, 请在命令后面的空格后加上你要转换的内容, 比如: \n\nmake_voice 据塔斯社报道，根据日本外务省20日发表的声明，美国总统拜登19日在参观广岛和平纪念馆时，并没有在纪念馆的留言簿上为美国曾向日本广岛投放原子弹道歉。报道称，拜登当时在留言簿上写道，“愿这座纪念馆的故事提醒我们所有人，我们有义务建设一个和平的未来。让我们携手共进，朝着世界核武器终将永远消除的那一天迈进。\n\n这样我就知道你要我把这段文字转换成语音了。😚 \n\n/make_voice 可以简写为 /mv 哈", chat_id)
+        if MSG_LEN == 1: return send_msg(f"{user_nick_name}, 你如果想让我把一段文字内容转换成语音, 请在命令后面的空格后加上你要转换的内容, 比如: \n\nmake_voice 据塔斯社报道, 根据日本外务省20日发表的声明, 美国总统拜登19日在参观广岛和平纪念馆时, 并没有在纪念馆的留言簿上为美国曾向日本广岛投放原子弹道歉。报道称, 拜登当时在留言簿上写道, “愿这座纪念馆的故事提醒我们所有人, 我们有义务建设一个和平的未来。让我们携手共进, 朝着世界核武器终将永远消除的那一天迈进。\n\n这样我就知道你要我把这段文字转换成语音了。😚 \n\n/make_voice 可以简写为 /mv 哈", chat_id)
         content = ' '.join(MSG_SPLIT[1:])
         send_msg(f"好嘞 {user_nick_name}, 我帮你把以下内容转换成语音, 请稍等 1 分钟哦 😁\n\n{content}", chat_id)
         try: create_audio_from_text(content, chat_id)
@@ -871,28 +896,43 @@ def local_bot_msg_command(tg_msg):
         if (MSG_SPLIT[0] in ['mybots'] or msg_text in ['/mybots']):
             send_msg(f"{user_nick_name}, 你好可爱啊 🤨, /mybots 这个指令是 @BotFather 的, 发给我没用哈, 请点击 @BotFather 过去设置我的参数吧! 😘", chat_id)
             return 
-        
+
+        elif MSG_SPLIT[0][1:].isdigit():
+            try:
+                # 如果消息以@开头则@后面的内容是 from_id 
+                from_id = MSG_SPLIT[0].replace('@', '').replace('/', '')
+                if from_id in get_unique_from_id_list():
+                    # 如果消息以 @ or / 开头则 @ or / 后面的内容是 from_id, 如果后面还有内容, 则是要发给 from_id 的消息
+                    if MSG_LEN > 1: send_msg(' '.join(MSG_SPLIT[1:]), from_id)
+                    # 如果后面没有内容, 则是要查询 from_id 的聊天历史记录，保存为 txt 文档并发给 BOT OWNER
+                    else:
+                        file_path = get_user_chat_history(from_id)
+                        if os.path.isfile(file_path): send_file(chat_id, file_path, description=f"Bot 和 {from_id} 之间的的聊天记录")
+                else: send_msg(f"{user_nick_name}, from_id {from_id} 没有聊天记录, 😘", chat_id)
+            except Exception as e: logging.error(f"local_bot_msg_command() get_user_chat_history() FAILED: \n\n{e}")
+            return
+
         # 发送最新的 user_commands 给用户
         elif MSG_SPLIT[0] in ['group_send_commands_list', 'gscl', '/group_send_commands_list', '/gscl']:
-            group_send_message_info = f"{dear_user}, 我的 commands 列表更新咯, 来康康吧 😙: \n\n{user_commands}"
-            send_msg_to_all(group_send_message_info)
-            send_msg(f"{dear_user}, 以下是你专项的指令哈, 我只发给你一个人看 😎:\n\n{bot_owner_commands}", chat_id)
+            group_send_message_info = f"{dear_user}, /commands 列表更新咯 😙: \n{user_commands}"
+            send_msg_to_all(group_send_message_info, bot_owner_chat_id=chat_id)
+            send_msg(bot_owner_commands, chat_id)
             return
         
         elif MSG_SPLIT[0] in ['blacklist', 'bl', '/blacklist', '/bl']:
-            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要把谁加入黑名单，请在命令后面的空格后再加上一个 from_id, 比如: \n\nblacklist 123456789\n\n这样就是把 from_id 为 123456789 的用户加入黑名单了. 😘 \n\nP.S. /blacklist 也可以缩写为 /bl", chat_id)
+            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要把谁加入黑名单, 请在命令后面的空格后再加上一个 from_id, 比如: \n\nblacklist 123456789\n\n这样就是把 from_id 为 123456789 的用户加入黑名单了. 😘 \n\nP.S. /blacklist 也可以缩写为 /bl", chat_id)
 
             from_id_to_blacklist = MSG_SPLIT[1]
             try: 
                 r = set_user_blacklist(from_id_to_blacklist)
                 if r: 
-                    send_msg(f"{user_nick_name}, 我已经把你拉黑了, 如果你想解除黑名单，请转发本消息给 @@{TELEGRAM_USERNAME}\n\n申请解除黑名单: \n\nremove_from_blacklist {from_id_to_blacklist}", from_id_to_blacklist)
+                    send_msg(f"{user_nick_name}, 我已经把你拉黑了, 如果你想解除黑名单, 请转发本消息给 @@{TELEGRAM_USERNAME}\n\n申请解除黑名单: \n\nremove_from_blacklist {from_id_to_blacklist}", from_id_to_blacklist)
                     send_msg(f"from_id: {from_id_to_blacklist} 已被成功加入黑名单并已经发消息告知.", chat_id)
             except Exception as e: logging.error(f"local_bot_msg_command() set_user_blacklist() FAILED: \n\n{e}")
             return
         
         elif MSG_SPLIT[0] in ['remove_from_blacklist', 'rbl', '/remove_from_blacklist', '/rbl']:
-            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要解除黑名单，请在命令后面的空格后再加上一个 from_id, 比如: \n\nremove_from_blacklist 123456789\n\n这样就是把 from_id 为 123456789 的用户从黑名单中移除了. 😘 \n\nP.S. /remove_from_blacklist 也可以缩写为 /rbl", chat_id)
+            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要解除黑名单, 请在命令后面的空格后再加上一个 from_id, 比如: \n\nremove_from_blacklist 123456789\n\n这样就是把 from_id 为 123456789 的用户从黑名单中移除了. 😘 \n\nP.S. /remove_from_blacklist 也可以缩写为 /rbl", chat_id)
 
             from_id_to_remove = MSG_SPLIT[1]
             try: 
@@ -949,7 +989,7 @@ def local_bot_msg_command(tg_msg):
         elif MSG_SPLIT[0] in ['group_send_message', 'gsm', '/gsm', '/group_send_message']:
             if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要群发消息, 请在命令后面的空格后再加上一个字符串, 比如: \n\ngroup_send_message 亲爱的, 我又升级了, 我可以直接读以太坊地址了, 吼吼, 发个钱包地址来看看吧 😘\n\n这样我就会逐条发送给每个用户。\n\nP.S. /group_send_message 也可以缩写为 /gsm", chat_id)
             message_content = ' '.join(MSG_SPLIT[1:])
-            send_msg_to_all(message_content)
+            send_msg_to_all(message_content, bot_owner_chat_id=chat_id)
             return
         
         # 使用 send_file_to_all 将文件发送给所有用户
@@ -957,6 +997,11 @@ def local_bot_msg_command(tg_msg):
             send_msg(f"{user_nick_name}, 你要群发文件, 请直接将文件拖拽给我或者发给我, 但是切记发送前一定要在文件 caption 里填写 /group_send_file 或者简写 /gsf , 这样我才知道这个文件是要求我依次轮询发给所有用户的。不知道 caption 怎么填写可以参考 /group_send_image 的帮助图片哈, 都一样的 😋", chat_id)
             return
 
+        # 使用 send_audio_to_all 将 audio 文件发送给所有用户
+        elif MSG_SPLIT[0] in ['group_send_audio', 'gsa', '/group_send_audio', '/gsa']:
+            send_msg(f"{user_nick_name}, 你要群发语音文件 (mp3 或者 wav), 请直接将文件拖拽给我或者发给我, 但是切记发送前一定要在文件 caption 里填写 /group_send_audio 或者简写 /gsa , 这样我才知道这个Audio文件是要求我依次轮询发给所有用户的。不知道 caption 怎么填写可以参考 /group_send_image 的帮助图片哈, 都一样的 😋", chat_id)
+            return
+        
     # 英语查单词和 英语老师 Amy
     if len(msg_text.split()) == 1 and not msg_text.lower().startswith('0x') and len(msg_text.replace('/', '')) > 4 and len(msg_text) < 46 and is_english(msg_text): 
         msg_lower = msg_text.lower()
@@ -997,7 +1042,7 @@ def local_bot_msg_command(tg_msg):
         send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url)
         return
     
-    # 如果用户发来一个英语单词，小于等于 4 个字符，那就当做 token symble 处理，查询 coinmarketcap
+    # 如果用户发来一个英语单词, 小于等于 4 个字符, 那就当做 token symble 处理, 查询 coinmarketcap
     if len(msg_text.split()) == 1 and len(msg_text) <= 4 and is_english(msg_text): 
         msg_text = msg_text.replace('/', '').upper()
         r = check_token_symbol_in_db_cmc_total_supply(msg_text)

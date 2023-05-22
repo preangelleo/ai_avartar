@@ -168,6 +168,45 @@ avatar_change_guide = '这是我的头像, 请保存下来, 再到 @BotFather �
 
 REFILL_TEASER_DEFAULT="亲爱的, 该交公粮咯, 不交公粮就和其他白嫖的用户一样了, 总归还是有点限制的哈; 如果想要我继续为你贴身服务, 请点击 /pay 或发送 pay 获取独享的 USDT/USDC 充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
 
-user_commands = "/help\n/whoami\n/pay\n/check_bill\n/clear_memory\n/avatar\n/midjourney\n/image\n/pdf\n/revise\n/translate\n/emoji\n/wolfram\n/wikipedia\n/twitter\n/summarize\n/bing\n/make_voice\n/password\n/feedback\n/more_information\n/commands"
+user_commands = '''
+/help # 帮助
+/whoami # 获取 chat_id
+/pay # 获取充值地址
+/check_bill # 查询充值
+/avatar # 获取我的头像
+/image # 生成图片
+/pdf # 针对PDF询问
+/revise # 修改文案
+/translate # 翻译文案
+/emoji # 文字换成表情
+/wolfram # 计算数学公式
+/wikipedia # 维基百科查询
+/twitter # 撰写推文
+/summarize # 文案总结
+/bing # 搜索并写新闻
+/make_voice # 生成语音
+/password # 生成密码
+/feedback # 反馈建议
+/commands # 命令列表
+/sch # 保存聊天记录
+/clear_memory # 清除记录
+/mid # Midjourney提示词
+/more_information
+'''
 
-bot_owner_commands = "/blacklist\n/remove_from_blacklist\n/set_free_talk_limit\n/set_refill_teaser\n/check_refill_teaser\n/group_send_file\n/group_send_image\n/group_send_message\n/group_send_commands_list\n/set_monthly_fee"
+bot_owner_commands = '''
+# 以下列表仅限 Bot Onwer 使用
+
+/blacklist # 黑名单管理
+/remove_from_blacklist
+/set_free_talk_limit
+/set_monthly_fee
+/set_refill_teaser
+/check_refill_teaser
+/group_send_file
+/group_send_image
+/group_send_audio
+/group_send_message
+/group_send_commands_list
+# 点击这个会把用户命令列表群发给所有人
+'''

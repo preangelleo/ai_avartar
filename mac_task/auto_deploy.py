@@ -1,5 +1,6 @@
 ## 这是需要在我的 Mac 本地运行的Python脚本，用于自动化部署<AI 分身>Bot和网站
-from main import *
+# from main import *
+import os, sys, json, shutil, random, string, subprocess
 
 vairables_file_name = 'user_input_variables.txt'
 working_folder = '/Users/lgg/Downloads'
@@ -12,6 +13,8 @@ mac_aliases = '/Users/lgg/.bash_aliases'
 
 on_going_file_name = 'on_going_process.json'
 bot_owner_chat_id_json = '/Users/lgg/coding/preangelleo/ai_avartar/tg/files/bot_owner_chat_id.json'
+ubuntu_bash_aliases = '/root/.bash_aliases'
+source_aliases_for_ubuntu = f"{coding_folder}/tg/.bash_aliases"
 
 if __name__ == '__main__':
     # 判断用户提供的变量文件是否存在
@@ -140,8 +143,8 @@ if __name__ == '__main__':
     print(f"SETP 7: 复制 {coding_folder}/tg 为 {user_tg_bot_folder}...")
     shutil.copytree(f'{coding_folder}/tg', user_tg_bot_folder)
 
-    print(f"SETP 8: 打开 {user_tg_bot_folder}/.env.avatar, 为其中的变量赋值...")
-    avatar_tg_bot_env_file = f'{user_tg_bot_folder}/.env.avatar'
+    print(f"SETP 8: 打开 {user_tg_bot_folder}/.env, 为其中的变量赋值...")
+    avatar_tg_bot_env_file = f'{user_tg_bot_folder}/.env'
     with open(avatar_tg_bot_env_file) as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
@@ -185,7 +188,7 @@ if __name__ == '__main__':
 
         with open(avatar_tg_bot_env_file, 'w') as f: f.writelines(lines)
 
-    print(f"SETP 9: 用户个性化变量读取并赋值完成, 文件夹已经成功克隆并修改 .env.avatar 文件, 准备开始同步到 {UBUNTU_SERVER_IP_ADDRESS}...")
+    print(f"SETP 9: 用户个性化变量读取并赋值完成, 文件夹已经成功克隆并修改 .env 文件, 准备开始同步到 {UBUNTU_SERVER_IP_ADDRESS}...")
 
     rsync_tg_bot = f'rsync -avz --exclude=".DS_Store" {user_tg_bot_folder} root@{UBUNTU_SERVER_IP_ADDRESS}:/root/'
 

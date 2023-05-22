@@ -1,18 +1,5 @@
 #!/bin/bash
 
-# 检查 .env.avatar 文件是否存在
-if [ -f .env.avatar ]; then
-    # 复制 .env.avatar 为 .env
-    echo "正在复制 .env.avatar 为 .env..."
-    cp .env.avatar .env
-
-    # 提示复制成功
-    echo "复制完成！已将 .env.avatar 文件复制为 .env。"
-else
-    # 提示 .env.avatar 文件不存在
-    echo "无法找到 .env.avatar 文件。"
-fi
-
 # 读取 .env 文件中的 DOMAIN_NAME
 echo "正在读取 .env 文件..."
 if [[ -f .env ]]; then

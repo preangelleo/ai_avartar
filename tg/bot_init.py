@@ -388,8 +388,8 @@ def initialize_owner_parameters_table():
         session.query(OwnerParameter).delete()
         session.commit()
         print(f"avatar_owner_parameters 表已清空!")
-        # Read .env.avatar to get the owner's parameters
-        with open('.env.avatar', 'r') as f:
+        # Read .env to get the owner's parameters
+        with open('.env', 'r') as f:
             for line in f.readlines():
                 line = line.strip()
                 if not line or line.startswith('#'): continue
@@ -822,7 +822,7 @@ def get_token_abi(address):
 if __name__ == '__main__':
     print(f"TELEGRAM_BOT initialing for {TELEGRAM_USERNAME}...")
 
-    make_a_choise = input(f"首次初始化之前一定要先执行 cp .env.avatar .env 以确保 .env 文件中的数据库连接信息正确! \n这是系统从镜像 IMAGE 文件启动后的首次初始化还是代码更新后的初始化？\n首次初始化要输入 'first_time_initiate'; \n代码更新后的初始化请直接按回车键: ")
+    make_a_choise = input(f"这是系统从镜像 IMAGE 文件启动后的首次初始化还是代码更新后的初始化？\n首次初始化要输入 'first_time_initiate'; \n代码更新后的初始化请直接按回车键: ")
     is_first_time_initiate = True if make_a_choise == 'first_time_initiate' else False
 
     print(f"\nSTEP 1: 创建所有数据库表单 ...")

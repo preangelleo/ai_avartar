@@ -22,7 +22,7 @@ os.remove(f'{working_folder}/{on_going_file_name}')
 
 next_step = f'''\nSUCCESS: 自动化部署全部完成, {USER_AVATAR_NAME} 的文件夹已经成功上传到 {UBUNTU_SERVER_IP_ADDRESS}, 接下来请用 {USER_AVATAR_NAME} 别名快速登录 {UBUNTU_SERVER_IP_ADDRESS}:
 
-1. 如果服务器环境是通过 AWS Snapshots 创建的, 登录后只需要执行 cp .env.avatar .env 命令后即可运行 pyi 初始化 Alias
+1. 如果服务器环境是通过 AWS Snapshots 创建的, 登录后只需要运行 pyi 初始化 Alias
 2. 服务器环境尚未搭建也没有通过 IMAGES 创建, 登录后依次执行别名: cms, ccd, cnd, cng 四个 shell 脚本程序, 然后再 pyi 初始化 Alias
 3. 最后, 通过 pmtg 启动程序, 并通过 pm2 save && pm2 startup 命令将 pm2 作为服务常驻进程.'''
 

@@ -958,7 +958,7 @@ def local_bot_msg_command(tg_msg):
             return
 
     # 英语查单词和 英语老师 Amy
-    if len(msg_text.split()) == 1 and not msg_text.lower().startswith('0x') and len(msg_text) > 4 and len(msg_text) < 46 and is_english(msg_text): 
+    if len(msg_text.split()) == 1 and not msg_text.lower().startswith('0x') and len(msg_text.replace('/', '')) > 4 and len(msg_text) < 46 and is_english(msg_text): 
         msg_lower = msg_text.lower()
         is_amy_command = True if msg_lower.startswith('/') else False
         msg_lower = msg_lower.replace('/', '')

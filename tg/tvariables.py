@@ -635,13 +635,35 @@ def mark_user_is_not_paid(from_id):
         print(f"DEBUG: mark_user_is_not_paid() {from_id} 已经更新到 avatar_user_priority 表中, is_paid = 0")
         return True
 
+'''
+class UserPriority(Base):
+    __tablename__ = 'avatar_user_priority'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_from_id = Column(String(255), unique=True)
+    priority = Column(Integer, default=0)
+    is_blacklist = Column(Integer, default=0)
+    free_until = Column(DateTime, default=datetime.now())
+    is_admin = Column(Integer, default=0)
+    is_owner = Column(Integer, default=0)
+    is_vip = Column(Integer, default=0)
+    is_paid = Column(Integer, default=0)
+    is_active = Column(Integer, default=0)
+    is_deleted = Column(Integer, default=0)
+    update_time = Column(DateTime, default=datetime.now())
+    next_payment_time = Column(DateTime, default=datetime.now())
+    '''
 # 从 UserPriority 表中查询给定 from_id 的用户的优先级, 返回一个字典
 def get_user_priority(from_id):
-    if not from_id: return
+    if not from_id: return None
     user_priority = {}
-    try: user_priority = pd.read_sql_query(f'SELECT * FROM avatar_user_priority WHERE user_from_id = "{from_id}"', engine).iloc[0].to_dict()
-    except Exception as e: print(f"ERROR: get_user_priority() failed: \n{e}")
+    try:
+        query = f'SELECT * FROM avatar_user_priority WHERE user_from_id = "{from_id}"'
+        result = pd.read_sql_query(query, engine)
+        if not result.empty: user_priority = result.iloc[0].to_dict()
+    except Exception as e: print(f"ERROR: get_user_priority() failed: {e}")
     return user_priority
+
 
 # 从 Coinmarketcap 查询给定 token 的 cmc_rank、price、market_cap、volume_24h、 percent_change_24h、market_cap、fully_diluted_market_cap、circulating_supply、total_supply、last_updated 等数据, 返回一个字典
 def get_token_info_from_coinmarketcap_output_chinese(token_symbol):

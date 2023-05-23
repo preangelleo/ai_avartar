@@ -324,3 +324,4 @@ def chat_gpt_regular(prompt, use_model = 'gpt-3.5-turbo', chatgpt_key = OPENAI_A
 
 if __name__ == "__main__":
     if debug: print("DEBUG: my_config.py is running...")
+    send_message(text='测试一下', chat_id=BOTOWNER_CHAT_ID)

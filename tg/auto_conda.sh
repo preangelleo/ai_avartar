@@ -123,6 +123,10 @@ yes | pip install web3
 echo "正在安装 moralis..."
 yes | pip install moralis
 
+# pip install websocket-client
+echo "正在安装 websocket-client..."
+yes | pip install websocket-client
+
 echo "Python 依赖包安装完毕..."
 
 # Function to change the server timezone

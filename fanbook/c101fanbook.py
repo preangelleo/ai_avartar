@@ -122,14 +122,17 @@ from websocket._core import create_connection
 
 def send_fb_msg_simple(chat_id, msg_text):
     """Sends a message using the Fanbook API"""
+    FANBOOK_DICTIONARY_BOT = 'f3ccb514449eb2b72362ac4e672edbc09f5d8b8ba4d6832b98fd233aded9fd9490e1f73e38f8633bfa4547402a34350a'
     url = f"https://a1.fanbook.mobi/api/bot/{FANBOOK_DICTIONARY_BOT}/sendMessage"
     headers = {'Content-type': 'application/json'}
+    print(chat_id)
     payload = {
         'chat_id': int(chat_id),
         'text': msg_text,
         'desc': msg_text
     }
     response = requests.post(url, data=json.dumps(payload), headers=headers)
+    print(response.json())
     return response.json()
 
 def send_fb_msg(chat_id, msg_text, desc='', parse_mode='Fanbook', selective=False, disable_web_page_preview=False, disable_notification=False, reply_to_message_id=None, reply_to_message_id_level_2=None, reply_markup=None, unreactive=None, ephemeral=None, users=None, mentions=None, mention_roles=None):
@@ -178,6 +181,7 @@ def send_fb_msg(chat_id, msg_text, desc='', parse_mode='Fanbook', selective=Fals
 "entities": []}}'''
 
 def on_message(message):
+    print(message)
     s = message.decode('utf8')
     obj = json.loads(s)
     # print(json.dumps(obj, indent=4, ensure_ascii=False))
@@ -195,72 +199,74 @@ def on_message(message):
         author = obj.get('data').get('author').get('nickname')
         if not channel_id or not author: return
 
-        try:
-            bot_is_mentioned = False
-            is_mentioned = True if obj.get('data').get('ctype') == 1 else False
-            if is_mentioned:
-                bot_is_mentioned_df = pd.DataFrame(obj.get('data').get('mentions'))
-                if not bot_is_mentioned_df.empty:
-                    bot_is_mentioned = True if bot_is_mentioned_df['nickname'].str.contains('AI_英语老师_Amy').any() else False
-        except Exception as e: print(f"ERROR: FANBOOK: {e}")
-        
+        # try:
+        #     bot_is_mentioned = False
+        #     is_mentioned = True if obj.get('data').get('ctype') == 1 else False
+        #     if is_mentioned:
+        #         bot_is_mentioned_df = pd.DataFrame(obj.get('data').get('mentions'))
+        #         if not bot_is_mentioned_df.empty:
+        #             bot_is_mentioned = True if bot_is_mentioned_df['nickname'].str.contains('AI_英语老师_Amy').any() else False
+        # except Exception as e: print(f"ERROR: FANBOOK: {e}")
+
         channel_type = obj.get('data').get('channel_type')
         guild_id = obj.get('data').get('guild_id')
 
         data_str = obj.get('data').get('content')
         data_dict = json.loads(data_str)
+        send_fb_msg_simple(chat_id=int(channel_id), msg_text=f"@{author}\n{message}")
+        return
 
-        if data_dict.get('type') == 'text':
-            msg_text = data_dict.get('text')
-
-            # if msg_text.startswith('${@!492100155395661824}'):
-            msg_text = msg_text.replace('${@!492100155395661824}', '')
-
-            if len(msg_text.split()) == 1 and is_english(msg_text): 
-
-                if (msg_text.lower() != 'r' and len(msg_text) == 1) or msg_text.lower() in ['help', 'hi', 'hello', 'sup'] or '/' in msg_text: 
-                    try: send_fb_msg_simple(chat_id = int(channel_id), msg_text = f"@{author}\n{english_bot_welcome_and_help_info}")
-                    except Exception as e: print(f"ERROR: FANBOOK SEND MSG ERROR: {e}")                    
-                    return
-                
-                if msg_text.lower() == 'r':
-                    df_random = pd.read_sql_query(f"SELECT `word` FROM `db_daily_words` WHERE `rank` > 500 ORDER BY RAND() LIMIT 1", db_engine)
-                    msg_text = df_random['word'].values[0]
-
-                word_dict = st_find_ranks_for_word(msg_text.lower())
-                if word_dict:
-                    word = word_dict.get('word', '')
-
-                    if not bot_is_mentioned and word_dict.get('rank', '') and word_dict.get('rank', '') < 500: 
-                        print(f"DEBUG: FANBOOK: dictionary bot was not mentioned and rank is less than 1000, ignore.")
-                        return 
-
-                    word_category = [key.upper() for key, value in word_dict.items() if value != 0 and key in ['toefl', 'gre', 'gmat', 'sat']]
-                    word_category_str = ' / '.join(word_category)
-                    word_trans = {
-                        '单词': word,
-                        '排名': word_dict.get('rank', ''),
-                        '发音': word_dict.get('us-phonetic', ''),
-                        '词库': word_category_str,
-                        '词意': word_dict.get('chinese', ''),
-                    }
-                    results = '\n'.join(f"{k}:\t {v}" for k, v in word_trans.items() if v)
-
-                    # 将查询结果发回到群里
-                    try: send_fb_msg_simple(chat_id = int(channel_id), msg_text = f"@{author}\n{results}")
-                    except Exception as e: print(f"ERROR: FANBOOK SEND MSG ERROR: {e}")
-
-            if bot_is_mentioned or channel_type == 3 or not guild_id:
-                # results = chat_gpt_regular(msg_text)
-                msg_text = msg_text.replace('${@!492100155395661824}', '')
-                try:
-                    if is_english(msg_text): message = chat_gpt_english(msg_text)
-                    else: message = chat_gpt_chinese(msg_text)
-                    send_fb_msg_simple(chat_id = int(channel_id), msg_text = f"@{author}\n{message}")
-                    
-                except Exception as e:
-                    print(f"ERROR: fanbook_english_dictionary() failed with error: \n{e}")
-                    return 
+        # if data_dict.get('type') == 'text':
+        #     msg_text = data_dict.get('text')
+        #
+        #     # if msg_text.startswith('${@!492100155395661824}'):
+        #     msg_text = msg_text.replace('${@!492100155395661824}', '')
+        #
+        #     if len(msg_text.split()) == 1 and is_english(msg_text):
+        #
+        #         if (msg_text.lower() != 'r' and len(msg_text) == 1) or msg_text.lower() in ['help', 'hi', 'hello', 'sup'] or '/' in msg_text:
+        #             try: send_fb_msg_simple(chat_id = int(channel_id), msg_text = f"@{author}\n{english_bot_welcome_and_help_info}")
+        #             except Exception as e: print(f"ERROR: FANBOOK SEND MSG ERROR: {e}")
+        #             return
+        #
+        #         if msg_text.lower() == 'r':
+        #             df_random = pd.read_sql_query(f"SELECT `word` FROM `db_daily_words` WHERE `rank` > 500 ORDER BY RAND() LIMIT 1", db_engine)
+        #             msg_text = df_random['word'].values[0]
+        #
+        #         word_dict = st_find_ranks_for_word(msg_text.lower())
+        #         if word_dict:
+        #             word = word_dict.get('word', '')
+        #
+        #             if not bot_is_mentioned and word_dict.get('rank', '') and word_dict.get('rank', '') < 500:
+        #                 print(f"DEBUG: FANBOOK: dictionary bot was not mentioned and rank is less than 1000, ignore.")
+        #                 return
+        #
+        #             word_category = [key.upper() for key, value in word_dict.items() if value != 0 and key in ['toefl', 'gre', 'gmat', 'sat']]
+        #             word_category_str = ' / '.join(word_category)
+        #             word_trans = {
+        #                 '单词': word,
+        #                 '排名': word_dict.get('rank', ''),
+        #                 '发音': word_dict.get('us-phonetic', ''),
+        #                 '词库': word_category_str,
+        #                 '词意': word_dict.get('chinese', ''),
+        #             }
+        #             results = '\n'.join(f"{k}:\t {v}" for k, v in word_trans.items() if v)
+        #
+        #             # 将查询结果发回到群里
+        #             try: send_fb_msg_simple(chat_id = int(channel_id), msg_text = f"@{author}\n{results}")
+        #             except Exception as e: print(f"ERROR: FANBOOK SEND MSG ERROR: {e}")
+        #
+        #     if bot_is_mentioned or channel_type == 3 or not guild_id:
+        #         # results = chat_gpt_regular(msg_text)
+        #         msg_text = msg_text.replace('${@!492100155395661824}', '')
+        #         try:
+        #             if is_english(msg_text): message = chat_gpt_english(msg_text)
+        #             else: message = chat_gpt_chinese(msg_text)
+        #             send_fb_msg_simple(chat_id=int(channel_id), msg_text = f"@{author}\n{message}")
+        #
+        #         except Exception as e:
+        #             print(f"ERROR: fanbook_english_dictionary() failed with error: \n{e}")
+        #             return
     return 
 
 def send_ping(ws):
@@ -269,12 +275,16 @@ def send_ping(ws):
         ws.send('{"type":"ping"}')
 
 def get_me():
+    import requests
     BASE_URL = 'https://a1.fanbook.mobi/api'
+    FANBOOK_DICTIONARY_BOT = 'f3ccb514449eb2b72362ac4e672edbc09f5d8b8ba4d6832b98fd233aded9fd9490e1f73e38f8633bfa4547402a34350a'
     response = requests.get(f"{BASE_URL}/bot/{FANBOOK_DICTIONARY_BOT}/getMe", timeout=3)
     return response.json()
 
 def get_private_chat():
+    import requests
     BASE_URL = 'https://a1.fanbook.mobi/api'
+    FANBOOK_DICTIONARY_BOT = 'f3ccb514449eb2b72362ac4e672edbc09f5d8b8ba4d6832b98fd233aded9fd9490e1f73e38f8633bfa4547402a34350a'
     response = requests.get(f"{BASE_URL}/bot/{FANBOOK_DICTIONARY_BOT}/getPrivateChat", timeout=3)
     return response.json()
 '''{'action': 'push', 'data': {'content': '{"type":"text","text":"ostentatious","contentType":0}', 'time': 1682613126167, 'user_id': '492095151452565504', 'channel_id': '492370317524983808', 'message_id': '492370345508999168', 'quote_l1': None, 'quote_l2': None, 'guild_id': None, 'channel_type': 3, 'status': 0, 'nonce': '492370317579509761', 'ctype': 0, 'author': {'nickname': '老哥哥', 'username': '12844776', 'avatar': 'https://fb-cdn.fanbook.mobi/fanbook/app/files/service/headImage/24ad91617e8d01e4288a147f95b5e09f', 'avatar_nft': None, 'bot': False}, 'desc': 'ostentatious'}, 'ack': -1, 'seq': None}
@@ -282,6 +292,9 @@ def get_private_chat():
 
 def handleWS(user_token):
     version = '1.6.60'
+    import base64
+    import json
+    FANBOOK_CLIENT_ID=500838395682099200
     device_id = f'bot{FANBOOK_CLIENT_ID}'
     header_map = json.dumps({
         "device_id": device_id,
@@ -292,11 +305,15 @@ def handleWS(user_token):
     })
     super_str = base64.b64encode(header_map.encode('utf8')).decode('utf8')
     addr = f'wss://gateway-bot.fanbook.mobi/websocket?id={user_token}&dId={device_id}&v={version}&x-super-properties={super_str}'
+    from websocket._core import create_connection
+    from websocket import WebSocketConnectionClosedException
+    from websocket._core import create_connection
     ws = create_connection(addr)
 
-    ping_thread = threading.Thread(target=send_ping, args=(ws,))
-    ping_thread.daemon = True
-    ping_thread.start()
+    import threading
+    # ping_thread = threading.Thread(target=send_ping, args=(ws,))
+    # ping_thread.daemon = True
+    # ping_thread.start()
     try:
         while True:
             evt_data = ws.recv()

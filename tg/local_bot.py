@@ -1007,6 +1007,7 @@ def check_local_bot_updates():
 if __name__ == '__main__':
     if debug: print(f"DEBUG: @{TELEGRAM_BOT_NAME} started...")
     i = 0
+
     while True:
         i += 1
         if debug: print(f"DEBUG: loop {i}")

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm[toml]>=7"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools_scm]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = [
+    "E203",
+    "E501",
+    "W503",
+    "F811",
+]
+extend-exclude = ["docs"]
+count = true
+statistics = true
+
+[tool.pydocstyle]
+convention = "google"
+add-ignore = "D10, D212"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-rA -x --doctest-modules --color=yes" # --cov=openelm"  # Uncomment this for coverage by default
+testpaths = ["tests"]
+doctest_optionflags = ["NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
+
+[project]
+name = "ai_avatar"
+description = "AI Avatar"
+authors = [{name = ""}]
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+dynamic = ["version", "dependencies"]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "isort",
+    "flake8",
+    "flake8-pyproject",
+    "pydocstyle",
+    "mypy",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+]

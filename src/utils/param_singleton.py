@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+import os
+
 class Params:
     _instance = None
 
@@ -7,4 +10,6 @@ class Params:
         return cls._instance
 
     def __init__(self):
-        self.OPENAI_TOKEN = None
+        load_dotenv()
+        self.OPENAI_TOKEN = os.getenv('OPENAI_KEY')
+        self.FAN_BOOK_BOT_TOKEN = os.getenv('FAN_BOOK_BOT_TOKEN')

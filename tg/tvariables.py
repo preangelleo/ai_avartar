@@ -32,6 +32,8 @@ if place_holder:
     DEBANK_API = owner_parameters_dict.get('DEBANK_API')
     MONTHLY_FEE = float(owner_parameters_dict.get('MONTHLY_FEE'))
     REFILL_TEASER = owner_parameters_dict.get('REFILL_TEASER')
+    ELEVEN_API_KEY = owner_parameters_dict.get('ELEVEN_API_KEY')
+    ELEVENLABS_STATUS = owner_parameters_dict.get('ELEVENLABS_STATUS') # 0 is false, 1 is true
 
     # 查看当前目录并决定 TELEGRAM_BOT_RUNNING 的值
     TELEGRAM_BOT_RUNNING = BOT_TOKEN
@@ -327,7 +329,7 @@ def chat_gpt_full(prompt, system_prompt='', user_prompt='', assistant_prompt='',
 
 def send_msg(message, chat_id, parse_mode='', base_url=telegram_base_url):
     if not message: return
-    if not chat_id: return print(f"DEBUG: no chat_id, noly print:\n\n{message}")
+    if not chat_id: return print(f"DEBUG: NO chat_id, only print:\n\n{message}")
 
     url = base_url + "sendMessage"
     payload = {
@@ -342,7 +344,7 @@ def send_msg(message, chat_id, parse_mode='', base_url=telegram_base_url):
 
     try: requests.post(url, json=payload, headers=headers)
     except Exception as e: return print(f"ERROR: send_msg() failed for:\n{e}\n\nOriginal message:\n{message}")
-    if debug: print(f"DEBUG: send_msg(): {message}")
+    if debug: print(f"DEBUG: send_msg(): chat_id: {chat_id} : {message}")
     return True
 
 def send_audio(audio_path, chat_id, base_url=telegram_base_url):
@@ -354,7 +356,7 @@ def send_audio(audio_path, chat_id, base_url=telegram_base_url):
     try:
         with open(audio_path, 'rb') as audio_file:
             requests.post(url, data={'chat_id': chat_id}, files={'audio': audio_file})
-    except Exception as e: print(f"ERROR : send_audio() failed : {e}")
+    except Exception as e: print(f"ERROR: send_audio() failed : {e}")
     return
 
 def send_img(chat_id, file_path, description='', base_url=telegram_base_url):
@@ -365,7 +367,7 @@ def send_img(chat_id, file_path, description='', base_url=telegram_base_url):
     URL = base_url + method + "chat_id=" + str(chat_id) + "&caption=" + description
     r = ''
     try: r = requests.post(URL, files=files)
-    except Exception as e: print(f"ERROR : send_img() failed : \n{e}")
+    except Exception as e: print(f"ERROR: send_img() failed : \n{e}")
     return r
 
 def send_file(chat_id, file_path, description='', base_url=telegram_base_url):
@@ -376,7 +378,7 @@ def send_file(chat_id, file_path, description='', base_url=telegram_base_url):
     URL = base_url + method + "chat_id=" + str(chat_id) + "&caption=" + description
     r = ''
     try: r = requests.post(URL, files=files)
-    except Exception as e: print(f"ERROR : send_file() failed : \n{e}")
+    except Exception as e: print(f"ERROR: send_file() failed : \n{e}")
     return r
 
 def tg_get_file_path(file_id):
@@ -549,63 +551,109 @@ def st_find_ranks_for_word(key_word):
     word_dict = df.iloc[0].to_dict()
     return word_dict
 
-def chat_gpt_english(prompt):
+def chat_gpt_english(prompt, gpt_model=OPENAI_MODEL):
     if not prompt: return
+    if debug: logging.info(f"chat_gpt_english() user prompt: {prompt}")
+    response = openai.ChatCompletion.create(
+        model=gpt_model,
+        messages=[
+            {"role": "system", "content": english_system_prompt},
+            {"role": "user", "content": english_user_prompt},
+            {"role": "assistant", "content": english_assistant_prompt},
+            # {"role": "user", "content": 'Vector database technology has continued to improve, offering better performance and more personalized user experiences for customers.'},
+            # {"role": "assistant", "content": '/英译中:\n矢量数据库技术一直在不断改进, 为客户提供更佳的性能和更个性化的用户体验。'},
+            # {"role": "user", "content": '''To address the challenges of digital intelligance in digital economy, artificial intelligence generate content (AIGC) has emerge. AIGC use artificial intalligence to assist or replace manual content generation by generating content based on userinputted keywords or requirements. '''},
+            # {"role": "assistant", "content": english_assistant_prompt_2},
+            # {"role": "user", "content": '''vector database'''},
+            # {"role": "assistant", "content": english_assistant_prompt_3},
+            # {"role": "user", "content": '''LLaMA'''},
+            # {"role": "assistant", "content": english_assistant_prompt_4},
+            {"role": "user", "content": prompt},
+            ]
+        )
+    reply = response['choices'][0]['message']['content']
+    reply = reply.strip('\n').strip()
+    return reply
 
+# 定义一个 chat_gpt_english() 的前置函数, 先检查用户的 prompt 是否在历史数据库中出现过, 如果出现过就直接调用相应的 explanation_gpt, 如果没有记录就调用 chat_gpt_english() 生成新的 explanation 发给用户 from_id 并记录到数据库中
+def chat_gpt_english_explanation(chat_id, prompt, gpt_model=OPENAI_MODEL):
+    if not chat_id or not prompt: return
+    prompt = prompt.lower().strip()
+    with Session() as session:
+        # 如果 fronm_id 不存在于表中, 则插入新的数据；如果已经存在, 则更新数据
+        explanation_exists = session.query(exists().where(GptEnglishExplanation.word == prompt)).scalar()
+        if not explanation_exists:
+            send_msg(f"收到, 我我去找 EnglishGPT 老师咨询一下 {prompt} 的意思, 然后再来告诉你 😗, 1 分钟以内答复你哈...", chat_id, parse_mode='', base_url=telegram_base_url)
+            gpt_explanation=chat_gpt_english(prompt, gpt_model)
+            new_explanation = GptEnglishExplanation(word=prompt, explanation=gpt_explanation, update_time=datetime.now(), gpt_model=gpt_model)
+            session.add(new_explanation)
+            session.commit()
+        else: gpt_explanation = session.query(GptEnglishExplanation.explanation).filter(GptEnglishExplanation.word == prompt).first()[0]
+    if gpt_explanation: send_msg(gpt_explanation, chat_id)
+    return
+
+'''    class GptStory(Base):
+        __tablename__ = 'gpt_story'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        prompt = Column(Text)
+        title = Column(String(255))
+        story = Column(Text)
+        gpt_model = Column(String(30))
+        from_id = Column(String(255))
+        chat_id = Column(String(255))
+        update_time = Column(DateTime)
+        '''
+
+# 定义一个 GptStory 数据库插入函数, 用于记录用户的 prompt, title, story, gpt_mode, from_id, chat_id, update_time
+def insert_gpt_story(prompt, title, story, gpt_model, from_id, chat_id):
+    if not prompt or not story or not gpt_model or not from_id or not chat_id: return
+    with Session() as session:
+        new_story = GptStory(prompt=prompt, story=story, title=title, gpt_model=gpt_model, from_id=from_id, chat_id=chat_id, update_time=datetime.now())
+        session.add(new_story)
+        session.commit()
+    return
+
+# 定义一个 GptStory 数据库查询函数, 用于查询 from_id 用户的最新的一条 story 和 title
+def get_gpt_story(from_id):
+    if not from_id: return
+    with Session() as session:
+        story_exists = session.query(exists().where(GptStory.from_id == from_id)).scalar()
+        if not story_exists: return
+        title = session.query(GptStory.title).filter(GptStory.from_id == from_id).order_by(GptStory.update_time.desc()).first()[0]
+        story = session.query(GptStory.story).filter(GptStory.from_id == from_id).order_by(GptStory.update_time.desc()).first()[0]
+    return title, story
+
+def chat_gpt_write_story(chat_id, from_id, prompt, gpt_model=OPENAI_MODEL):
+    if not prompt: return
     try:
-        if debug: print(f"DEBUG: {OPENAI_MODEL} Amy the English teacher is working length: {len(prompt.split())}...")
+        if debug: logging.info(f"chat_gpt_write_story() user prompt: {prompt}")
         response = openai.ChatCompletion.create(
-            model=OPENAI_MODEL,
+            model=gpt_model,
             messages=[
-                {"role": "system", "content": english_system_prompt},
-                {"role": "user", "content": english_user_prompt},
-                {"role": "assistant", "content": english_assistant_prompt},
-                {"role": "user", "content": 'Vector database technology has continued to improve, offering better performance and more personalized user experiences for customers.'},
-                {"role": "assistant", "content": '/英译中:\n矢量数据库技术一直在不断改进，为客户提供更佳的性能和更个性化的用户体验。'},
-                {"role": "user", "content": '''To address the challenges of digital intelligance in digital economy, artificial intelligence generate content (AIGC) has emerge. AIGC use artificial intalligence to assist or replace manual content generation by generating content based on userinputted keywords or requirements. '''},
-                {"role": "assistant", "content": '''
-英译中:
-为了应对数字经济中的数字智能挑战，人工智能生成内容（AIGC）已经涌现。AIGC利用人工智能来辅助或取代人工内容生成，通过基于用户输入的关键词或需求来生成内容。
-
-英文中的修改建议：
-"digital intelligance" 应改为 "digital intelligence"
-"intalligence" 应改为 "intelligence"
-"userinputted" 应改为 "user-inputted"
-"has emerge." 应改为 "has emerged"
-
-修改后的英文句子：
-To address the challenges of digital intelligence in the digital economy, artificial intelligence generated content (AIGC) has emerged. AIGC uses artificial intelligence to assist or replace manual content generation by generating content based on user-inputted keywords or requirements. '''},
-                {"role": "user", "content": '''vector database'''},
-                {"role": "assistant", "content": '''
-Vector Database（矢量数据库）
-
-释义:
-矢量数据库是一种地理信息系统（GIS）数据库，用于存储、管理和查询地理空间数据中的矢量数据。矢量数据是由点、线和多边形组成的地理要素，用以表示现实世界中的地理位置、形状和属性。
-
-相关信息:
-与矢量数据库相对的是栅格数据库，栅格数据库用于存储栅格数据（像素化的数据），如遥感图像、数字高程模型等。矢量数据库更适用于表示具有清晰边界的地理特征，如道路、建筑物和行政区划，而栅格数据库适用于表示有连续变化的地理数据，如气候和植被等。'''},
-                {"role": "user", "content": '''LLaMA'''},
-                {"role": "assistant", "content": '''
-LLaMA stands for "Large Language Model Assistant." It refers to an AI language model, like ChatGPT, which is designed to assist users with various tasks by generating human-like text based on the input provided. These large language models can be used for answering questions, providing explanations, generating content, and more.
-
-LLaMA 是 "Large Language Model Assistant（大型语言模型助手）" 的缩写。它指的是像 ChatGPT 这样的人工智能语言模型，旨在通过根据提供的输入生成类似人类的文本来协助用户完成各种任务。这些大型语言模型可用于回答问题、提供解释、生成内容等。
-'''},
+                {"role": "system", "content": kids_story_system_prompt},
+                {"role": "user", "content": kids_story_user_prompt},
+                {"role": "assistant", "content": kids_story_assistant_prompt},
                 {"role": "user", "content": prompt},
                 ]
             )
-        reply = response['choices'][0]['message']['content']
-        reply = reply.strip('\n').strip()
-        return reply
+        story = response['choices'][0]['message']['content']
+        story = story.strip('\n').strip()
+        title = story.split('\n')[0]
+        title = str(title).capitalize()
+        insert_gpt_story(prompt, title, story, gpt_model, from_id, chat_id)
+        send_msg(story, chat_id)
+        send_msg(confirm_read_story_guide, chat_id)
+        return 
     
-    except Exception as e: logging.error(f"Amy the English teacher length: {len(prompt.split())} ERROR: \n\n{e}") 
-    
+    except Exception as e: logging.error(f"chat_gpt_write_story():\n\n{e}") 
     return 
 
 # Mark user is_paid
 def mark_user_is_paid(from_id, next_payment_time):
     if not from_id: return
     with Session() as session:
-        # 如果 fronm_id 不存在于表中，则插入新的数据；如果已经存在，则更新数据
+        # 如果 fronm_id 不存在于表中, 则插入新的数据；如果已经存在, 则更新数据
         user_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
         if not user_exists:
             new_user = UserPriority(user_from_id=from_id, is_paid=1, next_payment_time=next_payment_time)
@@ -622,7 +670,7 @@ def mark_user_is_paid(from_id, next_payment_time):
 def mark_user_is_not_paid(from_id):
     if not from_id: return
     with Session() as session:
-        # 如果 from_id 不存在于表中，则插入新的数据；如果已经存在，则更新数据
+        # 如果 from_id 不存在于表中, 则插入新的数据；如果已经存在, 则更新数据
         user_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
         if not user_exists:
             new_user = UserPriority(user_from_id=from_id, is_paid=0)
@@ -684,7 +732,7 @@ def get_token_info_from_coinmarketcap_output_chinese(token_symbol):
     output_dict_str = '\n'.join([f"{k}: {v}" for k, v in output_dict.items()])
     return output_dict_str
 
-# 判断输入的 hash_tx 是否已经存在 avatar_crypto_payments 表中，如果不存在，则插入到表中
+# 判断输入的 hash_tx 是否已经存在 avatar_crypto_payments 表中, 如果不存在, 则插入到表中
 def insert_into_avatar_crypto_payments(from_id, coin, to_address, value, timestamp, hash_tx, user_title):
     if debug: print(f"DEBUG: insert_into_avatar_crypto_payments()")
     hash_tx = hash_tx.lower()
@@ -693,7 +741,7 @@ def insert_into_avatar_crypto_payments(from_id, coin, to_address, value, timesta
     # 如果 value 小于 1 则返回
     value = float(value)
     if value == 0:
-        # 先将 hash_tx 数据插入表中，以后再来更新 value 数据
+        # 先将 hash_tx 数据插入表中, 以后再来更新 value 数据
         with Session() as session:
             # Query the table 'avatar_crypto_payments' to check if the hash_tx exists
             hash_tx_exists = session.query(exists().where(CryptoPayments.Hash_id == hash_tx)).scalar()
@@ -706,7 +754,7 @@ def insert_into_avatar_crypto_payments(from_id, coin, to_address, value, timesta
             session.add(new_crypto_payment)
             session.commit()
             print(f"DEBUG: hash_tx {hash_tx} 已经插入到 avatar_crypto_payments 表中, value 为 0, 需要下次更新!")
-            send_msg(f"亲爱的, 你的交易 Transaction Hash {markdown_transaction_hash(hash_tx)} 已经系统被记录下来了, 但是链上还没有确认成功, 请过几分钟等下你再点击 /check_payment 试试看, 谢谢亲! 如果系统查到链上已确认, 你就不会收到这条消息了。\n\n如果你看到链上确认成功了, 但是等了太久我都没有给你确认，或者你总是收到这条消息，请联系 {TELEGRAM_USERNAME} 手动帮你查看是否到账, 麻烦亲爱的了。😗", from_id, parse_mode='Markdown')
+            send_msg(f"亲爱的, 你的交易 Transaction Hash {markdown_transaction_hash(hash_tx)} 已经系统被记录下来了, 但是链上还没有确认成功, 请过几分钟等下你再点击 /check_payment 试试看, 谢谢亲! 如果系统查到链上已确认, 你就不会收到这条消息了。\n\n如果你看到链上确认成功了, 但是等了太久我都没有给你确认, 或者你总是收到这条消息, 请联系 {TELEGRAM_USERNAME} 手动帮你查看是否到账, 麻烦亲爱的了。😗", from_id, parse_mode='Markdown')
         return 
     
     else:
@@ -1193,29 +1241,6 @@ def microsoft_azure_tts(text, voice='zh-CN-YunxiNeural', output_filename='output
     if speech_synthesis_result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted: return output_filename
     return False
 
-def eleven_labs_tts(content, tts_file_name, voice_id='YEhWVRrlzrtA9MzdS8vE'):
-    if TELEGRAM_BOT_NAME not in ['leowang_bot']: return 
-
-    if debug: print(f"DEBUG: eleven_labs_tts() voice_id: {voice_id}")
-    API_URL = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-
-    headers = {"xi-api-key": ELEVEN_API_KEY}
-    data = {
-        "text": content,
-        "voice_settings": {
-            "stability": 0.95,
-            "similarity_boost": 0.95
-        }
-    }
-    response = requests.post(API_URL, headers=headers, json=data)
-    if response.status_code == 200:
-        try:
-            with open(tts_file_name, "wb") as f:
-                f.write(response.content)
-            return tts_file_name
-        except Exception as e: print(f"ERROR : wring response.content to tts_file_name FAILED.\response.reason:{response.reason}\ntts_file_name:{tts_file_name}\nerror: {e}")
-    return False
-
 def create_news_podcast(filepath = '', prompt = '', openai_model=OPENAI_MODEL):
     if not filepath and not prompt: return 
 
@@ -1224,7 +1249,7 @@ def create_news_podcast(filepath = '', prompt = '', openai_model=OPENAI_MODEL):
 
     if not prompt: return
 
-    message = chat_gpt_full(prompt, new_reporter_system_prompt, new_reporter_user_prompt, new_reporter_assistant_prompt, openai_model, OPENAI_API_KEY)
+    message = chat_gpt_full(prompt, news_reporter_system_prompt, news_reporter_user_prompt, news_reporter_assistant_prompt, openai_model, OPENAI_API_KEY)
 
     filepath_news = filepath.replace('_snippet.txt', '_news.txt')
     with open(filepath_news, 'w') as f: f.write(message)
@@ -1286,7 +1311,7 @@ def create_news_and_audio_from_bing_search(query, chat_id, parse_mode='', base_u
 
     return
 
-# 定义一个TTS 函数，判断输入的内容是中文还是英文，然后调用不同的 TTS API 创建并返回filepath, 如果提供了 chat_id, 则将 filepath send_audio 给用户
+# 定义一个TTS 函数, 判断输入的内容是中文还是英文, 然后调用不同的 TTS API 创建并返回filepath, 如果提供了 chat_id, 则将 filepath send_audio 给用户
 def create_audio_from_text(text, chat_id=''):
     if not text: return 
     filepath = f"files/audio/{chat_id}_{text[:10]}.mp3" if chat_id else f"files/audio/no_chat_id_{text[:10]}.mp3"
@@ -1297,19 +1322,401 @@ def create_audio_from_text(text, chat_id=''):
         send_audio(new_filepath, chat_id)
         return new_filepath
 
+def convert_m4a_to_wav(m4a_file):
+    if debug: print(f"DEBUG: convert_m4a_to_wav() {m4a_file}")
+    # Set output file name based on M4A file name
+    output_file = m4a_file[:-4] + '.wav'
+
+    # Convert the M4A file to WAV using FFmpeg
+    os.system(f'ffmpeg -y -i {m4a_file} -acodec pcm_s16le -ar 44100 {output_file}')
+
+    # Print success message
+    if debug: print(f'DEBUG: convert_m4a_to_wav() output : {output_file}')
+    return output_file
+
+
+def get_elevenlabs_userinfo(elevenlabs_api_key):
+    url = "https://api.elevenlabs.io/v1/user"
+    headers = {
+        "accept": "application/json",
+        "xi-api-key": elevenlabs_api_key
+    }
+    response = requests.get(url, headers=headers)
+    return response.json().get('subscription', {})
+'''
+{
+  "subscription": {
+    "tier": "creator",
+    "character_count": 18107,
+    "character_limit": 100000,
+    "can_extend_character_limit": true,
+    "allowed_to_extend_character_limit": true,
+    "next_character_count_reset_unix": 1680361833,
+    "voice_limit": 30,
+    "professional_voice_limit": 1,
+    "can_extend_voice_limit": false,
+    "can_use_instant_voice_cloning": true,
+    "can_use_professional_voice_cloning": true,
+    "currency": "usd",
+    "status": "active"
+  },
+  "is_new_user": true,
+  "xi_api_key": "7506563f79bd85dbf7dade0cc8412b42",
+  "can_use_delayed_payment_methods": false
+}
+'''
+# r = get_elevenlabs_userinfo()
+# print(json.dumps(r, indent=2))
+
+'''
+    class ElevenLabsUser(Base):
+        __tablename__ = 'elevenlabs_user'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        from_id = Column(String(255))
+        elevenlabs_api_key = Column(String(255))
+        voice_id = Column(Text)
+        last_time_voice_id = Column(String(255))
+        original_voice_filepath = Column(String(255))
+        test_count = Column(Integer, default=0)
+
+        '''
+# 当用户每次提交 elevenlabs_api_key 的时候, 需要检查用户输入的 elevenlabs_api_key 是否有效, 并将 get_elevenlabs_userinfo 返回的结果中的 subscription 写入数据库, 再通过 get_elevenlabs_voices 获得目前的 voice_id dict
+def check_and_save_elevenlabs_api_key(elevenlabs_api_key, from_id):
+    subscription = get_elevenlabs_userinfo(elevenlabs_api_key)
+    if subscription:
+        if subscription.get('status') == 'active' and subscription.get('can_use_instant_voice_cloning') == True:
+            if debug: print(f"DEBUG: check_elevenlabs_api_key() subscription: {subscription}")
+            # 将 from_id, elevenlabs_api_key 插入ElevenLabsUser
+            with Session() as session:
+                # 如果表单不存在则创建表单
+                Base.metadata.create_all(engine, checkfirst=True)
+                # 检查 from_id 是否在 ElevenLabsUser 表中, 如果不在, 则创建新的记录, 如果在, 则更新 elevenlabs_api_key
+                elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
+                if not elevenlabs_user:
+                    elevenlabs_user = ElevenLabsUser(from_id=from_id, elevenlabs_api_key=elevenlabs_api_key)
+                    session.add(elevenlabs_user)
+                else: 
+                    # 更新 ElevenLabsUser 表中 from_id 用户的 elevenlabs_api_key
+                    session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'elevenlabs_api_key': elevenlabs_api_key})
+                session.commit()
+            send_msg(elevenlabs_apikey_saved, from_id)
+            return subscription
+        else: 
+            subscription_string = '\n'.join([f"{k}: {v}" for k, v in subscription.items()])
+            failed_notice = f"{elevenlabs_not_activate}\n\n你的订阅信息如下, 请仔细查看是哪一项有问题:\n\n{subscription_string}"
+            return send_msg(failed_notice, from_id)
+    else: return send_msg(elevenlabs_not_activate, from_id)
+
+# 根据 from_id 读取用户的 elevenlabs_api_key 和 original_voice_filepath 和 voice_id
+def get_elevenlabs_api_key(from_id):
+    with Session() as session:
+        # 读出 ElevenLabsUser 表中 from_id 用户的 elevenlabs_api_key 和 original_voice_filepath 和 voice_id 和 user_title
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
+        if elevenlabs_user: return elevenlabs_user.elevenlabs_api_key, elevenlabs_user.original_voice_filepath, elevenlabs_user.voice_id, elevenlabs_user.user_title
+        else: return None, None, None, None
+
+# 将 ElevenLabsUser 表中 from_id 的 ready_to_clone 字段更新为 1, user_title 更新为 user_title
+def update_elevenlabs_user_ready_to_clone(from_id, user_title):
+    with Session() as session:
+        # 如果用户存在, 则更新 ready_to_clone 字段为 1, 如果不存在则顺便创建
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
+        if not elevenlabs_user:
+            elevenlabs_user = ElevenLabsUser(from_id=from_id, ready_to_clone=1, user_title=user_title)
+            session.add(elevenlabs_user)
+        else:
+            session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'ready_to_clone': 1, 'user_title': user_title})
+        session.commit()
+    return True
+
+# 将输入的 original_voice_filepath 和 from_id 和 user_title 更新到 ElevenLabsUser 表中
+def update_elevenlabs_user_original_voice_filepath(original_voice_filepath, from_id, user_title):
+    with Session() as session:
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'original_voice_filepath': original_voice_filepath, 'user_title': user_title})
+        session.commit()
+    return True
+
+# 并将 ready_to_clone 字段更新为 0
+def update_elevenlabs_user_ready_to_clone_to_0(from_id, user_title, cmd = 'close_clone_voice'):
+    
+    with Session() as session:
+        # 读取表中的 original_voice_filepath, 如果为空, 则说明用户没有上传过语音文件, 返回 False
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
+        if not elevenlabs_user: 
+            # 将 from_id, user_title 插入ElevenLabsUser
+            elevenlabs_user = ElevenLabsUser(from_id=from_id, ready_to_clone=0, user_title=user_title)
+            session.add(elevenlabs_user)
+            session.commit()
+
+        if not elevenlabs_user.original_voice_filepath and cmd == 'confirm_my_voice': 
+            send_msg("你还没有上传过语音素材文件哦, 克隆还没成功呢, 请先上传语音文件再点击:\n/confirm_my_voice\n\n如果不想克隆你的声音了, 请点击:\n/close_clone_voice", from_id)
+            return 
+
+        # 更新 ready_to_clone 字段为 0
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'ready_to_clone': 0})
+        session.commit()
+    if cmd == 'close_clone_voice': send_msg(f"@{user_title} 你已经成功关闭了克隆声音功能, 以后你发来的语音我就当跟我聊天了, 不会用来当做训练克隆声音的素材, 放心哈。", from_id)
+    if cmd == 'confirm_my_voice': send_msg(f"@{user_title}, 你的声音训练素材已经保存好了, 以后你发来的语音我就当跟我聊天了, 不会用来当做训练克隆声音的素材, 放心哈。", from_id)
+    return True
+
+# 检查 ElevenLabsUser 表中 from_id 的 ready_to_clone 字段是否为 1
+def elevenlabs_user_ready_to_clone(from_id):
+    with Session() as session:
+        # 读出 ElevenLabsUser 表中 from_id 用户的 ready_to_clone = 1 的记录, 如果无记录, 说明用户不存在或者 ready_to_clone 字段不为 1, 返回 False, 否则返回 True
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id, ElevenLabsUser.ready_to_clone == 1).first()
+        if not elevenlabs_user: return False
+        else: return True
+
+# 将 voice_id 添加到 ElevenLabsUser 表中
+def update_elevenlabs_user_voice_id(voice_id, from_id):
+    with Session() as session:
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'voice_id': voice_id})
+        session.commit()
+    return voice_id
+
+
+# 为 elevenlabs 添加新的 voice
+def elevenlabs_add_voice(name, from_id, original_voice_filepath, elevenlabs_api_key):
+    url = "https://api.elevenlabs.io/v1/voices/add"
+    headers = {
+    "Accept": "application/json",
+    "xi-api-key": elevenlabs_api_key
+    }
+    data = {
+        'name': name,
+        'labels': '{"accent": "American"}',
+        'description': from_id
+    }
+    files = [
+        ('files', (f'{original_voice_filepath}', open(f'{original_voice_filepath}', 'rb'), 'audio/mpeg'))
+    ]
+
+    response = requests.post(url, headers=headers, data=data, files=files)
+    print(response.text)
+    voice_id = response.json().get('voice_id', None)
+    if voice_id: return update_elevenlabs_user_voice_id(voice_id, from_id)
+
+
+# r = elevenlabs_add_voice()
+# print(json.dumps(r, indent=2))
+
+def elevenlabs_update_voice(voice_id, voice_name, audio_file_path, user_eleven_labs_api_key):
+    curl_command = (f"curl -X 'POST' "
+                    f"'https://api.elevenlabs.io/v1/voices/{voice_id}/edit' "
+                    f"-H 'accept: application/json' "
+                    f"-H 'xi-api-key: {user_eleven_labs_api_key}' "
+                    f"-H 'Content-Type: multipart/form-data' "
+                    f"-F 'name={voice_name}' "
+                    f"-F 'files=@{audio_file_path};type=audio/wav' "
+                    f"-F 'labels='")
+
+    # Execute the curl command
+    process = subprocess.Popen(curl_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+
+    # Check if the command was successful
+    if process.returncode != 0: raise Exception(f"Curl command failed: {stderr.decode('utf-8')}")
+
+    # Parse the JSON response
+    response = json.loads(stdout.decode('utf-8'))
+    return response
+# r = elevenlabs_update_voice(voice_id, voice_name, audio_file_path)
+# print(json.dumps(r, indent=2))
+
+def get_elevenlabs_voices(user_eleven_labs_api_key):
+    url = 'https://api.elevenlabs.io/v1/voices'
+    headers = {
+        'accept': 'application/json',
+        'xi-api-key': user_eleven_labs_api_key
+    }
+    response = requests.get(url, headers=headers).json()
+    # if debug: print(f"DEBUG: {response}")
+    voices_dict = {}
+    for voice in response['voices']:
+        if voice['category'] == 'cloned':
+            voices_dict[voice['name']] = voice['voice_id']
+    # if debug: print(f"DEBUG: {voices_dict}")
+    return voices_dict
+'''
+{
+  "nanyang": "9ljiVpdb6qpxKPTng736",
+  "chaochao": "CCgIdKx0m0QHHQUgFAVR",
+  "anthony": "F6sIjTfa5MRpZTJiUrWH",
+  "frankhu": "OE7bDvPK9rylQqr62NeZ",
+  "vivianliu": "OX0yg3cTsrvlqUdlAbH5",
+  "my_english_voice": "YEhWVRrlzrtA9MzdS8vE",
+  "leowang_slow": "eXhbluainLzpz4zVbWr0",
+  "yuchen": "h3TnXnm8yL5bQdjZsiWE"
+}
+'''
+# r = get_elevenlabs_voices()
+# print(json.dumps(r, indent=2))
+
+'''
+{
+  "subscription": {
+    "tier": "creator",
+    "character_count": 18107,
+    "character_limit": 100000,
+    "can_extend_character_limit": true,
+    "allowed_to_extend_character_limit": true,
+    "next_character_count_reset_unix": 1680361833,
+    "voice_limit": 30,
+    "professional_voice_limit": 1,
+    "can_extend_voice_limit": false,
+    "can_use_instant_voice_cloning": true,
+    "can_use_professional_voice_cloning": true,
+    "currency": "usd",
+    "status": "active"
+  },
+  "is_new_user": true,
+  "xi_api_key": "7506563f79bd85dbf7dade0cc8412b42",
+  "can_use_delayed_payment_methods": false
+}
+'''
+
+def eleven_labs_tts(content, from_id, tts_file_name, voice_id, user_eleven_labs_api_key):
+    if debug: print(f"DEBUG: eleven_labs_tts() voice_id: {voice_id}")
+
+    subscription_started = get_elevenlabs_userinfo(user_eleven_labs_api_key)
+    '''
+    {
+    "tier": "creator",
+    "character_count": 21501,
+    "character_limit": 100000,
+    "can_extend_character_limit": true,
+    "allowed_to_extend_character_limit": true,
+    "next_character_count_reset_unix": 1680361833,
+    "voice_limit": 30,
+    "professional_voice_limit": 1,
+    "can_extend_voice_limit": false,
+    "can_use_instant_voice_cloning": true,
+    "can_use_professional_voice_cloning": true,
+    "currency": "usd",
+    "status": "active"
+    }
+    '''
+
+    words_remained = subscription_started['character_limit'] - subscription_started['character_count']
+    len_content = len(content)
+    can_extend_character_limit = subscription_started['can_extend_character_limit']
+    if len_content > words_remained and not can_extend_character_limit: 
+        out_range = f'''
+你的 Eleven Labs 每月可以合成语音的总单词量是 {format_number(subscription_started['character_limit'])}, 你本月已经使用的单词总数是 {format_number(subscription_started['character_count'])}, 你本次提交的单词总数是 {format_number(len_content)}, 超过了你的剩余可用额度 {format_number(words_remained)}, 与此同时你目前没有开通'即用即付(allowed_to_extend_character_limit)' 的功能, 建议如下:
+
+1) 减少本次生成的内容单词数到 {format_number(words_remained)} 以下;
+
+2) 激活即用即付的功能 (超出每月限量之后, 每 1000 个单词 0.3美金, 仅限 22 美金/月 级更高级别用户才可以激活此功能)
+
+具体的激活方法如下:
+登录 https://beta.elevenlabs.io/subscription 找到 Enable usage based billing (surpass 100000 characters), 把它右边的按钮打开即可。
+'''
+        send_msg(out_range, from_id, parse_mode='', base_url=telegram_base_url)
+        return 
+    
+    API_URL = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+
+    headers = {"xi-api-key": user_eleven_labs_api_key}
+    data = {
+        "text": content,
+        "voice_settings": {
+            "stability": 0.95,
+            "similarity_boost": 0.95
+        }
+    }
+    response = requests.post(API_URL, headers=headers, json=data)
+    if response.status_code == 200:
+        with open(tts_file_name, "wb") as f: f.write(response.content)
+
+        if os.path.isfile(tts_file_name): send_audio(tts_file_name, from_id, base_url=telegram_base_url)
+
+        subscription_finished = get_elevenlabs_userinfo(user_eleven_labs_api_key)
+        '''
+        {
+        "tier": "creator",
+        "character_count": 22083,
+        "character_limit": 100000,
+        "can_extend_character_limit": true,
+        "allowed_to_extend_character_limit": true,
+        "next_character_count_reset_unix": 1680361833,
+        "voice_limit": 30,
+        "professional_voice_limit": 1,
+        "can_extend_voice_limit": false,
+        "can_use_instant_voice_cloning": true,
+        "can_use_professional_voice_cloning": true,
+        "currency": "usd",
+        "status": "active"
+        }
+        '''
+
+        words_used = subscription_finished['character_count'] - subscription_started['character_count']
+
+        usd_cost = ((words_used - words_remained) / 1000) * 0.3 if words_used > words_remained and can_extend_character_limit else 0
+        usd_cost = round(usd_cost, 2)
+        send_msg(f"本次调用 Eleven Labs API 合成语音一共用量 {format_number(words_used)} 个单词, 实际消费 {usd_cost} usd, 本月剩余可用单词数 {format_number(subscription_finished['character_limit'] - subscription_finished['character_count'])}", from_id, parse_mode='', base_url=telegram_base_url)
+        ''' response dir
+        ['__attrs__', '__bool__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__enter__', '__eq__', '__exit__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__iter__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__nonzero__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_content', '_content_consumed', '_next', 'apparent_encoding', 'close', 'connection', 'content', 'cookies', 'elapsed', 'encoding', 'headers', 'history', 'is_permanent_redirect', 'is_redirect', 'iter_content', 'iter_lines', 'json', 'links', 'next', 'ok', 'raise_for_status', 'raw', 'reason', 'request', 'status_code', 'text', 'url']
+        '''
+        # 将 response 的 text , reason, json 内容打印出来, 尝试过很多次, 打不出来, 可能没有文字内容, 只有音频内容, 反正音频内容是正常的。
+        # print(response.text)
+        # print(response.reason)
+        # print(response.json())
+
+        return True
+
+def generate_clone_voice_audio_with_eleven_labs(content, from_id, user_title, folder='files/audio/clone_voice'):
+    
+    elevenlabs_api_key, original_voice_filepath, voice_id, user_title_read = get_elevenlabs_api_key(from_id)
+    if not elevenlabs_api_key: 
+        send_msg(eleven_labs_no_apikey_alert, from_id, parse_mode='', base_url=telegram_base_url)
+        return False
+    if not original_voice_filepath: 
+        send_msg(eleven_labs_no_original_voice_alert, from_id, parse_mode='', base_url=telegram_base_url)
+        return False
+    if not user_title_read or user_title_read != user_title: update_elevenlabs_user_original_voice_filepath(original_voice_filepath, from_id, user_title)
+    if not voice_id: 
+        voice_id = elevenlabs_add_voice(name=user_title, from_id=from_id, original_voice_filepath=original_voice_filepath, elevenlabs_api_key=elevenlabs_api_key)
+        if not voice_id: 
+            subscription = get_elevenlabs_userinfo(elevenlabs_api_key)
+            if subscription:
+                subscription_string = '\n'.join([f"{k}: {v}" for k, v in subscription.items()])
+                failed_notice = f"Eleven Labs 订阅信息如下, 请仔细查看是哪一项有问题:\n\n{subscription_string}"
+                eleven_labs_add_voice_failed_alert = f"{user_title}, 用你的克隆声音创建音频失败了, 😭😭😭...\n\n{failed_notice}"
+                send_msg(eleven_labs_add_voice_failed_alert, from_id, parse_mode='', base_url=telegram_base_url)
+                # 发送错误信息以及相关参数给 BOTCREATER_CHAT_ID
+                send_msg(f"ERROR: elevenlabs_add_voice() failed: \n\n@{user_title}\n/{from_id}\n{failed_notice}", BOTCREATER_CHAT_ID)
+                return False
+
+    user_folder = f"{folder}/{from_id}"
+    hashed_content = hashlib.md5(content.lower().encode('utf-8')).hexdigest()
+    new_file_name = f"{from_id}_{user_title}_{hashed_content[-7:]}.mp3"
+    tts_file_name = f"{user_folder}/{new_file_name}.mp3"
+    if os.path.isfile(tts_file_name): 
+        send_audio(tts_file_name, from_id, base_url=telegram_base_url)
+        return True
+
+    send_msg(f"正在用你的声音克隆语音哈, 请稍等 1 分钟, 做好了马上发给你哦 😘", from_id, parse_mode='', base_url=telegram_base_url)
+    r = eleven_labs_tts(content, from_id, tts_file_name, voice_id, elevenlabs_api_key)
+    if r: return True
+    else:
+        send_msg(f"{eleven_labs_tts_failed_alert}\n如果你的账号正常, 请转发本消息给 @laogege6 帮忙诊断一下把。", from_id, parse_mode='', base_url=telegram_base_url)
+        return False
+
+
 if __name__ == '__main__':
     print(f"tvariables.py is running...")
-    if BOTOWNER_CHAT_ID == BOTCREATER_CHAT_ID:
-        try: 
-            user_title = 'Laogege'
-            coin = 'USDT'
-            to_address = '0x3E711058491fB0723c6De9fD7E0c1b6635DE4A57'
-            hash_tx = '0x109b661b1025c8a2a34c4633e283970608745c0f64d6dc0f0976fb92b18c234e'
-            time_stamp = '2023-03-11T22:25:59.000Z'
-            value = 20000
-            r = insert_into_avatar_crypto_payments(BOTOWNER_CHAT_ID, coin, to_address, value, time_stamp, hash_tx, user_title)
-            if r: 
-                send_msg(f"叮咚, {user_title} {BOTOWNER_CHAT_ID} 刚刚充值 {format_number(value)} {coin.lower()}\n\n充值地址: \n{markdown_wallet_address(to_address)}\n\n交易哈希:\n{markdown_transaction_hash(hash_tx)}", BOTOWNER_CHAT_ID, parse_mode='Markdown')
-                next_payment_time_dict = update_user_next_payment_date(BOTOWNER_CHAT_ID, user_title)
-                send_msg(f"亲爱的, 你交来的公粮够我一阵子啦 😍😍😍, 下次交公粮的时间是: \n\n{next_payment_time_dict['next_payment_time']} \n\n你可别忘了哦, 反正到时候我会提醒你哒, 么么哒 😘", BOTOWNER_CHAT_ID)
-        except Exception as e: print(f"ERROR: insert_into_avatar_crypto_payments() failed: \n{e}")
+
+    # if BOTOWNER_CHAT_ID == BOTCREATER_CHAT_ID:
+        # try: 
+        #     user_title = 'Laogege'
+        #     coin = 'USDT'
+        #     to_address = '0x3E711058491fB0723c6De9fD7E0c1b6635DE4A57'
+        #     hash_tx = '0x109b661b1025c8a2a34c4633e283970608745c0f64d6dc0f0976fb92b18c234e'
+        #     time_stamp = '2023-03-11T22:25:59.000Z'
+        #     value = 20000
+        #     r = insert_into_avatar_crypto_payments(BOTOWNER_CHAT_ID, coin, to_address, value, time_stamp, hash_tx, user_title)
+        #     if r: 
+        #         send_msg(f"叮咚, {user_title} {BOTOWNER_CHAT_ID} 刚刚充值 {format_number(value)} {coin.lower()}\n\n充值地址: \n{markdown_wallet_address(to_address)}\n\n交易哈希:\n{markdown_transaction_hash(hash_tx)}", BOTOWNER_CHAT_ID, parse_mode='Markdown')
+        #         next_payment_time_dict = update_user_next_payment_date(BOTOWNER_CHAT_ID, user_title)
+        #         send_msg(f"亲爱的, 你交来的公粮够我一阵子啦 😍😍😍, 下次交公粮的时间是: \n\n{next_payment_time_dict['next_payment_time']} \n\n你可别忘了哦, 反正到时候我会提醒你哒, 么么哒 😘", BOTOWNER_CHAT_ID)
+        # except Exception as e: print(f"ERROR: insert_into_avatar_crypto_payments() failed: \n{e}")

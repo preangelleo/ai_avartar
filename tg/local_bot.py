@@ -55,25 +55,32 @@ def clear_chat_history(chat_id, message_id):
     return
 
 '''
-
-    class ChatHistory(Base):
-        __tablename__ = 'avatar_chat_history'
+    class UserPriority(Base):
+        __tablename__ = 'avatar_user_priority'
 
         id = Column(Integer, primary_key=True, autoincrement=True)
-        first_name = Column(String(255))
-        last_name = Column(String(255))
-        username = Column(String(255))
-        from_id = Column(String(255))
-        chat_id = Column(String(255))
-        update_time = Column(DateTime)
-        msg_text = Column(Text)
-        black_list = Column(Integer, default=0)
+        user_from_id = Column(String(255), unique=True)
+        priority = Column(Integer, default=0)
+        is_blacklist = Column(Integer, default=0)
+        free_until = Column(DateTime, default=datetime.now())
+        is_admin = Column(Integer, default=0)
+        is_owner = Column(Integer, default=0)
+        is_vip = Column(Integer, default=0)
+        is_paid = Column(Integer, default=0)
+        is_active = Column(Integer, default=0)
+        is_deleted = Column(Integer, default=0)
+        update_time = Column(DateTime, default=datetime.now())
+        next_payment_time = Column(DateTime, default=datetime.now())
         '''
-# 从 ChatHistory 到处 Unique from_id 到一个 python list
+
+# 从 UserPriority 到处 Unique from_id 到一个 python list
 def get_unique_from_id_list():
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `from_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"get_unique_from_id_list() read_sql_query() failed: \n\n{e}")
-    return df['from_id'].tolist()
+    try:
+        with Session() as session:
+            df = pd.read_sql(session.query(UserPriority).filter(UserPriority.is_deleted == 0).statement, session.bind)
+            if not df.empty: return df['user_from_id'].tolist()
+    except Exception as e: logging.error(f"get_unique_from_id_list() read_sql_query() failed: \n\n{e}")
+    return []
 
 def get_user_chat_history(from_id):
     SAVE_FOLDER = 'files/chat_history'
@@ -325,7 +332,7 @@ def send_audio_to_all(audio_file, bot_owner_chat_id=BOTOWNER_CHAT_ID):
             try: send_audio(audio_file, from_id)
             except Exception as e: logging.error(f"send_audio_to_all() send_audio() failed: \n\n{e}")
         # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把 {audio_file} 发送给所有 {df.shape[0]} 个用户了.", bot_owner_chat_id)
+        send_msg(f"{user_nick_name}, 我已经把 {audio_file.split('/')[-1]} 发送给所有 {df.shape[0]-1} 个用户了.", bot_owner_chat_id)
     except Exception as e: logging.error(f"send_audio_to_all() failed: \n\n{e}")
     return
 
@@ -352,6 +359,8 @@ def local_bot_msg_command(tg_msg):
     
     # 如果是群聊就要在回复的前缀 亲爱的后面加上 user_title
     user_nick_name = dear_user if is_private else f"{dear_user} @{user_title} "
+
+    if BOT_USERNAME in ['Leowang_test_bot', 'leowang_bot']: print(json.dumps(tg_msg, indent=2))
 
     # if debug: print(json.dumps(tg_msg, indent=2))
     if 'text' not in tg_msg['message']: 
@@ -487,15 +496,91 @@ def local_bot_msg_command(tg_msg):
             return 
 
         if 'voice' in tg_msg['message']: 
-            voice_caption = tg_msg['message'].get('caption', '')
-            if voice_caption and voice_caption.split()[0].lower() in ['group_send_audio', 'gsa', 'group send audio'] and chat_id in BOT_OWNER_LIST:
-                description = ' '.join(voice_caption.split()[1:])
-                send_msg(f'{user_nick_name}我收到了你发来的语音, 请稍等 1 分钟, 我马上把这个语音发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
-                send_audio_to_all(file_path, bot_owner_chat_id=chat_id)
-                return
+            if is_private and elevenlabs_user_ready_to_clone(from_id):
+                file_id = tg_msg['message']['voice'].get('file_id', '')
+                file_unique_id = tg_msg['message']['voice'].get('file_unique_id', '')
+                if not file_id or not file_unique_id: return
+
+                ''' 音频文件返回结果示例:
+                {"update_id": 843018592,
+                "message": {
+                    "message_id": 150,
+                    "from": {
+                    "id": 2118900665,
+                    "is_bot": false,
+                    "first_name": "Old_Bro_Leo",
+                    "username": "laogege6",
+                    "language_code": "zh-hans",
+                    "is_premium": true
+                    },
+                    "chat": {
+                    "id": 2118900665,
+                    "first_name": "Old_Bro_Leo",
+                    "username": "laogege6",
+                    "type": "private"
+                    },
+                    "date": 1684825362,
+                    "voice": {
+                    "duration": 4,
+                    "mime_type": "audio/ogg",
+                    "file_id": "AwACAgUAAxkBAAOWZGxlEhJjAWMFPocIIpypGREQ8LUAAm8HAAJNs2FXtj9HUXJQ0SMvBA",
+                    "file_unique_id": "AgADbwcAAk2zYVc",
+                    "file_size": 17656
+                    }}}
+                '''
+
+                clone_folder='files/audio/clone_voice'
+                if not os.path.isdir(clone_folder): os.mkdir(clone_folder)
+
+                user_folder = f"{clone_folder}/{from_id}"
+                if not os.path.isdir(user_folder): os.mkdir(user_folder)
+
+                user_original_voice_folder = f"{user_folder}/original_voice"
+                if not os.path.isdir(user_original_voice_folder): os.mkdir(user_original_voice_folder)
+
+                # Create local file name to store voice telegram message
+                local_file_folder_name = f"{user_original_voice_folder}/{file_unique_id}.ogg"
+                # Get the file path of the voice message using the Telegram Bot API
+                file_path_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_RUNNING}/getFile?file_id={file_id}"
+                file_path_response = requests.get(file_path_url).json()
+
+                file_path = file_path_response["result"]["file_path"]
+                # Download the voice message to your Ubuntu folder
+                voice_message_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_RUNNING}/{file_path}"
+
+                with open(local_file_folder_name, "wb") as f:
+                    response = requests.get(voice_message_url)
+                    f.write(response.content)
+
+                original_voice_filepath = local_file_folder_name.replace('.ogg', '.mp3')
+                command = f"ffmpeg -n -i {local_file_folder_name} {original_voice_filepath}"
+                subprocess.run(command, shell=True)
+                if os.path.exists(local_file_folder_name): os.remove(local_file_folder_name)
+
+                if update_elevenlabs_user_original_voice_filepath(original_voice_filepath, from_id, user_title): return send_msg(f"{user_nick_name} 我收到了你发来的英文素材, 已经保存下来了, 如果你觉得没问题就点击或者发送:\n\n/confirm_my_voice \n\n然后我就可以用这段素材帮你克隆你的声音样本咯, 以后你随时可以调用 /speak_my_voice 指令来用你这个声音阅读任何英文内容 😁...、\n\n如果不满意就重新念一段, 我会耐心等着你读完的...", chat_id, parse_mode='', base_url=telegram_base_url)
+            
             send_msg(f'{user_nick_name}我收到了你发来的语音, 稍等我 1 分钟, 我马上戴上耳机听一下你说的什么 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
             tg_msg['message']['text'] = deal_with_voice_to_text(file_id=tg_msg['message']['voice'].get('file_id'), file_unique_id=tg_msg['message']['voice'].get('file_unique_id'))
 
+        if 'audio' in tg_msg['message']: 
+            audio_caption = tg_msg['message'].get('caption', '')
+            if audio_caption and audio_caption.split()[0].lower() in ['group_send_audio', 'gsa'] and chat_id in BOT_OWNER_LIST:
+                file_name = tg_msg['message']['audio'].get('file_name', '')
+                file_id = tg_msg['message']['audio']['file_id']
+                # caption = tg_msg['message'].get('caption', '')
+                file_path = tg_get_file_path(file_id)
+                file_path = file_path.get('file_path', '')
+                if not file_path: return
+
+                SAVE_FOLDER = 'files/tg_received'
+                save_file_path = f'{SAVE_FOLDER}/{file_name}'
+                file_url = f'https://api.telegram.org/file/bot{TELEGRAM_BOT_RUNNING}/{file_path}'
+                with open(save_file_path, 'wb') as f: f.write(requests.get(file_url).content)
+
+                send_msg(f'{user_nick_name}我收到了你发来的语音, 请稍等 1 分钟, 我马上把这个语音发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
+                send_audio_to_all(save_file_path, bot_owner_chat_id=chat_id)
+                return
+            
         if 'sticker' in tg_msg['message']:  tg_msg['message']['text'] = tg_msg['message']['sticker']['emoji']
     
     # 如果消息是 reply_to_message, 则将 reply_to_message 的 text 加到 msg_text 里
@@ -589,10 +674,11 @@ def local_bot_msg_command(tg_msg):
     elif MSG_SPLIT[0] in help_list: 
         send_msg(avatar_first_response, chat_id, parse_mode='', base_url=telegram_base_url)
         if msg_text in ['/start', 'help', '/help', 'start']: 
+            if msg_text in ['/start']: insert_new_from_id_to_user_priority_table(from_id)
+
             send_img(chat_id, avatar_command_png, description=f'任何时候回复 /help 都可以看到这张图片哦 😁', base_url=telegram_base_url)
-            command_help_info = f"这里是我的一些命令, 只要你发给我的消息开头用了这个命令（后面必须有个空格）, 然后命令之后的内容我就会专门用这个命令针对的功能来处理。下面是一些有趣的命令, 你可以点击了解他们分别是干什么的, 该怎么使用。\n\n{user_commands}\n\n除了这些命令, 我还可以处理一些特殊的文字内容, 比如你发来一个 Crypto 的 Token 名 (不超过 4 个字符), 比如: \n/BTC /ETH /DOGE /APE 等等, \n我都可以帮你查他们的价格和交易量等关键信息; 如果你发来一个单独的英文字母 (超过 4 个字符) 那我会当你的字典, 告诉你这个英文单词的词频排名、发音、以及中文意思, 比如: \n/opulent /scrupulous /ostentatious \n除此之外, 你还可以直接发 /ETH 钱包地址或者交易哈希给我, 我都会尽量帮你读出来里面的信息, {user_nick_name}你不妨试试看呗。\n\n最后, 请记住, 随时回复 /start 或者 /help 就可以看到这个指令集。"
+            command_help_info = f"这里是我的一些命令, 只要你发给我的消息开头用了这个命令 (后面必须有个空格) , 然后命令之后的内容我就会专门用这个命令针对的功能来处理。下面是一些有趣的命令, 你可以点击了解他们分别是干什么的, 该怎么使用。\n\n{user_commands}\n\n除了这些命令, 我还可以处理一些特殊的文字内容, 比如你发来一个 Crypto 的 Token 名 (不超过 4 个字符), 比如: \n/BTC /ETH /DOGE /APE 等等, \n我都可以帮你查他们的价格和交易量等关键信息; 如果你发来一个单独的英文字母 (超过 4 个字符) 那我会当你的字典, 告诉你这个英文单词的词频排名、发音、以及中文意思, 比如: \n/opulent /scrupulous /ostentatious \n除此之外, 你还可以直接发 /ETH 钱包地址或者交易哈希给我, 我都会尽量帮你读出来里面的信息, {user_nick_name}你不妨试试看呗。\n\n最后, 请记住, 随时回复 /start 或者 /help 就可以看到这个指令集。"
             send_msg(command_help_info, chat_id, parse_mode='', base_url=telegram_base_url)
-        if msg_text in ['/start', 'start']: 
             if chat_id in BOT_OWNER_LIST: 
                 send_msg(f"\n{user_nick_name}, 以下信息我悄悄地发给你, 别人都不会看到也不会知道的哈 😉:", chat_id, parse_mode='', base_url=telegram_base_url)
                 send_img(chat_id, avatar_png)
@@ -602,16 +688,70 @@ def local_bot_msg_command(tg_msg):
                 send_file(chat_id, default_dialogue_tone_file)
                 send_msg(about_dialogue_tone_xls, chat_id, parse_mode='', base_url=telegram_base_url)
                 send_msg(change_persona, chat_id, parse_mode='', base_url=telegram_base_url)
-                bot_owner_command_help_info = f"作为 Bot Onwer, 你有一些特殊的管理命令用来维护我, 请点击查看各自的功能和使用方式吧:\n\n{bot_owner_commands}\n\n最后, 请记住, 随时回复 /start 就可以看到这个指令集。"
+                bot_owner_command_help_info = f"作为 Bot Onwer, 你有一些特殊的管理命令用来维护我, 请点击查看各自的功能和使用方式吧:\n\n{bot_owner_commands}\n\n最后, 请记住, 随时回复 /start 或者 /help 就可以看到这个指令集。"
                 send_msg(bot_owner_command_help_info, chat_id, parse_mode='', base_url=telegram_base_url)
             else: send_msg(avatar_create, chat_id, parse_mode='', base_url=telegram_base_url)
-        return 
+            return 
     
     elif msg_text in ['/more_information', 'more_information']: return send_msg(avatar_more_information, chat_id, parse_mode='', base_url=telegram_base_url)
     
     elif MSG_SPLIT[0] in ['whoami', '/whoami'] or msg_lower in ['who am i']:
         fn_and_ln = ' '.join([n for n in [first_name, last_name] if 'User' not in n])
         send_msg(f"你是 {fn_and_ln} 呀, 我的宝贝! 😘\n\nchat_id:\n{chat_id}\n电报链接:\nhttps://t.me/{username}", chat_id, parse_mode='', base_url=telegram_base_url)    
+        return
+
+    # 用户主动发起申请成为 vip (永久免费)用户
+    elif msg_lower in ['apply_for_vip', '/apply_for_vip', 'vip', '/vip']:
+        insert_new_from_id_to_user_priority_table(from_id)
+        # 通知用户申请发送成功
+        send_msg(f"{user_nick_name}, 你的 VIP 申请已经发送给 @{TELEGRAM_USERNAME} 了, 请耐心等待老板审批哦 😘", chat_id, parse_mode='', base_url=telegram_base_url)
+        # 给 bot onwer 发送申请消息
+        return send_msg(f"user: @{user_title}\nchat_id: {from_id}\n\n申请成为 VIP 用户:\n\n点击 /vip_{from_id} 同意\n\n如果不能点击就拷贝上面这个指令直接回复给我。", BOTOWNER_CHAT_ID)
+
+    # 提交用户自己的 elevenlabs_api_key
+    elif msg_text.startswith('/elevenlabs_api_key') or msg_text.startswith('elevenlabs_api_key'):
+        elevenlabs_api_key = msg_text.replace('/', '').replace('elevenlabs_api_key', '').strip()
+        if not elevenlabs_api_key: return send_msg(eleven_labs_apikey_retrieve_guide, chat_id, parse_mode='', base_url=telegram_base_url)
+        r = check_and_save_elevenlabs_api_key(elevenlabs_api_key, from_id)
+        if r: generate_clone_voice_audio_with_eleven_labs(eleven_labs_english_tranning_text, from_id, user_title, folder='files/audio/clone_voice')
+        return 
+
+    # /clone_my_voice 命令, 用来引导用户克隆自己的声音, 发来一段英文朗读 voice 文件
+    elif MSG_SPLIT[0] in ['clone_my_voice', '/clone_my_voice']:
+        r = update_elevenlabs_user_ready_to_clone(from_id, user_title)
+        if r: send_msg(elevenlabs_clone_voice_guide, chat_id, parse_mode='', base_url=telegram_base_url)
+        return
+
+    # close_clone_voice
+    elif MSG_SPLIT[0] in ['close_clone_voice', '/close_clone_voice']:
+        return update_elevenlabs_user_ready_to_clone_to_0(from_id, user_title)
+    
+    # update_elevenlabs_user_ready_to_clone_to_0(from_id) if msg_text in ['/confirm_my_voice', 'confirm_my_voice'] else None
+    elif MSG_SPLIT[0] in ['confirm_my_voice', '/confirm_my_voice']:
+        r = update_elevenlabs_user_ready_to_clone_to_0(from_id, user_title, cmd = 'confirm_my_voice')
+        if r: generate_clone_voice_audio_with_eleven_labs(eleven_labs_english_tranning_text, from_id, user_title, folder='files/audio/clone_voice')
+        return 
+    
+    # /speak_my_voice 命令, 用来引导用户用自己的声音朗读英文
+    elif MSG_SPLIT[0] in ['speak_my_voice', '/speak_my_voice', '/smv', 'smv']:
+        if MSG_LEN == 1: return send_msg(speak_my_voice_guide, chat_id, parse_mode='', base_url=telegram_base_url)
+        content = ' '.join(msg_text.split()[1:]).strip()
+        if is_english(content): generate_clone_voice_audio_with_eleven_labs(content, from_id, user_title, folder='files/audio/clone_voice')
+        else: send_msg(f"{user_nick_name}, 你发的不是英文, 目前用你克隆的声音尚且只能朗读英文哦 😁, 如果需要朗读中文, 可以用 /make_voice 指令后面加上这段内容再发给我。", chat_id, parse_mode='', base_url=telegram_base_url)
+        return
+    
+    # /write_story
+    elif MSG_SPLIT[0] in ['write_story', '/write_story', '/ws', 'ws']:
+        if MSG_LEN == 1: send_msg(write_story_guide, chat_id, parse_mode='', base_url=telegram_base_url)
+        story_prompt_from_user = 'None' if MSG_LEN == 1 else ' '.join(MSG_SPLIT[1:])
+        return chat_gpt_write_story(chat_id, from_id, story_prompt_from_user, gpt_model=OPENAI_MODEL)
+        
+    # /read_story
+    elif MSG_SPLIT[0] in ['read_story', '/read_story', '/rs', 'rs']:
+        title, story = get_gpt_story(from_id)
+        generated_with_my_clone_voice = False
+        if is_english(story): generated_with_my_clone_voice = generate_clone_voice_audio_with_eleven_labs(story, from_id, user_title, folder='files/audio/clone_voice')
+        if not generated_with_my_clone_voice: create_audio_from_text(story, chat_id)
         return
 
     elif MSG_SPLIT[0] in ['pay', '/pay','payment', '/payment', 'charge', 'refill', 'paybill']:
@@ -682,13 +822,13 @@ def local_bot_msg_command(tg_msg):
         if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要给我的老板反馈信息或者提意见, 请在命令后面的空格后再加上你要反馈的信息, 比如: \n\nfeedback 你好, 我是你的粉丝, 我觉得你的机器人很好用, 但是我觉得你的机器人还可以加入xxx功能, 这样就更好用了。\n\n这样我就会把你的反馈信息转发给我老板哈 😋。另外 /feedback 和 /owner 通用\n\n当然, 你也可以跟他私聊哦 @{TELEGRAM_USERNAME}", chat_id)
         feedback = ' '.join(MSG_SPLIT[1:])
         send_msg(f"收到, {user_nick_name}, 我马上把你的反馈信息转发给我老板哈 😋。你要反馈的信息如下:\n\n{feedback}", chat_id, parse_mode='', base_url=telegram_base_url)
-        feed_back_info = f"来自 @{user_title} /{from_id} 的反馈信息:\n\n{feedback}\n\n如需回复, 请用 /{from_id} 加上你要回复的内容即可。如果发送 /{from_id} 但后面没有任何内容, 我会把 @{user_title} 和我的聊天记录以 TXT 文档形式发给你参考。"
+        feed_back_info = f"来自 @{user_title} /{from_id} 的反馈信息:\n\n{feedback}\n\n如需回复, 请用 /{from_id} 加上你要回复的内容即可。如果点击或发送 /{from_id} 但后面没有任何内容, 我会把 @{user_title} 和我的聊天记录以 TXT 文档形式发给你参考。"
         for owner_chat_id in set(BOT_OWNER_LIST): send_msg(feed_back_info, owner_chat_id, parse_mode='', base_url=telegram_base_url)
         return
 
     # image generate function
     elif MSG_SPLIT[0] in ['img', 'ig', 'image', '/img', '/ig', '/image']:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要创作图片, 请在命令的空格后再后面加上你的图片描述（英文会更好）, 比如: \n\nimage 一只可爱的德牧在未来世界游荡\n\n这样我就会用这个创意创作图片。\n\nP.S. /image 也可以缩写为 /img 或者 /ig", chat_id)
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要创作图片, 请在命令的空格后再后面加上你的图片描述 (英文会更好) , 比如: \n\nimage 一只可爱的德牧在未来世界游荡\n\n这样我就会用这个创意创作图片。\n\nP.S. /image 也可以缩写为 /img 或者 /ig", chat_id)
         prompt = ' '.join(MSG_SPLIT[1:])
         try:
             file_list = stability_generate_image(prompt)
@@ -703,7 +843,7 @@ def local_bot_msg_command(tg_msg):
 
     # chatpdf function
     elif MSG_SPLIT[0] in ['pdf', 'doc', 'txt', 'docx', 'ppt', 'pptx', 'url', 'urls', '/pdf', '/doc', '/txt', '/docx', '/ppt', '/pptx', '/url', '/urls']:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要针对刚刚发给我的 PDF 内容进行交流, 请在命令后面的空格后加上你的问题, 比如: \n\npdf 这个 PDF 里介绍的项目已经上市了吗\n\n这样我就知道这个问题是针对刚才的 PDF 的。\n\nP.S. /pdf 也可以换做 /doc 或者 /txt 或者 /docx 或者 /ppt 或者 /pptx 或者 /url 或者 /urls , 不管你刚才发的文档是什么格式的, 这些指令都是一样的, 通用的（可以混淆使用, 我都可以分辨) 😎", chat_id)
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要针对刚刚发给我的 PDF 内容进行交流, 请在命令后面的空格后加上你的问题, 比如: \n\npdf 这个 PDF 里介绍的项目已经上市了吗\n\n这样我就知道这个问题是针对刚才的 PDF 的。\n\nP.S. /pdf 也可以换做 /doc 或者 /txt 或者 /docx 或者 /ppt 或者 /pptx 或者 /url 或者 /urls , 不管你刚才发的文档是什么格式的, 这些指令都是一样的, 通用的 (可以混淆使用, 我都可以分辨) 😎", chat_id)
         query = ' '.join(MSG_SPLIT[1:])
         try: 
             reply = qa.run(f"{query}\n Please reply with the same language as above prompt.")
@@ -734,7 +874,7 @@ def local_bot_msg_command(tg_msg):
         return
 
     # translate chinese to english and then generate audio with my voice
-    elif MSG_SPLIT[0] in ['ts', 'translate', 'tl', '/ts', '/translate', '/tl']:
+    elif MSG_SPLIT[0] in ['ts', 'translate', 'tl', '/ts', '/translate', '/tl', 'tr', '/tr']:
         if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想把你发给我的中文内容翻译成英文, 请在命令后面的空格后加上你要翻译的内容, 比如: \n\ntranslate 明天我要向全世界宣布我爱你。\n\n这样我就会把上面你发给我的内容翻译成英文。\n\nP.S. /translate 也可以换做 /ts 或者 /tl", chat_id)
 
         prompt = ' '.join(MSG_SPLIT[1:])
@@ -808,7 +948,7 @@ def local_bot_msg_command(tg_msg):
         return 
     
     # chatpdf function
-    elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier-investor', 'outlierinvestor', 'ol', '/outlier', '/oi', '/outlier-investor', '/outlierinvestor', '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and TELEGRAM_BOT_NAME.lower() in ['leonardo_huang_bot']:
+    elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier-investor', 'outlierinvestor', 'ol', '/outlier', '/oi', '/outlier-investor', '/outlierinvestor', '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and TELEGRAM_BOT_NAME.lower() in ['leowang_bot']:
         if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想让了解我写的《投资异类》里的内容, 请在命令后面的空格后加上你想了解的内容, 比如: \n\n投资异类 天使投资人最喜欢什么样的创业者\n\n这样我就会去《投资异类》里查找相关内容并提炼总结给你。\n\nP.S. /投资异类 也可以换做 /outlier 或者 /oi 或者 /outlier-investor 或者 /outlierinvestor 或者 /ol", chat_id)
         query = ' '.join(MSG_SPLIT[1:])
         send_msg("WoW, 你想了解我写的《投资异类》啊, 真是感动. 稍等 1 分钟, 你问的问题我认真写给你, 哈哈哈 😁", chat_id)
@@ -912,6 +1052,47 @@ def local_bot_msg_command(tg_msg):
             except Exception as e: logging.error(f"local_bot_msg_command() get_user_chat_history() FAILED: \n\n{e}")
             return
 
+        # 用 vip 命令设置用户成为 VIP, 当 msg_lower 以 /vip, vip, /vip_, vip_, /v, v, /v_, v_ 开头时, 会触发这个命令, 而 msg_lower 中的数字部分是 from_id
+        elif msg_lower.startswith('/vip') or msg_lower.startswith('vip') or msg_lower.startswith('/v') or msg_lower.startswith('v'):
+            user_from_id = msg_text.replace('/', '').replace('vip', '').replace('v', '').replace('_', '').strip()
+            # 判断 from_id 是否是数字
+            if user_from_id and user_from_id.isdigit(): 
+                # return send_msg(f"{user_nick_name}, 你要设置谁为 VIP, 请在命令后面的空格后再加上一个 from_id, 比如: \n\nvip 123456789\n\n这样就是把 from_id 为 123456789 的用户设置为 VIP 了😘。如果你不知道对方的 chat_id, 请对方发送 /vip 或者 /v 给我申请成为 VIP, 我会转达他的申请给你并附带对方的 chat_id, 届时如果你同意, 可以根据提示确认。\n\nP.S. /vip 也可以缩写为 /v", chat_id)
+                # 判断 from_id 是否在数据库中
+                if from_id in get_unique_from_id_list(): 
+                    r = set_user_as_vip(user_from_id)
+                    if r: 
+                        # 通知 user_from_id 他已经被设置为 VIP
+                        send_msg(f"{user_nick_name}, 我已经把你设置为 VIP 了, 你可以跟我永久免费聊天了. 😘", user_from_id)
+                        return send_msg(f"from_id: {user_from_id} 已被成功设置为 VIP, 可以享受永久免费聊天了。如果需要改变他的 VIP 状态, 随时可以回复或点击: \n\n/remove_vip_{user_from_id}", chat_id)
+                    
+        # Remove user from VIP list
+        elif msg_lower.startswith('/remove_vip') or msg_lower.startswith('remove_vip'):
+            user_from_id = msg_text.replace('/', '').replace('remove_vip', '').replace('_', '').strip()
+
+            if user_from_id and user_from_id.isdigit():
+                r = remove_user_from_vip_list(user_from_id)
+                if r: return send_msg(f"from_id: {user_from_id} 已被成功移出 VIP 列表!", chat_id)
+                else: return send_msg(f"from_id: {user_from_id} 本来就不在 VIP 列表中哈。", chat_id)
+
+            vip_list_with_hint_text = get_vip_list_except_owner_and_admin()
+
+            if vip_list_with_hint_text: 
+                text_format = '\n'.join(vip_list_with_hint_text)
+                vip_count = len(vip_list_with_hint_text)
+                if vip_count < 11: return send_msg(f"您一共有 {vip_count} 位 VIP 用户:\n\n{text_format}\n\n点击上面的 /remove_vip_xxxxxxxx 即可将相应的用户从 VIP 列表中移除 😘", chat_id)
+                else:
+                    # 将 text_format 保存为 txt 文件并发送给 chat_id
+                    SAVE_FOLDER = 'files/vip_list'
+                    # 检查 SAVE_FOLDER 是否存在, 不存在则创建
+                    if not os.path.exists(SAVE_FOLDER): os.makedirs(SAVE_FOLDER)
+                    file_name = f"{SAVE_FOLDER}/vip_list.txt"
+                    execution_help_info = f"您一共有 {vip_count} 位 VIP 用户, 拷贝用户名下面的 /remove_vip_xxxxxxxx 指令然后发给我即可将相应的用户从 VIP 列表中移除"
+                    with open(file_name, 'w') as f: f.write(f"{execution_help_info}\n\n{text_format}")
+                    send_file(chat_id, file_name, description=f"您的 {vip_count} 位 VIP 用户列表")
+            
+            return
+
         # 发送最新的 user_commands 给用户
         elif MSG_SPLIT[0] in ['group_send_commands_list', 'gscl', '/group_send_commands_list', '/gscl']:
             group_send_message_info = f"{dear_user}, /commands 列表更新咯 😙: \n{user_commands}"
@@ -944,12 +1125,15 @@ def local_bot_msg_command(tg_msg):
             return
 
         elif MSG_SPLIT[0] in ['set_free_talk_limit', 'sftl', '/set_free_talk_limit', '/sftl']:
-            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要设置免费用户每月的免费对话次数, 请在命令后面的空格后再加上一个整数, 比如: \n\nset_free_talk_limit 10\n\n这样就是设置免费用户每月的免费对话次数为 10 次了. 😘 \n\nP.S. /set_free_talk_limit 也可以缩写为 /sftl", chat_id)
+            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要设置免费用户每月的免费对话次数, 请在命令后面的空格后再加上一个整数, 比如: \n\nset_free_talk_limit 10\n\n这样就是设置免费用户每月的免费对话次数为 10 次了. 😘 \n\nP.S. /set_free_talk_limit 也可以缩写为 /sftl\n\n重要: 如果 BOT OWNER 把 free_talk_limit 设置为 1, 则意味着该服务只限 VIP、Owner 以及 Paid 用户使用, Free 用户不可用。如果需要邀请朋友成为 VIP, 那么 free_talk_limit 至少应该是 2, 这样新用户才能点击 /start 并发送 /vip 两个指令完成申请。如果 free_talk_limit 设置为 0, 那么除了已有的 VIP 和 Bot Owner 以及 Paid user 之外, 未来任何人都无法和 Bot 做任何交互。如果希望连付费用户都拒之门外, 那么请用 /set_monthly_fee 指令将月费设置为一个巨大的数字。Bot 刚启动的时候, 默认只有一个 Onwer 身份, 没有默认的 VIP, 所有的 VIP 都是 Owner 自己手动添加获批准的。", chat_id)
             # 检查 MSG_SPLIT[1] 是否可以转换成 INT, 否则提醒 BOT OWNER 这里只能输入整数
             try: free_talk_limit = int(MSG_SPLIT[1])
             except: return send_msg(f"{user_nick_name}, 你输入的 {MSG_SPLIT[1]} 不是整数, 请重新输入哈.", chat_id)
 
-            with lock:  free_user_free_talk_per_month = free_talk_limit
+            # free_talk_limit = 3 if not free_talk_limit or free_talk_limit < 3 else free_talk_limit
+            # free_talk_limit 不能是 0，否则目标 VIP 用户无法 /start 并发送 /vip 给 BOT 申请成为 VIP
+
+            with lock: MessageThread.free_user_free_talk_per_month = free_talk_limit
 
             try: update_owner_parameter('MAX_CONVERSATION_PER_MONTH', MSG_SPLIT[1])
             except Exception as e: return logging.error(f"local_bot_msg_command() update_owner_parameter() FAILED: \n\n{e}")
@@ -957,9 +1141,9 @@ def local_bot_msg_command(tg_msg):
             return send_msg(f"{user_nick_name}, 我已经把免费用户每月的免费对话次数设置为 {MSG_SPLIT[1]} 次了, 系统参数表也更新了, 请放心, 参数立刻生效 😘", chat_id)
         
         elif MSG_SPLIT[0] in ['set_monthly_fee', 'smf', '/set_monthly_fee', '/smf']:
-            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要设置每月的收费金额, 请在命令后面的空格后再加上一个整数, 比如: \n\nset_monthly_fee 10\n\n这样就是设置每月的收费金额为 10 美元了. 😘 \n\nP.S. /set_monthly_fee 也可以缩写为 /smf", chat_id)
+            if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要设置每月的收费金额, 请在命令后面的空格后再加上一个整数, 比如: \n\nset_monthly_fee 10\n\n这样就是设置每月的收费金额为 10 美元了. 😘 \n\nP.S. /set_monthly_fee 也可以缩写为 /smf\n\n重要: 如果 BOT OWNER 不希望任何付费用户来使用你的 Bot, 仅限 Owner 以及定向邀请或批准的 VIP 用户 (白名单), 那么请将月费金额设置成天文数字, 并用 /set_free_talk_limit 指令将每月每个用户的免费聊天次数设置为 0 ", chat_id)
             # 检查 MSG_SPLIT[1] 是否可以转换成 INT, 否则提醒 BOT OWNER 这里只能输入整数
-            try: monthly_fee = int(MSG_SPLIT[1])
+            try: int(MSG_SPLIT[1])
             except: return send_msg(f"{user_nick_name}, 你输入的 {MSG_SPLIT[1]} 不是整数, 请重新输入哈.", chat_id)
 
             try: update_owner_parameter('MONTHLY_FEE', MSG_SPLIT[1])
@@ -1029,10 +1213,7 @@ def local_bot_msg_command(tg_msg):
             else: is_amy_command = True
 
         if not is_amy_command: return
-        send_msg(f"收到, {user_nick_name}, 我我去找 @lgg_english_bot Amy Buffett 老师咨询一下 {msg_lower} 的意思, 然后再来告诉你😗, 1 分钟以内答复你哈...", chat_id, parse_mode='', base_url=telegram_base_url)
-        reply = chat_gpt_english(msg_lower)
-        send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url)
-        return 
+        return chat_gpt_english_explanation(chat_id, msg_lower, gpt_model=OPENAI_MODEL)
 
     msg_text = msg_text.replace('/', '', 1) if MSG_SPLIT[0].startswith('/') else msg_text
 

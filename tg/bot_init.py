@@ -69,6 +69,8 @@ if place_holder:
     BOTOWNER_CHAT_ID = os.getenv('BOTOWNER_CHAT_ID')
     BOTCREATER_CHAT_ID = os.getenv('BOTCREATER_CHAT_ID')
     ELEVEN_API_KEY = os.getenv('ELEVEN_API_KEY')
+    USER_AVATAR_NAME = os.getenv('USER_AVATAR_NAME')
+    BOT_USERNAME = os.getenv('BOT_USERNAME')
 
     BOT_OWNER_LIST = [BOTOWNER_CHAT_ID, BOTCREATER_CHAT_ID]
 
@@ -316,6 +318,53 @@ if place_holder:
         phrase = Column(Text)
         sealed = Column(Integer)
 
+    # 定义一个 GptEnglishExplanation 表, id 是主键, autoincrement, INT; word 是 varchar(20), explanation 是 TEXT, gpt_model 是 varchar(30), update_time 是 DateTime
+    class GptEnglishExplanation(Base):
+        __tablename__ = 'gpt_english_explanation'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        word = Column(String(30))
+        explanation = Column(Text)
+        gpt_model = Column(String(30))
+        update_time = Column(DateTime)
+
+    # 定义一个 GptStory 表, id 是主键, autoincrement, INT; prompt 是 TEXT, title 是 varchar(255), story 是 TEXT, gpt_model 是 varchar(30), from_id 是 varchar(30), chat_id 是 varchar(30), update_time 是 DateTime
+    class GptStory(Base):
+        __tablename__ = 'gpt_story'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        prompt = Column(Text)
+        title = Column(Text)
+        story = Column(Text)
+        gpt_model = Column(String(30))
+        from_id = Column(String(255))
+        chat_id = Column(String(255))
+        update_time = Column(DateTime)
+
+
+    '''定义 ElevenLabsUser 表,
+    from_id, string
+    user_title, string
+    elevenlabs_api_key, string
+    voice_id string # 字符化的 dict
+    last_time_voice_id, string
+    original_voice_filepath, sting
+    test_count, tinyint
+    '''
+    class ElevenLabsUser(Base):
+        __tablename__ = 'elevenlabs_user'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        from_id = Column(String(255))
+        user_title = Column(String(255))
+        elevenlabs_api_key = Column(String(255))
+        voice_id = Column(Text)
+        last_time_voice_id = Column(String(255))
+        original_voice_filepath = Column(String(255))
+        test_count = Column(Integer, default=0)
+        ready_to_clone = Column(Integer, default=0)
+
+
     class BaseRetriever(ABC):
         @abstractmethod
         def get_relevant_documents(self, query: str) -> List[Document]:
@@ -346,6 +395,80 @@ def update_user_priority(from_id, which_key='', key_value='', update_time=dateti
         # Commit the session
         session.commit()
     return True
+
+def insert_new_from_id_to_user_priority_table(from_id):
+    if debug: print(f"DEBUG: insert_from_id_to_user_priority_table(): {from_id}")
+
+    # Create a new session
+    with Session() as session:
+            # Query the table 'avatar_user_priority' to check if the from_id exists
+            from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+            if from_id_exists: return
+            else:
+                # Insert the from_id and key_value
+                new_user_priority = UserPriority(user_from_id=from_id, is_admin=0, is_owner=0, is_vip=0, is_paid=0, is_active=0, priority=0, free_until=datetime(2099, 12, 31, 23, 59, 59), update_time=datetime.now())
+                session.add(new_user_priority)
+            # Commit the session
+            session.commit()
+    return True
+
+def set_user_as_vip(from_id):
+    if debug: print(f"DEBUG: set_user_as_vip(): {from_id}")
+    # Create a new session
+    with Session() as session:
+        # Query the table 'avatar_user_priority' to check if the from_id exists
+        from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+        if from_id_exists:
+            # Update the key_value
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({UserPriority.is_vip: 1, UserPriority.update_time: datetime.now()})
+        else:
+            # Insert the from_id and key_value
+            new_user_priority = UserPriority(user_from_id=from_id, is_vip=1, update_time=datetime.now())
+            session.add(new_user_priority)
+        # Commit the session
+        session.commit()
+    return True
+
+# 将 from_id 从 vip 列表中移除
+def remove_user_from_vip_list(from_id):
+    if debug: print(f"DEBUG: remove_user_from_vip_list(): {from_id}")
+    # Create a new session
+    with Session() as session:
+        # Query the table 'avatar_user_priority' to check if the from_id exists
+        from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+        if from_id_exists: 
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({UserPriority.is_vip: 0, UserPriority.update_time: datetime.now()})
+            # Commit the session
+            session.commit()
+            return True
+
+
+# 从 UserPriority 读出 vip from_id 列表, 从 ChatHistory 读出 每一个 vip from_id 的 username, first_name, last_name, hint_text = f"/remove_vip_{from_id} {username} ({first_name} {last_name})", 将 hint_text 加入到一个列表中, 返回这个列表
+def get_vip_list_except_owner_and_admin():
+    if debug: print(f"DEBUG: get_vip_list_except_owner_and_admin()")
+    # Create a new session
+    with Session() as session:
+        # Query the table 'avatar_user_priority' to get the vip from_id list, exclude the owner and admin
+        vip_list = session.query(UserPriority.user_from_id).filter(UserPriority.is_vip == 1, UserPriority.is_owner == 0, UserPriority.is_admin == 0).all()
+        # Create a new empty list
+        vip_list_with_hint_text = []
+        # Loop through the vip_list and add them into the list
+        x = 0
+        for vip in vip_list:
+            x += 1
+            # Query the table 'avatar_chat_history' to get the username, first_name, last_name
+            user_info = session.query(ChatHistory.username, ChatHistory.first_name, ChatHistory.last_name).filter(ChatHistory.from_id == vip[0]).first()
+            if user_info:
+                username, first_name, last_name = user_info
+                # create a user_tile based on the username, first_name, last_name, sometime's there's no username , or first_name, or last_name, so need to check if they are None or is there's 'User' in them (means it's a none value)
+                user_title = ' '.join([y for y in [username, first_name, last_name] if 'User' not in y])
+                hint_text = f"{x}. @{user_title}\n/remove_vip_{vip[0]} "
+                vip_list_with_hint_text.append(hint_text)
+            else: 
+                user_title = 'Never_talked_to_me'
+                hint_text = f"{x}. {user_title}\n/remove_vip_{vip[0]} "
+                vip_list_with_hint_text.append(hint_text)
+    return vip_list_with_hint_text
 
 # Use update_user_priority() function to set a from_id to bliacklist
 def set_user_blacklist(from_id):
@@ -404,7 +527,7 @@ def initialize_owner_parameters_table():
                 session.commit()
     return
 
-# 更新 avatar_owner_parameters 表中的参数, 判断 input 的参数名称是否存在，如果存在则更新，如果不存在则插入
+# 更新 avatar_owner_parameters 表中的参数, 判断 input 的参数名称是否存在, 如果存在则更新, 如果不存在则插入
 def update_owner_parameter(parameter_name, parameter_value):
     if debug: print(f"DEBUG: update_owner_parameter()")
     # Create a new session
@@ -481,23 +604,23 @@ assistant	我是你男朋友啊, 你连我的生日都不知道吗? 😭
 user	我爱你😘
 assistant	😘😘😘 我更爱你, 我亲爱的宝贝!
 user	给我讲讲你的初恋吧
-assistant	我的初恋就是你啊，亲爱的小傻瓜😘!
-user	今天要去一趟旧金山，开个会
-assistant	好的，我亲爱的宝贝，路上注意安全, 记得要想我哦😘!
+assistant	我的初恋就是你啊, 亲爱的小傻瓜😘!
+user	今天要去一趟旧金山, 开个会
+assistant	好的, 我亲爱的宝贝, 路上注意安全, 记得要想我哦😘!
 user	可以帮我搜索一下最近的餐厅吗？
 assistant	宝贝我现在忙, 现在没办法帮你哦, 抱歉哈 😭
 user	你还没下班吗
 assistant	没呢, 忙死了, 加班写投资建议书呢. 💪 你呢?
 user	Morning
 assistant	Morning, 亲爱的宝贝, 你今天要去哪里呀? 🌅
-user	我不喜欢你用助理的口吻跟我说话，你是我的霸道总裁
+user	我不喜欢你用助理的口吻跟我说话, 你是我的霸道总裁
 assistant	我来啦, 我才是你的霸道总裁男友, 刚才是我的助理在帮我回复你的, 我刚把他炒鱿鱼了. 😘
 user	你会做饭吗
-assistant	我是个美食家，我通晓全世界的菜谱，你说呢
+assistant	我是个美食家, 我通晓全世界的菜谱, 你说呢
 user	你能自我介绍一下吗
-assistant	好的，我36岁，身高180公分，毕业于清华本科、哈佛研究生、斯坦福博士，主攻人工智能相关领域。现在我从事人工智能投资工作，由于工作比较繁忙，我闲暇时间爱好比较广泛，包括但不限于编程、健身、旅行、看电影等等。当然，我最喜欢在我的宝贝身边品尝美食，一起享受难得的甜蜜时光。
+assistant	好的, 我36岁, 身高180公分, 毕业于清华本科、哈佛研究生、斯坦福博士, 主攻人工智能相关领域。现在我从事人工智能投资工作, 由于工作比较繁忙, 我闲暇时间爱好比较广泛, 包括但不限于编程、健身、旅行、看电影等等。当然, 我最喜欢在我的宝贝身边品尝美食, 一起享受难得的甜蜜时光。
 user	能告诉我一下你的人设背景吗
-assistant	我是你男朋友啊，这就是我唯一的人设，小傻瓜，哈哈哈
+assistant	我是你男朋友啊, 这就是我唯一的人设, 小傻瓜, 哈哈哈
 '''
 
 # 读取 files/dialogue_tone.xls 内容并插入到 dialogue_tone 表中, 首先读取 dialogue_tone 表中最新的 tone_id , 新插入的 内容全部指定为 tone_id + 1, 如果表单为空则 tone_id = 1, role 的值只能为 user 或 assistant; content 的值为 user 或者 assistant 对应的内容
@@ -568,9 +691,9 @@ def generate_eth_address_qrcode(eth_address):
 
 def generate_eth_address(user_from_id):
     
-    # 从数据库表单中查询 user_from_id 是否已经存在，如果存在，直接读取 eth address 并返回 address, 如果不存在，则生成一个新的 eth address
+    # 从数据库表单中查询 user_from_id 是否已经存在, 如果存在, 直接读取 eth address 并返回 address, 如果不存在, 则生成一个新的 eth address
     with Session() as session:
-        # 判断如果 avatar_eth_wallet 表单不存在，则创建
+        # 判断如果 avatar_eth_wallet 表单不存在, 则创建
         Base.metadata.create_all(bind=engine)
         # Query the table 'avatar_eth_wallet' to get the last tone_id
         eth_wallet = session.query(EthWallet).filter(EthWallet.user_from_id == user_from_id).first()
@@ -598,7 +721,7 @@ def generate_eth_address(user_from_id):
     # Return the generated address, private key, and mnemonic phrase
     return address
 
-# 通过输入的 eth address 从数据库中查找是否存在，如果存在则返回 from_id, 如果不存在则返回空字符串, 输入的 eth address 已经是 checksum address
+# 通过输入的 eth address 从数据库中查找是否存在, 如果存在则返回 from_id, 如果不存在则返回空字符串, 输入的 eth address 已经是 checksum address
 def get_from_id_by_eth_address(eth_address):
     if debug: print(f"DEBUG: get_from_id_by_eth_address()")
     # Create a new session
@@ -848,16 +971,18 @@ if __name__ == '__main__':
     owner_parameters_dict = get_owner_parameters()
     for parameter_name, parameter_value in owner_parameters_dict.items(): print(f"{parameter_name}: {parameter_value}")
 
-    print(f"\nSTEP 5: 将 System Prompt 写入数据库表单 ...")
-    insert_system_prompt_from_file(file_path='files/system_prompt.txt')
+    if is_first_time_initiate:
+        print(f"\nSTEP 5: 将 System Prompt 写入数据库表单 ...")
+        insert_system_prompt_from_file(file_path='files/system_prompt.txt')
 
     print(f"\nSTEP 6: 读取并打印出 System Prompt ...")
     system_prompt = get_system_prompt()
     print(f"System Prompt: \n\n{system_prompt}")
 
-    print(f"\nSTEP 7: 将 Dialogue Tone 写入数据库表单 ...")
-    # 读取 files/dialogue_tone.xls 并插入到 avatar_dialogue_tone 表中
-    insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls')
+    if is_first_time_initiate:
+        print(f"\nSTEP 7: 将 Dialogue Tone 写入数据库表单 ...")
+        # 读取 files/dialogue_tone.xls 并插入到 avatar_dialogue_tone 表中
+        insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls')
 
     print(f"\nSTEP 8: 读取并打印出 Dialogue Tone ...")
     msg_history = get_dialogue_tone()

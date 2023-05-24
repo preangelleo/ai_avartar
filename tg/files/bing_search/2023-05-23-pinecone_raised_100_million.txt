@@ -1,0 +1,53 @@
+WEBPAGES
+
+NAME: Announcing Our $100M Series B Funding to Build Long-Term ... - pinecone.io
+SNIPPET: Dear Pinecone Community, I am thrilled to share some exciting news with you all. We raised \$100 million in Series B funding, led by Andreessen Horowitz, with participation from ICONIQ Growth, and our existing investors Menlo Ventures and Wing Venture Capital.
+URL: https://www.pinecone.io/learn/series-b/
+DATE: 2023-05-21 21:23:00
+
+NAME: A.I. startup Pinecone sees $582M valuation jump in 14 months | Fortune
+SNIPPET: Pinecone Systems Inc., a startup whose platform supports artificial intelligence software, has raised $100 million in a funding round that values the company at $750 million. The round was led by ...
+URL: https://fortune.com/2023/04/27/ai-startup-pinecone-andreessen-horowitz-investment/
+DATE: 2023-05-20 21:08:00
+
+NAME: Pinecone drops $100M investment on $750M valuation, as vector database ...
+SNIPPET: When Pinecone launched a vector database aimed at data scientists in 2021, it was probably ahead of its time. ... the company announced a $100 million Series B investment on a $750 million post ...
+URL: https://techcrunch.com/2023/04/27/pinecone-drops-100m-investment-on-750m-valuation-as-vector-database-demand-grows/
+DATE: 2023-05-22 07:12:00
+
+NAME: AI Startup Pinecone Raises Funds at $750 Million Value
+SNIPPET: Pinecone Systems Inc., a startup whose platform supports artificial intelligence software, has raised $100 million in a funding round that values the company at $750 million. The round was led by ...
+URL: https://www.bloomberg.com/news/articles/2023-04-27/andreessen-backed-ai-startup-pinecone-valued-at-750-million
+DATE: 2023-05-21 21:49:00
+
+NAME: Pinecone Raises $100M in Series B Funding to Provide Long-Term Memory ...
+SNIPPET: NEW YORK, April 27, 2023--Pinecone, the vector database company providing long-term memory for AI, announced today it has raised $100M in Series B funding at a $750M valuation. The funding round ...
+URL: https://finance.yahoo.com/news/pinecone-raises-100m-series-b-150000397.html
+DATE: 2023-05-18 11:22:00
+
+NAME: Pinecone Raises $100M Series B to Provide Long-Term Memory for AI
+SNIPPET: NEW YORK, April 28, 2023 — Pinecone, the vector database company providing long-term memory for AI, announced it has raised $100M in Series B funding at a $750M valuation. The funding round was led by Andreessen Horowitz, with participation from ICONIQ Growth and previous investors Menlo Ventures and Wing Venture Capital. Since introducing ...
+URL: https://www.datanami.com/this-just-in/pinecone-raises-100m-series-b-to-provide-long-term-memory-for-ai/
+DATE: 2023-05-16 11:29:00
+
+NAME: Pinecone Gets $100M and AssemblyAI for Speech Recognition
+SNIPPET: Pinecone is an advanced data storage and organization infrastructure startup that successfully raised $100 million in a Series B funding round led by Andreessen Horowitz and other venture capital firms, including ICONIQ Growth, Menlo Ventures, and Wing Venture Capital. According to its blog post, the capital raised in this funding round ...
+URL: https://geekflare.com/pinecone-gets-100m-assemblyai-for-speech-recognition/
+DATE: 2023-05-16 14:29:00
+
+NAME: Pinecone raises $100m
+SNIPPET: Pinecone Systems of New York has raised $100 million in a funding round that values the company at $750 million. Investors were Andreessen Horowitz, Iconiq, Menlo Ventures and Wing Venture Capital. The proceeds will be used for R&D, hiring and scaling up the business, according to CEO Edo Liberty ...
+URL: https://www.electronicsweekly.com/news/business/pinecone-raises-100m-2023-04/
+DATE: 2023-05-21 20:47:00
+
+NAME: Pinecone Raises $100 Million in Series B | The SaaS News
+SNIPPET: Pinecone, a New York-based vector database company providing long-term memory for AI, announced that it raised $100 million in Series B funding at a $750M valuation, to provide long-term memory for AI.. The funding round was led by Andreessen Horowitz, with participation from ICONIQ Growth and previous investors Menlo Ventures and Wing Venture Capital.
+URL: https://www.thesaasnews.com/news/pinecone-raises-100-million-in-series-b
+DATE: 2023-04-28 08:06:00
+
+NAME: Pinecone Raises $100 Million in Series B funding to provide AI with ...
+SNIPPET: Published on: April 28, 2023. -Pinecone, a vector database startup that provides long-term memory for AI, revealed today that it has raised $100 million in Series B funding at a valuation of $750 million. Andreessen Horowitz led the round, with participation from ICONIQ Growth and prior investors Menlo Ventures and Wing Venture Capital.
+URL: https://siliconvalleyjournals.com/pinecone-raises-100-million-in-series-b-funding-to-provide-ai-with-long-term-memory/
+DATE: 2023-05-20 08:19:00
+
+

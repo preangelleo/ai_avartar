@@ -161,3 +161,6 @@ cython_debug/
 
 configuration.json
 download
+
+tg/files/bing_search
+tg/files/audio

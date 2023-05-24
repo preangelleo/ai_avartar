@@ -20,3 +20,4 @@ wechaty
 pymysql
 pydub
 mnemonic
+sqlalchemy

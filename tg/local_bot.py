@@ -235,105 +235,10 @@ def local_chatgpt_to_reply(msg_text, from_id, chat_id):
 
     return reply
 
-# 从 avatar_chat_history 读出 Unique 的 from_id 并群发 files/images/avatar_command.png Image 给他们
-def send_img_to_all(img_file, description='', bot_owner_chat_id=BOTOWNER_CHAT_ID):
-    if not os.path.isfile(img_file): return
-    if debug: logging.debug(f"send_img_to_all()")
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_img_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send image")
-    
-    # create a list of from_id from df
-    from_ids = df['chat_id'].tolist()
-
-    # 向 from_ids 里的所有用户发送 img_file 图片
-    try:
-        send_msg(f"{user_nick_name}, 我要开始群发图片了, 一共有 {len(from_ids)} 个用户, 需要一个一个发给他们, 请耐心等待哈 😘", bot_owner_chat_id)
-        for i in range(len(from_ids)):
-            from_id = from_ids[i]
-            if not from_id: continue
-            if from_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_img_to_all() {i}/{len(from_ids)} to: {from_id}")
-            try: send_img(from_id, img_file, description)
-            except Exception as e: logging.error(f"send_img_to_all() send_img() failed: \n\n{e}")
-        # 通知 bot owner 发送成功
-        send_msg(f"亲爱的, 我已经把图片发送给所有 {len(from_ids)} 个用户了啦, 使命必达, 欧耶 😎!", bot_owner_chat_id)
-    except Exception as e: logging.error(f"send_img_to_all() failed: \n\n{e}")
-    return
-
-# 从 avatar_chat_history 读出 Unique 的 from_id 并群发 msg_text 消息给他们
-def send_msg_to_all(msg_text, bot_owner_chat_id=BOTOWNER_CHAT_ID):
-    if debug: logging.debug(f"send_msg_to_all()")
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_msg_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send message")
-
-    try:
-        for i in range(df.shape[0]):
-            from_id = df.iloc[i]['chat_id']
-            if from_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_msg_to_all() {i}/{df.shape[0]} to: {from_id}")
-            send_msg(msg_text, from_id)
-        # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把以下消息发送给所有 {df.shape[0]-1} 个用户了, 消息原文:\n\n{msg_text}", bot_owner_chat_id)
-    except Exception as e: logging.error(f"end_msg_to_all() failed: \n\n{e}")
-    return
-
-# 群发文件给数据库中所有的 from_id
-def send_file_to_all(file, bot_owner_chat_id=BOTOWNER_CHAT_ID):
-    if not os.path.isfile(file): return
-    if debug: logging.debug(f"send_file_to_all()")
-    # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_file_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send file")
-
-    try:
-        for i in range(df.shape[0]):
-            from_id = df.iloc[i]['chat_id']
-            if from_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_file_to_all() {i}/{df.shape[0]} to: {from_id}")
-            send_file(from_id, file)
-        # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把 {file} 发送给所有 {df.shape[0]-1} 个用户了.", bot_owner_chat_id)
-    except Exception as e: logging.error(f"send_file_to_all() failed: \n\n{e}")
-    return
-
-# 群发音频给数据库中所有的 from_id
-def send_audio_to_all(audio_file, bot_owner_chat_id=BOTOWNER_CHAT_ID):
-    if not os.path.isfile(audio_file): return
-    if debug: logging.debug(f"send_audio_to_all()")
-    # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_audio_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send audio")
-
-    try:
-        for i in range(df.shape[0]):
-            from_id = df.iloc[i]['chat_id']
-            if not from_id: continue
-            if from_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_audio_to_all() {i}/{df.shape[0]} to: {from_id}")
-            try: send_audio(audio_file, from_id)
-            except Exception as e: logging.error(f"send_audio_to_all() send_audio() failed: \n\n{e}")
-        # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把 {audio_file} 发送给所有 {df.shape[0]} 个用户了.", bot_owner_chat_id)
-    except Exception as e: logging.error(f"send_audio_to_all() failed: \n\n{e}")
-    return
-
 # Dealing with message input
 def local_bot_msg_command(tg_msg):
     global qa
     global last_word_checked
-    global dear_user
 
     # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
     from_id = str(tg_msg['message']['from']['id'])
@@ -358,64 +263,7 @@ def local_bot_msg_command(tg_msg):
         # logging.debug(f"text not in tg_msg['message'] and message is:\n\n{json.dumps(tg_msg['message'], indent=2)}")
 
         if 'document' in tg_msg['message']:
-            try:
-                file_name = tg_msg['message']['document'].get('file_name', '')
-                if not file_name: return
-                if file_name in ['dialogue_tone.xls', 'system_prompt.txt'] and chat_id not in BOT_OWNER_LIST: return
-
-                file_id = tg_msg['message']['document']['file_id']
-                # caption = tg_msg['message'].get('caption', '')
-
-                file_path = tg_get_file_path(file_id)
-                file_path = file_path.get('file_path', '')
-                if not file_path: return
-
-                if debug: logging.debug(f"document file_path: {file_path}")
-                SAVE_FOLDER = 'files/'
-
-                save_file_path = f'{SAVE_FOLDER}{file_name}'
-                file_url = f'https://api.telegram.org/file/bot{TELEGRAM_BOT_RUNNING}/{file_path}'
-                with open(save_file_path, 'wb') as f: f.write(requests.get(file_url).content)
-
-                caption = tg_msg['message'].get('caption', '')
-                if caption and caption.split()[0].lower() in ['group_send_file', 'gsf', 'group send file']: 
-                    description = ' '.join(caption.split()[1:])
-                    send_msg(f'{user_nick_name}我收到了你发来的文件, 请稍等 1 分钟, 我马上把这个文件发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
-                    send_file_to_all(save_file_path, bot_owner_chat_id=chat_id)
-                    return
-
-                loader = ''
-                if file_name.endswith('.pdf'): loader = PyPDFLoader(save_file_path)
-                if file_name.endswith('.txt') and file_name != 'system_prompt.txt': loader = TextLoader(save_file_path, encoding='utf8')
-                if file_name.endswith('.docx') or file_name.endswith('.doc'): loader = UnstructuredWordDocumentLoader(save_file_path)
-                if file_name.endswith('.pptx') or file_name.endswith('.ppt'): loader = UnstructuredPowerPointLoader(save_file_path)
-
-                if loader:
-                    documents = loader.load()
-                    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-                    texts = text_splitter.split_documents(documents)
-                    
-                    db = Chroma.from_documents(texts, embeddings)
-                    retriever = db.as_retriever()
-                    
-                    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
-
-                    send_msg(f"{user_nick_name}, 我收到你发来的 {file_name[-4:].upper()} 文档了, 如果想要了解本文档的相关内容, 可以使用 doc 命令前缀加上你的问题, 我会帮你通过矢量数据进行语义搜索, 找到答案。注意, doc 命令后面需要有空格哦 🙂. 现在我先帮你简单看一下这个文档是说什么的. 请稍等 1 分钟哈。🤩", chat_id)
-
-                    query = "请简单介绍一下这个文档讲了什么。"
-                    r = qa.run(query)
-                    if r: send_msg(r, tg_msg['message']['chat']['id'])
-                    # translate_if_is_english(r, tg_msg['message']['chat']['id'])
-                elif file_name == 'dialogue_tone.xls': 
-                    r = insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls')
-                    if r: send_msg(f"{user_nick_name}, 我收到你发来的 dialogue_tone.xls 文档了, 我已经妥善保存, 下一次聊天的时候, 我会按照新文件的指示来应对聊天风格哈, 放心, 我很聪明的 🙂!", chat_id)
-                    else: send_msg(f"{user_nick_name}, 我收到你发来的 dialogue_tone.xls 文档了, 但是我处理不了, 请你检查一下格式是否正确哈, 然后再发一次给我 😮‍💨", chat_id)
-                elif file_name == 'system_prompt.txt': 
-                    r = insert_system_prompt_from_file(file_path='files/system_prompt.txt')
-                    if r: send_msg(f"{user_nick_name}, 我收到你发来的 system_prompt.txt 文档了, 我已经妥善保存, 下一次聊天的时候, 我会按照新的 System Prompt 要求来定位我自己, 放心, 我很聪明的 🙂!", chat_id)
-                    else: send_msg(f"{user_nick_name}, 我收到你发来的 system_prompt.txt 文档了, 但是我处理不了, 请你检查一下格式是否正确哈, 然后再发一次给我 😮‍💨", chat_id)
-            except Exception as e: send_msg(f"对不起{user_nick_name}, 你发来的文件我处理不了😮‍💨", chat_id)
-            return 
+            pass
         
         if 'photo' in tg_msg['message']:
             if debug: logging.debug(f"photo in tg message")

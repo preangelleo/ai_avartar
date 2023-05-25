@@ -80,7 +80,7 @@ class FanbookBot(Bot):
         ping_thread.daemon = True
         ping_thread.start()
 
-    def handle_ws(self):
+    def handle_websocket_connection(self):
         ws = create_connection(self.addr)
         self.handle_heart_beat(ws)
         try:
@@ -93,7 +93,7 @@ class FanbookBot(Bot):
             print('WebSocketError: ', e)
 
     def run(self):
-        self.handle_ws()
+        self.handle_websocket_connection()
 
 
 if __name__ == '__main__':

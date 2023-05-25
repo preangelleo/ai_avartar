@@ -20,3 +20,8 @@ wechaty
 pymysql
 pydub
 mnemonic
+python-dotenv
+websocket
+websocket-client
+pre-commit
+black

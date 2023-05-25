@@ -56,6 +56,8 @@ class Params:
         db_password = os.getenv('DB_PASSWORD')
         db_name = os.getenv('DB_NAME')
 
+        self.FAN_BOOK_BOT_TOKEN = os.getenv('FAN_BOOK_BOT_TOKEN')
+
         self.INFURA_KEY = os.getenv('INFURA_KEY')
         self.DEBANK_API = os.getenv('DEBANK_API')
         self.CMC_PA_API = os.getenv('CMC_PA_API')

@@ -12,8 +12,5 @@ class Params:
 
     def __init__(self):
         load_dotenv()
-        self.OPENAI_TOKEN = os.getenv("OPENAI_KEY")
-        self.FAN_BOOK_BOT_TOKEN = os.getenv("FAN_BOOK_BOT_TOKEN")
-
-
-params = Params()
+        self.OPENAI_TOKEN = os.getenv('OPENAI_KEY')
+        self.FAN_BOOK_BOT_TOKEN = os.getenv('FAN_BOOK_BOT_TOKEN')

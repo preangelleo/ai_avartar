@@ -26,3 +26,4 @@ websocket-client
 pre-commit
 black
 flake8
+autopep8

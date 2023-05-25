@@ -1,72 +1,68 @@
 import requests
 from src.bot.bot import Bot
-from utils.param_singleton import params
 import json
 import base64
 import threading
 from websocket._core import create_connection
 import time
-
-BASE_URL = "https://a1.fanbook.mobi/api"
-GET_USER_TOKEN_TIMEOUT_COUNT = 3
-FAN_BOOK_GET_ME_URL = f"{BASE_URL}/bot/{params.FAN_BOOK_BOT_TOKEN}/getMe"
-FAN_BOOK_SEND_MSG_URL = (
-    f"https://a1.fanbook.mobi/api/bot/{params.FAN_BOOK_BOT_TOKEN}/sendMessage"
+from constants import (
+    FAN_BOOK_GET_ME_URL,
+    FAN_BOOK_SEND_MSG_URL,
+    HEAT_BEAT_INTERVAL,
+    FANBOOK_CLIENT_ID,
+    DEVICE_ID,
+    FANBOOK_VERSION,
+    GET_USER_TOKEN_TIMEOUT_COUNT,
 )
-FANBOOK_CLIENT_ID = 500838395682099200
-DEVICE_ID = f"bot{FANBOOK_CLIENT_ID}"
-FANBOOK_VERSION = "1.6.60"
-HEAT_BEAT_INTERVAL = 20
 
 
 class FanbookBot(Bot):
     def __init__(self):
-        self.bot_token = params.FAN_BOOK_BOT_TOKEN
         self.fanbook_client_id = FANBOOK_CLIENT_ID
         self.header_map = json.dumps(
             {
-                "device_id": DEVICE_ID,
-                "version": FANBOOK_VERSION,
-                "platform": "bot",
-                "channel": "office",
-                "build_number": "1",
+                'device_id': DEVICE_ID,
+                'version': FANBOOK_VERSION,
+                'platform': 'bot',
+                'channel': 'office',
+                'build_number': '1',
             }
         )
         self.user_token = self.get_user_token()
         self.super_str = base64.b64encode(
-            self.header_map.encode("utf8")
+            self.header_map.encode('utf8')
         ).decode(  # noqa
-            "utf8"
+            'utf8'
         )  # noqa
-        self.addr = f"wss://gateway-bot.fanbook.mobi/websocket?id={self.user_token}&dId={DEVICE_ID}&v={FANBOOK_VERSION}&x-super-properties={self.super_str}"  # noqa
+        self.addr = f'wss://gateway-bot.fanbook.mobi/websocket?id={self.user_token}&dId={DEVICE_ID}&v={FANBOOK_VERSION}&x-super-properties={self.super_str}'  # noqa
 
     def get_user_token(self):
         response = requests.get(
             FAN_BOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT
         )
-        return response.json()["result"]["user_token"]
+        return response.json()['result']['user_token']
 
     def handle_single_msg(self, message):
-        s = message.decode("utf8")
+        s = message.decode('utf8')
         obj = json.loads(s)
-        if obj.get("action") == "push":
+        if obj.get('action') == 'push':
             self.handle_push(obj)
 
     def handle_push(self, obj):
-        is_bot = obj.get("data").get("author").get("bot")
+        is_bot = obj.get('data').get('author').get('bot')
         if is_bot:
             return
 
-        channel_id = obj.get("data").get("channel_id")
-        author = obj.get("data").get("author").get("nickname")
+        channel_id = obj.get('data').get('channel_id')
+        author = obj.get('data').get('author').get('nickname')
         if not channel_id or not author:
             return
 
-        self.send_message("hello", channel_id)
+        self.send_message('hello', channel_id)
 
     def send_message(self, message, chat_id):
-        headers = {"Content-type": "application/json"}
-        payload = {"chat_id": int(chat_id), "text": message, "desc": message}
+        headers = {'Content-type': 'application/json'}
+        payload = {'chat_id': int(chat_id), 'text': message, 'desc': message}
 
         response = requests.post(
             FAN_BOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers
@@ -77,7 +73,7 @@ class FanbookBot(Bot):
     def send_ping(self, ws):
         while True:
             time.sleep(HEAT_BEAT_INTERVAL)
-            ws.send('{"type":"ping"}')
+            ws.send("{'type':'ping'}")
 
     def handle_heart_beat(self, ws):
         ping_thread = threading.Thread(target=self.send_ping, args=(ws,))
@@ -92,13 +88,13 @@ class FanbookBot(Bot):
                 evt_data = ws.recv()
                 self.handle_single_msg(evt_data)
         except ConnectionError:
-            print("WebSocketClosed")
+            print('WebSocketClosed')
         except Exception as e:
-            print("WebSocketError: ", e)
+            print('WebSocketError: ', e)
 
     def run(self):
         self.handle_ws()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     FanbookBot().run()

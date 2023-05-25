@@ -25,3 +25,4 @@ websocket
 websocket-client
 pre-commit
 black
+flake8

@@ -5,8 +5,6 @@ class ChatGPTBranch(BotBranch):
     def __init__(self):
         pass
 
-    def handle_single_msg(self, msg):
+    def handle_single_msg(self, msg, bot):
         pass
 
-    def run(self):
-        pass

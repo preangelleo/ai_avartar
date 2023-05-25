@@ -3,12 +3,10 @@
 debug = True
 place_holder = True
 if place_holder:
-    import os, re, json, base64, hashlib, math, string, time, uuid, time, urllib, imaplib, email, random, requests, \
-        chardet, subprocess, xlrd, pytz
+    import os, re, json, base64, hashlib, math, string, time, uuid, time, urllib, imaplib, email, random, requests, chardet, subprocess, xlrd, pytz
     import azure.cognitiveservices.speech as speechsdk
     from pydub import AudioSegment
-    from sqlalchemy import DateTime, Table, create_engine, insert, update, Column, Integer, String, Text, Float, text, \
-        Boolean, exists, inspect
+    from sqlalchemy import DateTime, Table, create_engine, insert, update, Column, Integer, String, Text, Float, text, Boolean, exists, inspect
     from sqlalchemy.orm import declarative_base, Session
     from sqlalchemy.schema import MetaData
     from sqlalchemy.orm import sessionmaker
@@ -30,8 +28,7 @@ if place_holder:
     from langchain.schema import Document
     from langchain.chains import RetrievalQA
     from langchain.llms import OpenAI
-    from langchain.document_loaders import PyPDFLoader, TextLoader, UnstructuredPowerPointLoader, \
-        UnstructuredWordDocumentLoader, UnstructuredURLLoader
+    from langchain.document_loaders import PyPDFLoader, TextLoader, UnstructuredPowerPointLoader, UnstructuredWordDocumentLoader, UnstructuredURLLoader
     from langchain.indexes import VectorstoreIndexCreator
     from langchain.document_loaders.csv_loader import CSVLoader
     from langchain.document_loaders import UnstructuredPDFLoader, OnlinePDFLoader
@@ -54,7 +51,6 @@ if place_holder:
     from logging_util import logging
 
     from dotenv import load_dotenv
-
     load_dotenv()
 
     # 获取环境变量
@@ -103,7 +99,6 @@ if place_holder:
     Session = sessionmaker(bind=engine)
     Base = declarative_base()
 
-
     # Define the table 'avatar_chat_history'
     class ChatHistory(Base):
         __tablename__ = 'avatar_chat_history'
@@ -118,7 +113,6 @@ if place_holder:
         msg_text = Column(Text)
         black_list = Column(Integer, default=0)
 
-
     # Define the table 'avatar_owner_parameters'
     class OwnerParameter(Base):
         __tablename__ = 'avatar_owner_parameters'
@@ -128,7 +122,6 @@ if place_holder:
         parameter_value = Column(String(255))
         update_time = Column(DateTime)
 
-
     # Define the table 'avatar_system_prompt', id is the primary key autoincrement, INT; system_prompt is the TEXT, update_time is the DateTime
     class SystemPrompt(Base):
         __tablename__ = 'avatar_system_prompt'
@@ -136,8 +129,7 @@ if place_holder:
         id = Column(Integer, primary_key=True, autoincrement=True)
         system_prompt = Column(Text)
         update_time = Column(DateTime)
-
-
+    
     # Define the table 'avatar_dialogue_tone', `id` is the primary key autoincrement, INT; `tone_id` is INT,`role` Column(String(255)), `content` TEXT, update_time is the DateTime
     class DialogueTone(Base):
         __tablename__ = 'avatar_dialogue_tone'
@@ -148,7 +140,6 @@ if place_holder:
         content = Column(Text)
         update_time = Column(DateTime)
 
-
     # Define the table 'avatar_eth_wallet', `id` is the primary key autoincrement, INT; `address` is TEXT, `private_key` is TEXT, `user_from_id` is varchar(255), `create_time` is DateTime
     class EthWallet(Base):
         __tablename__ = 'avatar_eth_wallet'
@@ -158,7 +149,6 @@ if place_holder:
         private_key = Column(Text)
         user_from_id = Column(String(255))
         create_time = Column(DateTime)
-
 
     # Define the table 'avatar_crypto_payments', `id` is the primary key autoincrement, INT; `user_from_id` is varchar(255), `address` is varchar(255), `usdt_paid_in` is FLOAT, `usdc_paid_in` is FLOAT, `eth_paid_in` is FLOAT, `update_time` is DateTime, `Hash_id` is TEXT
     class CryptoPayments(Base):
@@ -172,8 +162,7 @@ if place_holder:
         eth_paid_in = Column(Float, default=0)
         update_time = Column(DateTime)
         Hash_id = Column(Text)
-
-
+    
     # Define the table `avatar_user_priority`, `id` is the primary key autoincrement, INT; `user_from_id` is varchar(255), `priority` is TINYINT, `is_blacklist` is TINYINT, `free_until` is DateTime, `is_admin` is TINYINT, `is_owner` is TINYINT, `is_vip` is TINYINT, `is_paid` is TINYINT, `is_active` is TINYINT, `is_deleted` is TINYINT, `update_time` is DateTime, `next_payment_time` is DateTime, all the default value is 0; make sure user_from_id can not be duplicated, need to be unique
     class UserPriority(Base):
         __tablename__ = 'avatar_user_priority'
@@ -191,7 +180,6 @@ if place_holder:
         is_deleted = Column(Integer, default=0)
         update_time = Column(DateTime, default=datetime.now())
         next_payment_time = Column(DateTime, default=datetime.now())
-
 
     '''mysql> DESCRIBE db_cmc_total_supply;
     +-----------------------+---------------+------+-----+---------+-------+
@@ -227,8 +215,6 @@ if place_holder:
     +-----------------------+---------------+------+-----+---------+-------+
     27 rows in set (0.00 sec)
     '''
-
-
     # define the bable 'db_cmc_total_supply'
     class CmcTotalSupply(Base):
         __tablename__ = 'db_cmc_total_supply'
@@ -260,7 +246,6 @@ if place_holder:
         in_mylist = Column(Integer)
         in_blacklist = Column(Integer)
         in_alertlist = Column(Integer)
-
 
     '''mysql> DESCRIBE db_daily_words;
     +----------------------+--------------+------+-----+---------+----------------+
@@ -298,8 +283,7 @@ if place_holder:
     +----------------------+--------------+------+-----+---------+----------------+
     29 rows in set (0.00 sec)
     '''
-
-
+    
     # define the table 'db_daily_words'
     class DailyWords(Base):
         __tablename__ = 'db_daily_words'
@@ -334,7 +318,6 @@ if place_holder:
         phrase = Column(Text)
         sealed = Column(Integer)
 
-
     # 定义一个 GptEnglishExplanation 表, id 是主键, autoincrement, INT; word 是 varchar(20), explanation 是 TEXT, gpt_model 是 varchar(30), update_time 是 DateTime
     class GptEnglishExplanation(Base):
         __tablename__ = 'gpt_english_explanation'
@@ -344,7 +327,6 @@ if place_holder:
         explanation = Column(Text)
         gpt_model = Column(String(30))
         update_time = Column(DateTime)
-
 
     # 定义一个 GptStory 表, id 是主键, autoincrement, INT; prompt 是 TEXT, title 是 varchar(255), story 是 TEXT, gpt_model 是 varchar(30), from_id 是 varchar(30), chat_id 是 varchar(30), update_time 是 DateTime
     class GptStory(Base):
@@ -369,8 +351,6 @@ if place_holder:
     original_voice_filepath, sting
     test_count, tinyint
     '''
-
-
     class ElevenLabsUser(Base):
         __tablename__ = 'elevenlabs_user'
 
@@ -397,7 +377,6 @@ if place_holder:
                 List of relevant documents
             """
 
-
 # def update avatar_user_priority table, input include (from_id, which_key='', key_value='', update_time=datetime.now()), check if the from_id exists, if exists then update the key_value, if not exists then insert the from_id and key_value
 def update_user_priority(from_id, which_key='', key_value='', update_time=datetime.now()):
     if debug: print(f"DEBUG: update_user_priority()")
@@ -407,8 +386,7 @@ def update_user_priority(from_id, which_key='', key_value='', update_time=dateti
         from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
         if from_id_exists:
             # Update the key_value
-            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
-                {which_key: key_value, UserPriority.update_time: update_time})
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({which_key: key_value, UserPriority.update_time: update_time})
         else:
             # Insert the from_id and key_value
             new_user_priority = UserPriority(user_from_id=from_id, update_time=update_time)
@@ -418,26 +396,21 @@ def update_user_priority(from_id, which_key='', key_value='', update_time=dateti
         session.commit()
     return True
 
-
 def insert_new_from_id_to_user_priority_table(from_id):
     if debug: print(f"DEBUG: insert_from_id_to_user_priority_table(): {from_id}")
 
     # Create a new session
     with Session() as session:
-        # Query the table 'avatar_user_priority' to check if the from_id exists
-        from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
-        if from_id_exists:
-            return
-        else:
-            # Insert the from_id and key_value
-            new_user_priority = UserPriority(user_from_id=from_id, is_admin=0, is_owner=0, is_vip=0, is_paid=0,
-                                             is_active=0, priority=0, free_until=datetime(2099, 12, 31, 23, 59, 59),
-                                             update_time=datetime.now())
-            session.add(new_user_priority)
-        # Commit the session
-        session.commit()
+            # Query the table 'avatar_user_priority' to check if the from_id exists
+            from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+            if from_id_exists: return
+            else:
+                # Insert the from_id and key_value
+                new_user_priority = UserPriority(user_from_id=from_id, is_admin=0, is_owner=0, is_vip=0, is_paid=0, is_active=0, priority=0, free_until=datetime(2099, 12, 31, 23, 59, 59), update_time=datetime.now())
+                session.add(new_user_priority)
+            # Commit the session
+            session.commit()
     return True
-
 
 def set_user_as_vip(from_id):
     if debug: print(f"DEBUG: set_user_as_vip(): {from_id}")
@@ -447,8 +420,7 @@ def set_user_as_vip(from_id):
         from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
         if from_id_exists:
             # Update the key_value
-            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
-                {UserPriority.is_vip: 1, UserPriority.update_time: datetime.now()})
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({UserPriority.is_vip: 1, UserPriority.update_time: datetime.now()})
         else:
             # Insert the from_id and key_value
             new_user_priority = UserPriority(user_from_id=from_id, is_vip=1, update_time=datetime.now())
@@ -457,7 +429,6 @@ def set_user_as_vip(from_id):
         session.commit()
     return True
 
-
 # 将 from_id 从 vip 列表中移除
 def remove_user_from_vip_list(from_id):
     if debug: print(f"DEBUG: remove_user_from_vip_list(): {from_id}")
@@ -465,9 +436,8 @@ def remove_user_from_vip_list(from_id):
     with Session() as session:
         # Query the table 'avatar_user_priority' to check if the from_id exists
         from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
-        if from_id_exists:
-            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
-                {UserPriority.is_vip: 0, UserPriority.update_time: datetime.now()})
+        if from_id_exists: 
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({UserPriority.is_vip: 0, UserPriority.update_time: datetime.now()})
             # Commit the session
             session.commit()
             return True
@@ -479,8 +449,7 @@ def get_vip_list_except_owner_and_admin():
     # Create a new session
     with Session() as session:
         # Query the table 'avatar_user_priority' to get the vip from_id list, exclude the owner and admin
-        vip_list = session.query(UserPriority.user_from_id).filter(UserPriority.is_vip == 1, UserPriority.is_owner == 0,
-                                                                   UserPriority.is_admin == 0).all()
+        vip_list = session.query(UserPriority.user_from_id).filter(UserPriority.is_vip == 1, UserPriority.is_owner == 0, UserPriority.is_admin == 0).all()
         # Create a new empty list
         vip_list_with_hint_text = []
         # Loop through the vip_list and add them into the list
@@ -488,38 +457,30 @@ def get_vip_list_except_owner_and_admin():
         for vip in vip_list:
             x += 1
             # Query the table 'avatar_chat_history' to get the username, first_name, last_name
-            user_info = session.query(ChatHistory.username, ChatHistory.first_name, ChatHistory.last_name).filter(
-                ChatHistory.from_id == vip[0]).first()
+            user_info = session.query(ChatHistory.username, ChatHistory.first_name, ChatHistory.last_name).filter(ChatHistory.from_id == vip[0]).first()
             if user_info:
                 username, first_name, last_name = user_info
                 # create a user_tile based on the username, first_name, last_name, sometime's there's no username , or first_name, or last_name, so need to check if they are None or is there's 'User' in them (means it's a none value)
                 user_title = ' '.join([y for y in [username, first_name, last_name] if 'User' not in y])
                 hint_text = f"{x}. @{user_title}\n/remove_vip_{vip[0]} "
                 vip_list_with_hint_text.append(hint_text)
-            else:
+            else: 
                 user_title = 'Never_talked_to_me'
                 hint_text = f"{x}. {user_title}\n/remove_vip_{vip[0]} "
                 vip_list_with_hint_text.append(hint_text)
     return vip_list_with_hint_text
 
-
 # Use update_user_priority() function to set a from_id to bliacklist
 def set_user_blacklist(from_id):
     if debug: print(f"DEBUG: set_user_blacklist()")
-    try:
-        return update_user_priority(from_id, 'is_blacklist', 1)
-    except:
-        return False
-
+    try: return update_user_priority(from_id, 'is_blacklist', 1)
+    except: return False
 
 # Use update_user_priority() function to remove a from_id from bliacklist
 def remove_user_blacklist(from_id):
     if debug: print(f"DEBUG: remove_user_blacklist()")
-    try:
-        return update_user_priority(from_id, 'is_blacklist', 0)
-    except:
-        return False
-
+    try: return update_user_priority(from_id, 'is_blacklist', 0)
+    except: return False
 
 # initiate the avatar_user_priority table, set BOT_OWNER_ID as the owner, set BOT_OWNER_ID as the admin, set BOT_OWNER_ID as the vip, set BOT_OWNER_ID as the paid, set BOT_OWNER_ID as the active, set BOT_OWNER_ID as the deleted, set BOT_OWNER_ID as the priority 100, set BOT_OWNER_ID as the free_until 2099-12-31 23:59:59
 def initialize_user_priority_table():
@@ -531,16 +492,10 @@ def initialize_user_priority_table():
             from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
             if from_id_exists:
                 # Update the key_value
-                session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
-                    {UserPriority.is_admin: 1, UserPriority.is_owner: 1, UserPriority.is_vip: 1,
-                     UserPriority.is_paid: 1, UserPriority.is_active: 1, UserPriority.priority: 100,
-                     UserPriority.free_until: datetime(2099, 12, 31, 23, 59, 59)})
+                session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({UserPriority.is_admin: 1, UserPriority.is_owner: 1, UserPriority.is_vip: 1, UserPriority.is_paid: 1, UserPriority.is_active: 1, UserPriority.priority: 100, UserPriority.free_until: datetime(2099, 12, 31, 23, 59, 59)})
             else:
                 # Insert the from_id and key_value
-                new_user_priority = UserPriority(user_from_id=from_id, is_admin=1, is_owner=1, is_vip=1, is_paid=1,
-                                                 is_active=1, priority=100,
-                                                 free_until=datetime(2099, 12, 31, 23, 59, 59),
-                                                 update_time=datetime.now())
+                new_user_priority = UserPriority(user_from_id=from_id, is_admin=1, is_owner=1, is_vip=1, is_paid=1, is_active=1, priority=100, free_until=datetime(2099, 12, 31, 23, 59, 59), update_time=datetime.now())
                 session.add(new_user_priority)
             # Commit the session
             session.commit()
@@ -549,7 +504,7 @@ def initialize_user_priority_table():
 
 def initialize_owner_parameters_table():
     if debug: print(f"DEBUG: initialize_owner_parameters_table()")
-
+    
     # Create a new session
     with Session() as session:
         # 清空 avatar_owner_parameters 表
@@ -567,12 +522,10 @@ def initialize_owner_parameters_table():
                 parameter_value = parameter_value.strip()
 
                 # Insert the owner's parameters into the table 'avatar_owner_parameters'
-                new_owner_parameter = OwnerParameter(parameter_name=parameter_name, parameter_value=parameter_value,
-                                                     update_time=datetime.now())
+                new_owner_parameter = OwnerParameter(parameter_name=parameter_name, parameter_value=parameter_value, update_time=datetime.now())
                 session.add(new_owner_parameter)
                 session.commit()
     return
-
 
 # 更新 avatar_owner_parameters 表中的参数, 判断 input 的参数名称是否存在, 如果存在则更新, 如果不存在则插入
 def update_owner_parameter(parameter_name, parameter_value):
@@ -583,17 +536,14 @@ def update_owner_parameter(parameter_name, parameter_value):
         parameter_name_exists = session.query(exists().where(OwnerParameter.parameter_name == parameter_name)).scalar()
         if parameter_name_exists:
             # Update the parameter_value
-            session.query(OwnerParameter).filter(OwnerParameter.parameter_name == parameter_name).update(
-                {OwnerParameter.parameter_value: parameter_value, OwnerParameter.update_time: datetime.now()})
+            session.query(OwnerParameter).filter(OwnerParameter.parameter_name == parameter_name).update({OwnerParameter.parameter_value: parameter_value, OwnerParameter.update_time: datetime.now()})
         else:
             # Insert the parameter_name and parameter_value
-            new_owner_parameter = OwnerParameter(parameter_name=parameter_name, parameter_value=parameter_value,
-                                                 update_time=datetime.now())
+            new_owner_parameter = OwnerParameter(parameter_name=parameter_name, parameter_value=parameter_value, update_time=datetime.now())
             session.add(new_owner_parameter)
         # Commit the session
         session.commit()
     return
-
 
 # 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
 def get_owner_parameters():
@@ -605,10 +555,8 @@ def get_owner_parameters():
         # Create a new empty dictionary
         owner_parameters_dict = {}
         # Loop through the owner_parameters and add them into the dictionary
-        for owner_parameter in owner_parameters: owner_parameters_dict[
-            owner_parameter.parameter_name] = owner_parameter.parameter_value
+        for owner_parameter in owner_parameters: owner_parameters_dict[owner_parameter.parameter_name] = owner_parameter.parameter_value
     return owner_parameters_dict
-
 
 def insert_system_prompt(system_prompt):
     if debug: print(f"DEBUG: insert_system_prompt()")
@@ -622,22 +570,18 @@ def insert_system_prompt(system_prompt):
         session.commit()
     return True
 
-
 # 读取 files/system_prompt.txt 并插入到 system_prompt 表中
 def insert_system_prompt_from_file(file_path='files/system_prompt.txt'):
     # Read files/system_prompt.txt
-    with open(file_path, 'r') as f:
-        system_prompt = f.read()
+    with open(file_path, 'r') as f: system_prompt = f.read()
 
     last_system_prompt = get_system_prompt()
-    if last_system_prompt and last_system_prompt == system_prompt: return print(
-        f"系统提示 system_prompt 没有变化, 不需要更新!")
+    if last_system_prompt and last_system_prompt == system_prompt: return print(f"系统提示 system_prompt 没有变化, 不需要更新!")
 
     # Insert the system prompt into the table 'avatar_system_prompt'
     r = insert_system_prompt(system_prompt)
     if r: print(f"系统提示 system_prompt 已更新!")
     return r
-
 
 # 读出 system_prompt 表中的 最后一个（最新的）system_prompt, 并返回一个 string
 def get_system_prompt():
@@ -648,7 +592,6 @@ def get_system_prompt():
         # 如果 system_prompt 为空则返回空字符串
         if not system_prompt: return ''
         return system_prompt.system_prompt
-
 
 # Samples of files/dialogue_tone.xls:
 '''
@@ -680,7 +623,6 @@ user	能告诉我一下你的人设背景吗
 assistant	我是你男朋友啊, 这就是我唯一的人设, 小傻瓜, 哈哈哈
 '''
 
-
 # 读取 files/dialogue_tone.xls 内容并插入到 dialogue_tone 表中, 首先读取 dialogue_tone 表中最新的 tone_id , 新插入的 内容全部指定为 tone_id + 1, 如果表单为空则 tone_id = 1, role 的值只能为 user 或 assistant; content 的值为 user 或者 assistant 对应的内容
 
 def insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls'):
@@ -694,24 +636,19 @@ def insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls'):
     with Session() as session:
         # Query the table 'avatar_dialogue_tone' to get the last tone_id
         last_tone_id = session.query(DialogueTone).order_by(DialogueTone.id.desc()).first()
-        if last_tone_id:
-            tone_id = last_tone_id.tone_id + 1
-        else:
-            tone_id = 1
+        if last_tone_id: tone_id = last_tone_id.tone_id + 1
+        else: tone_id = 1
         # Loop through the DataFrame and insert the content into the table 'avatar_dialogue_tone'
         for index, row in df.iterrows():
             if row['role'] == 'user':
-                new_dialogue_tone = DialogueTone(tone_id=tone_id, role='user', content=row['content'],
-                                                 update_time=datetime.now())
+                new_dialogue_tone = DialogueTone(tone_id=tone_id, role='user', content=row['content'], update_time=datetime.now())
                 session.add(new_dialogue_tone)
                 session.commit()
             if row['role'] == 'assistant':
-                new_dialogue_tone = DialogueTone(tone_id=tone_id, role='assistant', content=row['content'],
-                                                 update_time=datetime.now())
+                new_dialogue_tone = DialogueTone(tone_id=tone_id, role='assistant', content=row['content'], update_time=datetime.now())
                 session.add(new_dialogue_tone)
                 session.commit()
     return True
-
 
 # 读取 dialogue_tone 中最大的 tone_id 并将对应的 role 和 content 返回为一个 string 形式的对话列表, 用 \n 换行, 类似 Samples of files/dialogue_tone.xls:
 def get_dialogue_tone():
@@ -719,10 +656,8 @@ def get_dialogue_tone():
     with Session() as session:
         # Query the table 'avatar_dialogue_tone' to get the last tone_id
         last_tone_id = session.query(DialogueTone).order_by(DialogueTone.id.desc()).first()
-        if last_tone_id:
-            tone_id = last_tone_id.tone_id
-        else:
-            return ''
+        if last_tone_id: tone_id = last_tone_id.tone_id
+        else: return ''
         # Query the table 'avatar_dialogue_tone' to get the dialogue_tone
         dialogue_tone = session.query(DialogueTone).filter(DialogueTone.tone_id == tone_id).all()
 
@@ -730,11 +665,10 @@ def get_dialogue_tone():
 
         msg_history = [{"role": "system", "content": system_prompt}]
 
-        # output dialogue_tone to row by row to format: {"role": "dialogue.role", "content": dialogue.content} and append into msg_history
+        # output dialogue_tone to row by row to format: {"role": "dialogue.role", "content": dialogue.content} and append into msg_history 
         for dialogue in dialogue_tone: msg_history.append({"role": dialogue.role, "content": dialogue.content})
 
         return msg_history
-
 
 # 为输入的 eth address 生成一个二维码, 并保存到 files/images/eth_address 目录下, file_name 为 eth address, 如果文件夹不存在则创建, 如果文件已经存在则不再生成, 返回生成的二维码文件的路径或者已经存在的二维码文件的路径
 def generate_eth_address_qrcode(eth_address):
@@ -752,12 +686,11 @@ def generate_eth_address_qrcode(eth_address):
     qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?{params}"
     r = requests.get(qr_code_url)
     # Save the QR code to the file_path
-    with open(file_path, 'wb') as f:
-        f.write(r.content)
+    with open(file_path, 'wb') as f: f.write(r.content)
     return file_path
 
-
 def generate_eth_address(user_from_id):
+    
     # 从数据库表单中查询 user_from_id 是否已经存在, 如果存在, 直接读取 eth address 并返回 address, 如果不存在, 则生成一个新的 eth address
     with Session() as session:
         # 判断如果 avatar_eth_wallet 表单不存在, 则创建
@@ -775,13 +708,11 @@ def generate_eth_address(user_from_id):
     # Save the address, private key into the table 'avatar_eth_wallet'
     with Session() as session:
         # Create a new eth wallet
-        new_eth_wallet = EthWallet(address=address, private_key=private_key, user_from_id=user_from_id,
-                                   create_time=datetime.now())
+        new_eth_wallet = EthWallet(address=address, private_key=private_key, user_from_id=user_from_id, create_time=datetime.now())
         # Add the new eth wallet into the session
         session.add(new_eth_wallet)
         # Create a new crypto payment
-        new_crypto_payment = CryptoPayments(user_from_id=user_from_id, address=address, usdt_paid_in=0, usdc_paid_in=0,
-                                            eth_paid_in=0, update_time=datetime.now(), Hash_id='')
+        new_crypto_payment = CryptoPayments(user_from_id=user_from_id, address=address, usdt_paid_in=0, usdc_paid_in=0, eth_paid_in=0, update_time=datetime.now(), Hash_id='')
         # Add the new crypto payment into the session
         session.add(new_crypto_payment)
         # Commit the session
@@ -790,7 +721,6 @@ def generate_eth_address(user_from_id):
     # Return the generated address, private key, and mnemonic phrase
     return address
 
-
 # 通过输入的 eth address 从数据库中查找是否存在, 如果存在则返回 from_id, 如果不存在则返回空字符串, 输入的 eth address 已经是 checksum address
 def get_from_id_by_eth_address(eth_address):
     if debug: print(f"DEBUG: get_from_id_by_eth_address()")
@@ -798,11 +728,8 @@ def get_from_id_by_eth_address(eth_address):
     with Session() as session:
         # Query the table 'avatar_eth_wallet' to get the last tone_id
         eth_wallet = session.query(EthWallet).filter(EthWallet.address == eth_address).first()
-        if eth_wallet:
-            return eth_wallet.user_from_id
-        else:
-            return ''
-
+        if eth_wallet: return eth_wallet.user_from_id
+        else: return ''
 
 # check eth balance of a given address and convert the balance from wei to eth
 def check_eth_balance(address):
@@ -811,8 +738,7 @@ def check_eth_balance(address):
     # get the balance of the address
     balance = w3.eth.get_balance(address)
     # convert the balance from wei to eth
-    return balance / 10 ** 18
-
+    return balance / 10**18
 
 # check erc20 token balance of a given address and convert the balance from wei to token
 def check_address_token_balance(address, token_address, chain='eth'):
@@ -826,13 +752,12 @@ def check_address_token_balance(address, token_address, chain='eth'):
         "id": address,
         'token_id': token_address,
         'chain_id': chain
-    }
+        }
     params = urlencode(_params)
     URL = base_url + path + "?" + params
     r = requests.request(method, URL, headers=headers)
     # print(json.dumps(r.json(), indent=2, ensure_ascii=False))
     return 0 if r.status_code != 200 else r.json().get('amount', 0)
-
 
 ''' return:
 {'amount': 139236.331166,
@@ -853,7 +778,6 @@ def check_address_token_balance(address, token_address, chain='eth'):
  'symbol': 'USDC',
  'time_at': 1533324504.0}
 '''
-
 
 # 检查一个给定 eth 地址的 ETH, USDT, USDC 余额并返回一个字典
 def check_address_balance(address):
@@ -940,8 +864,6 @@ def check_address_balance(address):
     }
 }
 '''
-
-
 # 从 Coinmarketcap 给定 token 的价格等数据, 返回一个字典
 def get_token_info_from_coinmarketcap(token_symbol):
     # CoinMarketCap API endpoint
@@ -957,7 +879,6 @@ def get_token_info_from_coinmarketcap(token_symbol):
         token_info = token_data[token_symbol]
         return token_info
     return
-
 
 '''
 output_dict={
@@ -972,7 +893,6 @@ Max流通市值:  295,000,000
 本次更新时间:  2023-05-18 19:25:49
 }'''
 
-
 # 从 Coinmarketcap 给定 token 的价格等数据, 返回一个字典
 def get_token_info_from_coinmarketcap(token_symbol):
     # CoinMarketCap API endpoint
@@ -989,7 +909,6 @@ def get_token_info_from_coinmarketcap(token_symbol):
         return token_info
     return
 
-
 # Check if a given symbol is in CmcTotalSupply : db_cmc_total_supply's symbol column, if yes, return True, else return False
 def check_token_symbol_in_db_cmc_total_supply(token_symbol):
     if debug: print(f"DEBUG: check_token_symbol_in_db_cmc_total_supply()")
@@ -999,17 +918,14 @@ def check_token_symbol_in_db_cmc_total_supply(token_symbol):
         token_symbol_exists = session.query(exists().where(CmcTotalSupply.symbol == token_symbol)).scalar()
         return token_symbol_exists
 
-
 # 用 Pandas 从 CmcTotalSupply db_cmc_total_supply 读取 token_address 的信息并放入 df
 def get_token_info_from_db_cmc_total_supply(token_address):
     if debug: print(f"DEBUG: get_token_info_from_db_cmc_total_supply()")
     # Create a new session
     with Session() as session:
         # Query the table 'db_cmc_total_supply' to get the token_info
-        df = pd.read_sql(session.query(CmcTotalSupply).filter(CmcTotalSupply.token_address == token_address).statement,
-                         session.bind)
+        df = pd.read_sql(session.query(CmcTotalSupply).filter(CmcTotalSupply.token_address == token_address).statement, session.bind)
         return df
-
 
 def etherscan_make_api_url(module, action, **kwargs):
     BASE_URL = "https://api.etherscan.io/api"
@@ -1017,7 +933,6 @@ def etherscan_make_api_url(module, action, **kwargs):
     for key, value in kwargs.items():
         url += f"&{key}={value}"
     return url
-
 
 def get_token_abi(address):
     get_abi_url = etherscan_make_api_url("contract", "getabi", address=address)
@@ -1030,18 +945,15 @@ def get_token_abi(address):
 if __name__ == '__main__':
     print(f"TELEGRAM_BOT initialing for {TELEGRAM_USERNAME}...")
 
-    make_a_choise = input(
-        f"这是系统从镜像 IMAGE 文件启动后的首次初始化还是代码更新后的初始化？\n首次初始化要输入 'first_time_initiate'; \n代码更新后的初始化请直接按回车键: ")
+    make_a_choise = input(f"这是系统从镜像 IMAGE 文件启动后的首次初始化还是代码更新后的初始化？\n首次初始化要输入 'first_time_initiate'; \n代码更新后的初始化请直接按回车键: ")
     is_first_time_initiate = True if make_a_choise == 'first_time_initiate' else False
 
     print(f"\nSTEP 1: 创建所有数据库表单 ...")
-    with Session() as session:
-        Base.metadata.create_all(bind=engine)
+    with Session() as session: Base.metadata.create_all(bind=engine)
 
     print(f"\nSTEP 2: 清空 ChatHistory, EthWallet, CryptoPayment, UserPriority, SystemPrompt, DialogueTone 表 ...")
     if is_first_time_initiate:
-        confirm = input(
-            f"确认要清空 ChatHistory, EthWallet, CryptoPayment, UserPriority, SystemPrompt, DialogueTone 表吗？请输入 'yes' 确认: ")
+        confirm = input(f"确认要清空 ChatHistory, EthWallet, CryptoPayment, UserPriority, SystemPrompt, DialogueTone 表吗？请输入 'yes' 确认: ")
         if confirm == 'yes':
             with Session() as session:
                 session.query(ChatHistory).delete()
@@ -1078,7 +990,7 @@ if __name__ == '__main__':
     print(json.dumps(msg_history, indent=2, ensure_ascii=False))
 
     print(f"\nSTEP 9: 测试生成 eth address ...")
-    user_from_id = '2118900665'
+    user_from_id='2118900665'
     address = generate_eth_address(user_from_id)
     print(f"{user_from_id} ETH Address: {address}")
 

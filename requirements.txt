@@ -21,3 +21,4 @@ pymysql
 pydub
 mnemonic
 sqlalchemy
+sqlalchemy

@@ -47,7 +47,7 @@ class TelegramDocumentBranch(DocumentBranch):
             if caption and caption.split()[0].lower() in ['group_send_file', 'gsf', 'group send file']:
                 bot.send_msg(f'{msg.user_nick_name}我收到了你发来的文件, 请稍等 1 分钟, 我马上把这个文件发给所有人 😁...',
                          msg.chat_id)
-                bot.send_file_to_all(save_file_path, bot_owner_chat_id=msg.chat_id)
+                bot.send_file_to_all(msg, save_file_path, bot_owner_chat_id=msg.chat_id)
                 return
 
             loader = ''

@@ -34,3 +34,19 @@ def tg_get_file_path(file_id):
         return response.json()['result']
     except Exception as e:
         return print(f"ERROR: tg_get_file_path() failed: \n{e}")
+
+
+# Get updates from telegram server
+def local_bot_getUpdates(previous_update_id):
+    method = "getUpdates?"
+    _params = {
+        "offset": previous_update_id,
+        "timeout": 123,
+        "limit": 10
+        }
+    params = urlencode(_params)
+    URL = telegram_base_url + method + params
+    r = ''
+    try: r = requests.get(URL)
+    except Exception as e: logging.error(f"local_bot_getUpdates() failed: \n{e}")
+    return r

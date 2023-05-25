@@ -225,3 +225,41 @@ class DailyWords(Base):
     relevant = Column(Text)
     phrase = Column(Text)
     sealed = Column(Integer)
+
+
+class GptEnglishExplanation(Base):
+    __tablename__ = 'gpt_english_explanation'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    word = Column(String(30))
+    explanation = Column(Text)
+    gpt_model = Column(String(30))
+    update_time = Column(DateTime)
+
+
+class GptStory(Base):
+    __tablename__ = 'gpt_story'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    prompt = Column(Text)
+    title = Column(Text)
+    story = Column(Text)
+    gpt_model = Column(String(30))
+    from_id = Column(String(255))
+    chat_id = Column(String(255))
+    update_time = Column(DateTime)
+
+
+class ElevenLabsUser(Base):
+    __tablename__ = 'elevenlabs_user'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    from_id = Column(String(255))
+    user_title = Column(String(255))
+    elevenlabs_api_key = Column(String(255))
+    voice_id = Column(Text)
+    last_time_voice_id = Column(String(255))
+    original_voice_filepath = Column(String(255))
+    test_count = Column(Integer, default=0)
+    ready_to_clone = Column(Integer, default=0)
+

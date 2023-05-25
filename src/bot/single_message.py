@@ -15,7 +15,8 @@ class SingleMessage:
                  msg_photo,
                  msg_voice,
                  msg_sticker,
-                 caption
+                 caption,
+                 reply_to_message_text,
                  ):
         self.raw_msg = raw_msg
         self.from_id = str(from_id)
@@ -33,6 +34,7 @@ class SingleMessage:
         self.msg_voice = msg_voice
         self.msg_sticker = msg_sticker
         self.caption = caption
+        self.reply_to_message_text = reply_to_message_text
 
 
 def build_from_telegram_msg(tg_msg):
@@ -50,6 +52,7 @@ def build_from_telegram_msg(tg_msg):
         msg_document=tg_msg['message'].get('document'),
         msg_photo=tg_msg['message'].get('photo'),
         msg_voice=tg_msg['message'].get('voice'),
-        msg_sticker=tg_msg['message'].get('sticker'),
-        caption=tg_msg['message'].get('caption', '')
+        msg_sticker=tg_msg['message'].get('sticker', {}).get('emoji'),
+        caption=tg_msg['message'].get('caption', ''),
+        reply_to_message_text=tg_msg['message'].get('reply_to_message', {}).get('text')
     )

@@ -1,3 +1,5 @@
+import threading
+
 from database.mysql import OwnerParameter
 
 
@@ -8,7 +10,6 @@ from langchain.utilities import WikipediaAPIWrapper
 
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 import openai
@@ -17,13 +18,14 @@ import pinecone
 from web3 import Web3
 
 from dotenv import load_dotenv
+from prompt_template import REFILL_TEASER_DEFAULT
 
 
 # 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
 def get_owner_parameters():
     print(f"DEBUG: get_owner_parameters()")
     # Create a new session
-    with Session() as session:
+    with Params().Session() as session:
         # Query the table 'avatar_owner_parameters'
         owner_parameters = session.query(OwnerParameter).all()
         # Create a new empty dictionary
@@ -36,6 +38,8 @@ def get_owner_parameters():
 
 class Params:
     _instance = None
+    free_user_free_talk_per_month_lock = threading.Lock()
+    refill_teaser_lock = threading.Lock()
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -58,7 +62,6 @@ class Params:
         self.MORALIS_API = os.getenv('MORALIS_API')
         self.ETHERSCAN_API = os.getenv('ETHERSCAN_API')
         self.MONTHLY_FEE = float(os.getenv('MONTHLY_FEE'))
-        self.ELEVEN_API_KEY = os.getenv('ELEVEN_API_KEY')
 
         self.INFURA = "https://mainnet.infura.io/v3/" + self.INFURA_KEY
         self.web3 = Web3(Web3.HTTPProvider(self.INFURA))
@@ -108,6 +111,8 @@ class Params:
         self.DEBANK_API = owner_parameters_dict.get('DEBANK_API')
         self.MONTHLY_FEE = float(owner_parameters_dict.get('MONTHLY_FEE'))
         self.REFILL_TEASER = owner_parameters_dict.get('REFILL_TEASER')
+        self.ELEVEN_API_KEY = owner_parameters_dict.get('ELEVEN_API_KEY')
+        self.ELEVENLABS_STATUS = owner_parameters_dict.get('ELEVENLABS_STATUS')
 
         # 查看当前目录并决定 TELEGRAM_BOT_RUNNING 的值
         self.TELEGRAM_USERNAME = self.USER_TELEGRAM_LINK.split('/')[-1]
@@ -118,7 +123,7 @@ class Params:
         openai.api_key = self.OPENAI_API_KEY
         os.environ["OPENAI_API_KEY"] = self.OPENAI_API_KEY
 
-        self.ELEVENLABS_API = os.getenv("ELEVEN_API_KEY")
+        self.ELEVENLABS_API = self.ELEVEN_API_KEY
         self.BING_SEARCH_API_KEY = os.getenv("BING_SEARCH_API")
         self.STABILITY_URL = f"https://api.stability.ai/v1/"
 
@@ -146,3 +151,13 @@ class Params:
         self.metadata = MetaData()
         self.Session = sessionmaker(bind=self.engine)
 
+        self.free_user_free_talk_per_month = int(self.MAX_CONVERSATION_PER_MONTH)
+        self.refill_teaser = self.REFILL_TEASER if self.REFILL_TEASER else REFILL_TEASER_DEFAULT
+
+    def update_free_user_free_talk_per_month(self, new_value):
+        with self.free_user_free_talk_per_month_lock:
+            self.free_user_free_talk_per_month = new_value
+
+    def update_refill_teaser(self, new_value):
+        with self.refill_teaser_lock:
+            self.refill_teaser = new_value

@@ -7,6 +7,20 @@ from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 
 
+# Define a thread class for processing a single message
+class MessageThread(threading.Thread):
+    avatar_uid_lock = threading.Lock()
+    avatar_UID = -2
+
+    def __init__(self, bot, tg_msg):
+        threading.Thread.__init__(self)
+        self.bot = bot
+        self.tg_msg = tg_msg
+
+    def run(self):
+        self.bot.handle_single_msg(self.tg_msg)
+
+
 class TelegramBot(Bot):
 
     def __init__(self, *args, **kwargs):
@@ -86,14 +100,14 @@ class TelegramBot(Bot):
         if not updates: return
 
         if MessageThread.avatar_UID != updates[0]['update_id']:
-            with lock:
+            with MessageThread.avatar_uid_lock:
                 MessageThread.avatar_UID = updates[0]['update_id']
         else:
             return
 
         for tg_msg in updates:
             # Create a separate thread for processing each message
-            message_thread = MessageThread(tg_msg)
+            message_thread = MessageThread(self, tg_msg)
             message_thread.start()
 
     def run(self):

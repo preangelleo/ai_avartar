@@ -5,6 +5,9 @@ from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
 from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
 from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
 from src.bot.bot_branch.text_branch.text_branch import TextBranch
+from src.bot.single_message import build_from_fanbook_msg, SingleMessage
+from src.utils.logging_util import logging
+
 import requests
 from src.bot.bot import Bot
 import json
@@ -12,7 +15,8 @@ import base64
 import threading
 from websocket._core import create_connection
 import time
-from constants import (
+from src.bot.fanbook.utils.constants import (
+    FANBOOK_BOT_NAME,
     FAN_BOOK_GET_ME_URL,
     FAN_BOOK_SEND_MSG_URL,
     HEAT_BEAT_INTERVAL,
@@ -24,6 +28,18 @@ from constants import (
 
 
 class FanbookBot(Bot):
+    def send_audio(self, audio_path, chat_id):
+        # TODO(kezhang@): implement or leave it as None if you don't want to support this in fanbook
+        pass
+
+    def send_img(self, chat_id, file_path, description=''):
+        # TODO(kezhang@): implement or leave it as None if you don't want to support this in fanbook
+        pass
+
+    def send_file(self, chat_id, file_path, description=''):
+        # TODO(kezhang@): implement or leave it as None if you don't want to support this in fanbook
+        pass
+
     def __init__(self, *args, **kwargs):
         super(FanbookBot, self).__init__(*args, **kwargs)
         self.fanbook_client_id = FANBOOK_CLIENT_ID
@@ -50,13 +66,14 @@ class FanbookBot(Bot):
         )
         return response.json()['result']['user_token']
 
-    def handle_single_msg(self, message):
-        s = message.decode('utf8')
-        obj = json.loads(s)
-        if obj.get('action') == 'push':
-            self.handle_push(obj)
+    def handle_single_msg(self, message: SingleMessage):
+        # TODO(kezhang@): It's fine for now if you just want to test the `hello world` logic
+        #  But ideally we should not override tghis function and should reuse all the logic in Bot.handle_single_msg
+        self.handle_push(message)
 
     def handle_push(self, obj):
+        # TODO(kezhang@): It's fine for tesing now
+        #  Ideally this function should be removed and reuse all the logic in Bot.handle_single_msg
         is_bot = obj.get('data').get('author').get('bot')
         if is_bot:
             return
@@ -66,16 +83,16 @@ class FanbookBot(Bot):
         if not channel_id or not author:
             return
 
-        self.send_message('hello', channel_id)
+        self.send_msg('hello', channel_id)
 
-    def send_message(self, message, chat_id):
+    def send_msg(self, msg: str, chat_id, parse_mode=None):
         headers = {'Content-type': 'application/json'}
-        payload = {'chat_id': int(chat_id), 'text': message, 'desc': message}
+        payload = {'chat_id': int(chat_id), 'text': msg, 'desc': msg}
 
         response = requests.post(
             FAN_BOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers
         )
-        print(response.json())
+        logging.debug(f"send_msg(): {response.json()}")
         return response.json()
 
     def send_ping(self, ws):
@@ -93,12 +110,14 @@ class FanbookBot(Bot):
         self.handle_heart_beat(ws)
         try:
             while True:
-                evt_data = ws.recv()
-                self.handle_single_msg(evt_data)
+                s = ws.recv().decode('utf8')
+                obj = json.loads(s)
+                if obj.get('action') == 'push':
+                    self.handle_single_msg(build_from_fanbook_msg(obj))
         except ConnectionError:
-            print('WebSocketClosed')
+            logging.error('WebSocketClosed')
         except Exception as e:
-            print('WebSocketError: ', e)
+            logging.error('WebSocketError: ', e)
 
     def run(self):
         self.handle_websocket_connection()
@@ -106,6 +125,8 @@ class FanbookBot(Bot):
 
 if __name__ == '__main__':
     FanbookBot(
+        bot_name=FANBOOK_BOT_NAME,
+        # TODO(kezhang@): You should either implement these 4 branch for Fanbook or replace them with NoOpBranch
         document_branch_handler=None,
         photo_branch_handler=None,
         voice_branch_handler=None,

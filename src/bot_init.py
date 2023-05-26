@@ -1,7 +1,69 @@
 import json
+import sqlalchemy
+from src.utils.param_singleton import Params, get_owner_parameters
+from src.bot.bot_branch.payment_branch.crpto.utils import generate_eth_address
+from src.database.mysql import *
+from utils.utils import insert_system_prompt_from_file, get_system_prompt, insert_dialogue_tone_from_file, \
+    get_dialogue_tone
 
-from bot.bot_branch.payment_branch.crpto.utils import generate_eth_address
-from src.utils.utils import *
+
+# initiate the avatar_user_priority table, set BOT_OWNER_ID as the owner, set BOT_OWNER_ID as the admin,
+# set BOT_OWNER_ID as the vip, set BOT_OWNER_ID as the paid, set BOT_OWNER_ID as the active, set BOT_OWNER_ID as the
+# deleted, set BOT_OWNER_ID as the priority 100, set BOT_OWNER_ID as the free_until 2099-12-31 23:59:59
+def initialize_user_priority_table():
+    print(f"DEBUG: initialize_user_priority_table()")
+    # Create a new session
+    with Params().Session() as session:
+        for from_id in bot.bot_admin_id_list:
+            # Query the table 'avatar_user_priority' to check if the from_id exists
+            from_id_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
+            if from_id_exists:
+                # Update the key_value
+                session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
+                    {UserPriority.is_admin: 1, UserPriority.is_owner: 1, UserPriority.is_vip: 1,
+                     UserPriority.is_paid: 1, UserPriority.is_active: 1, UserPriority.priority: 100,
+                     UserPriority.free_until: datetime(2099, 12, 31, 23, 59, 59)})
+            else:
+                # Insert the from_id and key_value
+                new_user_priority = UserPriority(user_from_id=from_id, is_admin=1, is_owner=1, is_vip=1, is_paid=1,
+                                                 is_active=1, priority=100,
+                                                 free_until=datetime(2099, 12, 31, 23, 59, 59),
+                                                 update_time=datetime.now())
+                session.add(new_user_priority)
+            # Commit the session
+            session.commit()
+    return True
+
+
+
+
+
+def initialize_owner_parameters_table():
+    print(f"DEBUG: initialize_owner_parameters_table()")
+
+    # Create a new session
+    with Params().Session() as session:
+        # 清空 avatar_owner_parameters 表
+        session.query(OwnerParameter).delete()
+        session.commit()
+        print(f"avatar_owner_parameters 表已清空!")
+        # Read .env to get the owner's parameters
+        with open('.env', 'r') as f:
+            for line in f.readlines():
+                line = line.strip()
+                if not line or line.startswith('#'): continue
+
+                parameter_name, parameter_value = line.split('=', 1)
+                parameter_name = parameter_name.strip()
+                parameter_value = parameter_value.strip()
+
+                # Insert the owner's parameters into the table 'avatar_owner_parameters'
+                new_owner_parameter = OwnerParameter(parameter_name=parameter_name, parameter_value=parameter_value,
+                                                     update_time=datetime.now())
+                session.add(new_owner_parameter)
+                session.commit()
+    return
+
 
 if __name__ == '__main__':
     print(f"TELEGRAM_BOT initialing for {Params().TELEGRAM_USERNAME}...")

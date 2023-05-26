@@ -38,7 +38,7 @@ class TelegramBot(Bot):
     def __init__(self, *args, **kwargs):
         super(TelegramBot, self).__init__(*args, **kwargs)
 
-    def send_msg(self, msg, chat_id, parse_mode=None):
+    def send_msg(self, msg: str, chat_id, parse_mode=None):
         if not msg:
             return False
         if not chat_id:
@@ -123,7 +123,7 @@ class TelegramBot(Bot):
             message_thread.start()
 
     def run(self):
-        logging.debug(f"@{Params().TELEGRAM_BOT_NAME} started...")
+        logging.debug(f"@{self.bot_name} started...")
         i = 0
         while True:
             i += 1
@@ -136,6 +136,9 @@ class TelegramBot(Bot):
 
 if __name__ == '__main__':
     TelegramBot(
+        bot_name=Params().TELEGRAM_BOT_NAME,
+        bot_owner_id=Params().TELEGRAM_BOTOWNER_CHAT_ID,
+        bot_creator_id=Params().TELEGRAM_BOTCREATER_CHAT_ID,
         document_branch_handler=TelegramDocumentBranch(),
         photo_branch_handler=TelegramPhotoBranch(),
         voice_branch_handler=TelegramVoiceBranch(),

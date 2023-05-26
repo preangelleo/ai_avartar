@@ -1,7 +1,18 @@
 from abc import ABC, abstractmethod
 from datetime import date
 
+from src.bot.single_message import SingleMessage
+from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
+from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
+from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import CoinMarketCapBranch
 from src.bot.bot_branch.document_branch.document_branch import DocumentBranch
+from src.bot.bot_branch.english_teacher_branch.english_teacher_branch import EnglishTeacherBranch
+from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
+from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
+from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
+from src.bot.bot_branch.photo_branch.photo_branch import PhotoBranch
+from src.bot.bot_branch.text_branch.text_branch import TextBranch
+from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 
@@ -12,6 +23,7 @@ import json
 import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
+from utils.prompt_template import reply_emoji_list, emoji_list_for_happy
 
 
 class Bot(ABC):
@@ -19,30 +31,26 @@ class Bot(ABC):
     last_word_checked = 'nice'
 
     def __init__(self,
-                 document_branch_handler,
-                 photo_branch_handler,
-                 voice_branch_handler,
-                 audio_branch_handler,
-                 improper_branch_handler,
-                 text_branch_handler,
-                 payment_branch_handler,
-                 check_bill_branch_handler,
-                 bot_owner_branch_handler,
-                 english_teacher_branch_handler,
-                 coinmarketcap_branch_handler):
-        """
-        Init Function of Bot
-        :type document_branch_handler: DocumentBranch
-        :type photo_branch_handler: PhotoBranch
-        :type voice_branch_handler: VoiceBranch
-        :type audio_branch_handler: AudioBranch
-        :type improper_branch_handler: ImproperBranch
-        :type text_branch_handler: TextBranch
-        :type payment_branch_handler: PaymentBranch
-        :type check_bill_branch_handler: CheckBillBranch
-        :type english_teacher_branch_handler: EnglishTeacherBranch
-        :type coinmarketcap_branch_handler: CoinMarketCapBranch
-        """
+                 bot_name: str,
+                 bot_owner_id: str,
+                 bot_creator_id: str,
+                 document_branch_handler: DocumentBranch,
+                 photo_branch_handler: PhotoBranch,
+                 voice_branch_handler: VoiceBranch,
+                 audio_branch_handler: AudioBranch,
+                 improper_branch_handler: ImproperBranch,
+                 text_branch_handler: TextBranch,
+                 payment_branch_handler: PaymentBranch,
+                 check_bill_branch_handler: CheckBillBranch,
+                 bot_owner_branch_handler: BotOwnerBranch,
+                 english_teacher_branch_handler: EnglishTeacherBranch,
+                 coinmarketcap_branch_handler: CoinMarketCapBranch):
+
+        self.bot_name = bot_name
+        self.bot_owner_id = bot_owner_id
+        self.bot_creator_id = bot_creator_id
+        self.bot_admin_id_list = [bot_owner_id, bot_creator_id]
+
         self.document_branch_handler = document_branch_handler
         self.photo_branch_handler = photo_branch_handler
         self.voice_branch_handler = voice_branch_handler
@@ -56,7 +64,7 @@ class Bot(ABC):
         self.coinmarketcap_branch_handler = coinmarketcap_branch_handler
 
     @abstractmethod
-    def send_msg(self, msg, chat_id, parse_mode=None):
+    def send_msg(self, msg: str, chat_id, parse_mode=None):
         raise NotImplementedError
 
     @abstractmethod
@@ -72,7 +80,7 @@ class Bot(ABC):
         raise NotImplementedError
 
     # 从 avatar_chat_history 读出 Unique 的 from_id 并群发 files/images/avatar_command.png Image 给他们
-    def send_img_to_all(self, msg, img_file, description='', bot_owner_chat_id=Params().BOTOWNER_CHAT_ID):
+    def send_img_to_all(self, msg, img_file, description=''):
         if not os.path.isfile(img_file): return
         logging.debug(f"send_img_to_all()")
         try:
@@ -90,11 +98,11 @@ class Bot(ABC):
         try:
             self.send_msg(
                 f"{msg.user_nick_name}, 我要开始群发图片了, 一共有 {len(from_ids)} 个用户, 需要一个一个发给他们, 请耐心等待哈 😘",
-                bot_owner_chat_id)
+                self.bot_owner_id)
             for i in range(len(from_ids)):
                 from_id = from_ids[i]
                 if not from_id: continue
-                if from_id == bot_owner_chat_id: continue
+                if from_id == self.bot_owner_id: continue
 
                 logging.debug(f"send_img_to_all() {i}/{len(from_ids)} to: {from_id}")
                 try:
@@ -103,13 +111,13 @@ class Bot(ABC):
                     logging.error(f"send_img_to_all() bot.send_img() failed: \n\n{e}")
             # 通知 bot owner 发送成功
             self.send_msg(f"亲爱的, 我已经把图片发送给所有 {len(from_ids)} 个用户了啦, 使命必达, 欧耶 😎!",
-                          bot_owner_chat_id)
+                          self.bot_owner_id)
         except Exception as e:
             logging.error(f"send_img_to_all() failed: \n\n{e}")
         return
 
     # 从 avatar_chat_history 读出 Unique 的 from_id 并群发 msg_text 消息给他们
-    def send_msg_to_all(self, msg, msg_text, bot_owner_chat_id=Params().BOTOWNER_CHAT_ID):
+    def send_msg_to_all(self, msg: SingleMessage, msg_text):
         logging.debug(f"send_msg_to_all()")
         try:
             df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0",
@@ -122,20 +130,20 @@ class Bot(ABC):
         try:
             for i in range(df.shape[0]):
                 from_id = df.iloc[i]['chat_id']
-                if from_id == bot_owner_chat_id: continue
+                if from_id == self.bot_owner_id: continue
 
                 logging.debug(f"send_msg_to_all() {i}/{df.shape[0]} to: {from_id}")
                 self.send_msg(msg_text, from_id)
             # 通知 bot owner 发送成功
             self.send_msg(
                 f"{msg.user_nick_name}, 我已经把以下消息发送给所有 {df.shape[0] - 1} 个用户了, 消息原文:\n\n{msg_text}",
-                bot_owner_chat_id)
+                self.bot_owner_id)
         except Exception as e:
             logging.error(f"end_msg_to_all() failed: \n\n{e}")
         return
 
     # 群发文件给数据库中所有的 from_id
-    def send_file_to_all(self, msg, file, bot_owner_chat_id=Params().BOTOWNER_CHAT_ID):
+    def send_file_to_all(self, msg: SingleMessage, file):
         if not os.path.isfile(file): return
         logging.debug(f"send_file_to_all()")
         # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
@@ -150,19 +158,19 @@ class Bot(ABC):
         try:
             for i in range(df.shape[0]):
                 from_id = df.iloc[i]['chat_id']
-                if from_id == bot_owner_chat_id: continue
+                if from_id == self.bot_owner_id: continue
 
                 logging.debug(f"send_file_to_all() {i}/{df.shape[0]} to: {from_id}")
                 self.send_file(from_id, file)
             # 通知 bot owner 发送成功
             self.send_msg(f"{msg.user_nick_name}, 我已经把 {file} 发送给所有 {df.shape[0] - 1} 个用户了.",
-                          bot_owner_chat_id)
+                          self.bot_owner_id)
         except Exception as e:
             logging.error(f"send_file_to_all() failed: \n\n{e}")
         return
 
     # 群发音频给数据库中所有的 from_id
-    def send_audio_to_all(self, msg, audio_file, bot_owner_chat_id=Params().BOTOWNER_CHAT_ID):
+    def send_audio_to_all(self, msg: SingleMessage, audio_file):
         if not os.path.isfile(audio_file): return
         logging.debug(f"send_audio_to_all()")
         # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
@@ -178,7 +186,7 @@ class Bot(ABC):
             for i in range(df.shape[0]):
                 from_id = df.iloc[i]['chat_id']
                 if not from_id: continue
-                if from_id == bot_owner_chat_id: continue
+                if from_id == self.bot_owner_id: continue
 
                 logging.debug(f"send_audio_to_all() {i}/{df.shape[0]} to: {from_id}")
                 try:
@@ -188,7 +196,7 @@ class Bot(ABC):
             # 通知 bot owner 发送成功
             self.send_msg(
                 f"{msg.user_nick_name}, 我已经把 {audio_file.split('/')[-1]} 发送给所有 {df.shape[0] - 1} 个用户了.",
-                bot_owner_chat_id)
+                self.bot_owner_id)
         except Exception as e:
             logging.error(f"send_audio_to_all() failed: \n\n{e}")
         return
@@ -196,7 +204,7 @@ class Bot(ABC):
     '''定义一个功能, 检查后判断是否要继续为用户服务：通过 给定的 from_id 从 UserPriority 表中查询用户的优先级, 返回一个字典; 如果用户是黑名单用户, 这直接返回 False, 如果用户是 free_until 用户, 则判断此刻有没有过期, 如果没有过期则返回 True, 如果过期了则继续下面的代码; 检查用户最新一次 usdt_paid_in 或者 usdt_paid_in 是 {MONTHLY_FEE} 的 x 倍, 再判断上一次付费到现在是一个月的 y 倍, 如果如果 x > y 则返回 True, 否则返回 False
     '''
 
-    def user_is_legit(self, msg, from_id):
+    def user_is_legit(self, msg: SingleMessage, from_id):
         if not from_id:
             return
         user_priority = get_user_priority(from_id)
@@ -232,7 +240,7 @@ class Bot(ABC):
                     f"SELECT COUNT(*) FROM avatar_chat_history WHERE from_id = '{from_id}' AND DATE_FORMAT(update_time, '%Y-%m') = '{current_month}'")
                 row_count = session.execute(count_query).scalar()
                 logging.debug(
-                    f"from_id {from_id} 本月({current_month}) 已与 @{Params().TELEGRAM_BOT_NAME} 交流: {row_count} 次...")
+                    f"from_id {from_id} 本月({current_month}) 已与 @{self.bot_name} 交流: {row_count} 次...")
 
                 # Check if the row count exceeds the threshold
                 if (row_count - offset) > Params().free_user_free_talk_per_month:
@@ -246,18 +254,16 @@ class Bot(ABC):
             logging.error(f"check_this_month_total_conversation() 2 read_sql_query() failed:\n\n{e}")
         return
 
-    def handle_single_msg(self, msg):
+    def handle_single_msg(self, msg: SingleMessage):
         """
-        Handle a single message of class SingleMessage
-
-        :type msg: SingleMessage
+        Handle a single message of class SingleMessage.
         """
 
         # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
         if not self.user_is_legit(msg, msg.from_id):
             return
 
-        if Params().BOT_USERNAME in ['Leowang_test_bot', 'leowang_bot']:
+        if Params().TELEGRAM_BOT_NAME in ['Leowang_test_bot', 'leowang_bot']:
             print(json.dumps(msg.raw_msg, indent=2))
 
         # Only process none text messages when text is None.
@@ -284,7 +290,7 @@ class Bot(ABC):
             return
 
         # 如果是群聊但是没有 at 机器人, 则先标记好, 后面打印完消息后直接返回
-        msg.should_be_ignored = not msg.is_private and Params().TELEGRAM_BOT_NAME not in msg.msg_text
+        msg.should_be_ignored = not msg.is_private and self.bot_name not in msg.msg_text
 
         # 判断用户发来的消息是不是不合规的, 如果骂人就拉黑
         if msg_is_inproper(msg.msg_text):
@@ -304,7 +310,7 @@ class Bot(ABC):
             self.check_bill_branch_handler.handle_single_msg(msg, self)
 
         # BOT OWNER COMMANDS
-        if msg.chat_id in Params().BOT_OWNER_LIST:
+        if msg.chat_id in self.bot_admin_id_list:
             self.bot_owner_branch_handler.handle_single_msg(msg, self)
 
         # 英语查单词和 英语老师 Amy
@@ -334,7 +340,7 @@ class Bot(ABC):
         except Exception as e:
             return logging.error(f"save_avatar_chat_history() failed: {e}")
 
-        reply = local_chatgpt_to_reply(msg.msg_text, msg.from_id, msg.chat_id)
+        reply = local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
 
         if reply:
             try:

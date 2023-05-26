@@ -29,8 +29,8 @@ def chat_gpt_english_explanation(bot, chat_id, prompt, gpt_model=Params().OPENAI
 
 
 class EnglishTeacherBranch(BotBranch):
-    def __init__(self):
-        pass
+    def __init__(self, *args, **kwargs):
+        super(EnglishTeacherBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         msg_lower = msg.msg_text.lower()

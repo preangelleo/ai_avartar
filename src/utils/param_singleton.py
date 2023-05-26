@@ -56,8 +56,6 @@ class Params:
         db_password = os.getenv('DB_PASSWORD')
         db_name = os.getenv('DB_NAME')
 
-        self.FAN_BOOK_BOT_TOKEN = os.getenv('FAN_BOOK_BOT_TOKEN')
-
         self.INFURA_KEY = os.getenv('INFURA_KEY')
         self.DEBANK_API = os.getenv('DEBANK_API')
         self.CMC_PA_API = os.getenv('CMC_PA_API')
@@ -91,11 +89,6 @@ class Params:
         self.UBUNTU_SERVER_IP_ADDRESS = owner_parameters_dict.get('UBUNTU_SERVER_IP_ADDRESS')
         self.DOMAIN_NAME = owner_parameters_dict.get('DOMAIN_NAME')
         self.OPENAI_API_KEY = owner_parameters_dict.get('OPENAI_API_KEY')
-        self.BOT_TOKEN = owner_parameters_dict.get('BOT_TOKEN')
-        self.BOT_USERNAME = owner_parameters_dict.get('BOT_USERNAME')
-        self.USER_TELEGRAM_LINK = owner_parameters_dict.get('USER_TELEGRAM_LINK')
-        self.BOTOWNER_CHAT_ID = owner_parameters_dict.get('BOTOWNER_CHAT_ID')
-        self.BOTCREATER_CHAT_ID = owner_parameters_dict.get('BOTCREATER_CHAT_ID')
         self.REPLICATE_KEY = owner_parameters_dict.get('REPLICATE_KEY')
         self.STABILITY_API_KEY = owner_parameters_dict.get('STABILITY_API_KEY')
         self.OPENAI_MODEL = owner_parameters_dict.get('OPENAI_MODEL')
@@ -117,10 +110,14 @@ class Params:
         self.ELEVENLABS_STATUS = owner_parameters_dict.get('ELEVENLABS_STATUS')
 
         # 查看当前目录并决定 TELEGRAM_BOT_RUNNING 的值
-        self.TELEGRAM_USERNAME = self.USER_TELEGRAM_LINK.split('/')[-1]
-        self.TELEGRAM_BOT_RUNNING = self.BOT_TOKEN
-        self.TELEGRAM_BOT_NAME = self.BOT_USERNAME
-        self.BOT_OWNER_LIST = [self.BOTOWNER_CHAT_ID, self.BOTCREATER_CHAT_ID]
+        self.TELEGRAM_BOTOWNER_CHAT_ID = owner_parameters_dict.get('BOTOWNER_CHAT_ID')
+        self.TELEGRAM_BOTCREATER_CHAT_ID = owner_parameters_dict.get('BOTCREATER_CHAT_ID')
+        self.TELEGRAM_BOT_TOKEN = owner_parameters_dict.get('BOT_TOKEN')
+        self.TELEGRAM_BOT_NAME = owner_parameters_dict.get('BOT_USERNAME')
+        self.TELEGRAM_USERNAME = owner_parameters_dict.get('USER_TELEGRAM_LINK').split('/')[-1]
+
+        # Fanbook Param
+        self.FAN_BOOK_BOT_TOKEN = os.getenv('FAN_BOOK_BOT_TOKEN')
 
         openai.api_key = self.OPENAI_API_KEY
         os.environ["OPENAI_API_KEY"] = self.OPENAI_API_KEY

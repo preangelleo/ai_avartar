@@ -14,8 +14,8 @@ from src.utils.utils import insert_dialogue_tone_from_file, insert_system_prompt
 
 
 class TelegramDocumentBranch(DocumentBranch):
-    def __init__(self):
-        super(TelegramDocumentBranch, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(TelegramDocumentBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         tg_msg = msg.raw_msg
@@ -25,7 +25,7 @@ class TelegramDocumentBranch(DocumentBranch):
             if not file_name:
                 return
             if file_name in ['dialogue_tone.xls',
-                             'system_prompt.txt'] and msg.chat_id not in Params().BOT_OWNER_LIST:
+                             'system_prompt.txt'] and msg.chat_id not in bot.bot_admin_id_list:
                 return
 
             file_id = tg_msg['message']['document']['file_id']
@@ -39,7 +39,7 @@ class TelegramDocumentBranch(DocumentBranch):
             SAVE_FOLDER = 'files/'
 
             save_file_path = f'{SAVE_FOLDER}{file_name}'
-            file_url = f'https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_RUNNING}/{file_path}'
+            file_url = f'https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_TOKEN}/{file_path}'
             with open(save_file_path, 'wb') as f:
                 f.write(requests.get(file_url).content)
 
@@ -47,7 +47,7 @@ class TelegramDocumentBranch(DocumentBranch):
             if caption and caption.split()[0].lower() in ['group_send_file', 'gsf', 'group send file']:
                 bot.send_msg(f'{msg.user_nick_name}我收到了你发来的文件, 请稍等 1 分钟, 我马上把这个文件发给所有人 😁...',
                          msg.chat_id)
-                bot.send_file_to_all(msg, save_file_path, bot_owner_chat_id=msg.chat_id)
+                bot.send_file_to_all(msg, save_file_path)
                 return
 
             loader = ''

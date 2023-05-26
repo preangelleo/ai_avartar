@@ -53,8 +53,8 @@ def check_token_symbol_in_db_cmc_total_supply(token_symbol):
 
 
 class CoinMarketCapBranch(BotBranch):
-    def __init__(self):
-        pass
+    def __init__(self, *args, **kwargs):
+        super(CoinMarketCapBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         msg_text = msg.msg_text.replace('/', '').upper()

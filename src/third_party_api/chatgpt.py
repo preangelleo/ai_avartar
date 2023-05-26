@@ -38,7 +38,7 @@ def chat_gpt_full(prompt, system_prompt='', user_prompt='', assistant_prompt='',
 
 
 # Call chatgpt and restore reply and send to chat_id:
-def local_chatgpt_to_reply(msg_text, from_id, chat_id):
+def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
     openai.api_key = Params().OPENAI_API_KEY
     reply = ''
 
@@ -56,7 +56,7 @@ def local_chatgpt_to_reply(msg_text, from_id, chat_id):
         for i in range(df.shape[0]):
             history_conversation = df.iloc[i]
             user_or_assistant = 'assistant' if history_conversation['username'] in [
-                Params().TELEGRAM_BOT_NAME] else 'user'
+                bot.bot_name] else 'user'
             if user_or_assistant == previous_role: continue
             if i == df.shape[0] - 1 and user_or_assistant == 'user': continue
             if len(history_conversation['msg_text']) > 1200: continue
@@ -84,7 +84,7 @@ def local_chatgpt_to_reply(msg_text, from_id, chat_id):
             new_record = ChatHistory(
                 first_name='ChatGPT',
                 last_name='Bot',
-                username=Params().TELEGRAM_BOT_NAME,
+                username=bot.bot_name,
                 from_id=from_id,
                 chat_id=chat_id,
                 update_time=datetime.now(),

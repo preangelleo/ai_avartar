@@ -2,7 +2,7 @@ import random
 import re
 import string
 
-from bot.bot_branch.payment_branch.crpto.utils import get_transactions_info_by_hash_tx, \
+from src.bot.bot_branch.payment_branch.crpto.utils import get_transactions_info_by_hash_tx, \
     read_and_send_24h_outgoing_trans
 from src.bot.bot_branch.bot_branch import BotBranch
 
@@ -16,7 +16,9 @@ from src.utils.constants import default_system_prompt_file, default_dialogue_ton
 
 from src.third_party_api.elevenlabs import *
 from src.utils.utils import *
-from third_party_api.chatgpt import chat_gpt_regular, chat_gpt_full, chat_gpt_write_story
+from src.third_party_api.azure import create_news_podcast, microsoft_azure_tts
+from src.third_party_api.chatgpt import chat_gpt_regular, chat_gpt_full, chat_gpt_write_story
+from src.utils.prompt_template import *
 
 
 def create_news_and_audio_from_bing_search(bot, query, chat_id):
@@ -79,14 +81,13 @@ def create_audio_from_text(bot, text, chat_id=''):
         return new_filepath
 
 
-
 class TextBranch(BotBranch):
-    def __init__(self):
-        super(TextBranch, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(TextBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         # 如果 at 了机器人, 则将机器人的名字去掉
-        msg_text = msg.msg_text.replace(f'@{Params().TELEGRAM_BOT_NAME}', '')
+        msg_text = msg.msg_text.replace(f'@{bot.bot_name}', '')
         logging.info(f"IGNORE: {msg.user_title} {msg.from_id}: {msg_text}" if msg.should_be_ignored else f"LEGIT: {msg.user_title} {msg.from_id}: {msg_text}")
 
         msg_lower = msg_text.lower()
@@ -186,7 +187,7 @@ class TextBranch(BotBranch):
                          )
                 command_help_info = f"这里是我的一些命令, 只要你发给我的消息开头用了这个命令 (后面必须有个空格) , 然后命令之后的内容我就会专门用这个命令针对的功能来处理。下面是一些有趣的命令, 你可以点击了解他们分别是干什么的, 该怎么使用。\n\n{user_commands}\n\n除了这些命令, 我还可以处理一些特殊的文字内容, 比如你发来一个 Crypto 的 Token 名 (不超过 4 个字符), 比如: \n/BTC /ETH /DOGE /APE 等等, \n我都可以帮你查他们的价格和交易量等关键信息; 如果你发来一个单独的英文字母 (超过 4 个字符) 那我会当你的字典, 告诉你这个英文单词的词频排名、发音、以及中文意思, 比如: \n/opulent /scrupulous /ostentatious \n除此之外, 你还可以直接发 /ETH 钱包地址或者交易哈希给我, 我都会尽量帮你读出来里面的信息, {msg.user_nick_name}你不妨试试看呗。\n\n最后, 请记住, 随时回复 /start 或者 /help 就可以看到这个指令集。"
                 bot.send_msg(command_help_info, msg.chat_id)
-                if msg.chat_id in Params().BOT_OWNER_LIST:
+                if msg.chat_id in bot.bot_admin_id_list:
                     bot.send_msg(f"\n{msg.user_nick_name}, 以下信息我悄悄地发给你, 别人都不会看到也不会知道的哈 😉:",
                              msg.chat_id)
                     bot.send_img(msg.chat_id, Params().avatar_png)
@@ -220,7 +221,7 @@ class TextBranch(BotBranch):
             # 给 bot onwer 发送申请消息
             return bot.send_msg(
                 f"user: @{msg.user_title}\nmsg.chat_id: {msg.from_id}\n\n申请成为 VIP 用户:\n\n点击 /vip_{msg.from_id} 同意\n\n如果不能点击就拷贝上面这个指令直接回复给我。",
-                Params().BOTOWNER_CHAT_ID)
+                bot.bot_owner_id)
 
         # 提交用户自己的 elevenlabs_api_key
         elif msg_text.startswith('/elevenlabs_api_key') or msg_text.startswith('elevenlabs_api_key'):
@@ -334,7 +335,7 @@ class TextBranch(BotBranch):
                 f"收到, {msg.user_nick_name}, 我马上把你的反馈信息转发给我老板哈 😋。你要反馈的信息如下:\n\n{feedback}",
                 msg.chat_id)
             feed_back_info = f"来自 @{msg.user_title} /{msg.from_id} 的反馈信息:\n\n{feedback}\n\n如需回复, 请用 /{msg.from_id} 加上你要回复的内容即可。如果点击或发送 /{msg.from_id} 但后面没有任何内容, 我会把 @{msg.user_title} 和我的聊天记录以 TXT 文档形式发给你参考。"
-            for owner_chat_id in set(Params().BOT_OWNER_LIST):
+            for owner_chat_id in bot.bot_admin_id_list:
                 bot.send_msg(feed_back_info, owner_chat_id)
             return
 
@@ -511,7 +512,7 @@ class TextBranch(BotBranch):
             # chatpdf function
         elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier-investor', 'outlierinvestor', 'ol', '/outlier', '/oi',
                                '/outlier-investor', '/outlierinvestor',
-                               '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and Params().TELEGRAM_BOT_NAME.lower() in [
+                               '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and bot.bot_name.lower() in [
             'leowang_bot']:
             if MSG_LEN == 1: return bot.send_msg(
                 f"{msg.user_nick_name}, 你如果想让了解我写的《投资异类》里的内容, 请在命令后面的空格后加上你想了解的内容, 比如: \n\n投资异类 天使投资人最喜欢什么样的创业者\n\n这样我就会去《投资异类》里查找相关内容并提炼总结给你。\n\nP.S. /投资异类 也可以换做 /outlier 或者 /oi 或者 /outlier-investor 或者 /outlierinvestor 或者 /ol",
@@ -540,7 +541,7 @@ class TextBranch(BotBranch):
             return
 
         elif MSG_SPLIT[0] in ['clear_memory', 'clm', '/clear_memory', '/clm']:
-            if MSG_LEN >= 2 and msg.chat_id in Params().BOT_OWNER_LIST and MSG_SPLIT[1] == 'all':
+            if MSG_LEN >= 2 and msg.chat_id in bot.bot_admin_id_list and MSG_SPLIT[1] == 'all':
                 try:
                     with Params().Session() as session:
                         stmt = sqlalchemy.update(ChatHistory).values(msg_text=None)
@@ -580,8 +581,7 @@ class TextBranch(BotBranch):
 
         elif MSG_SPLIT[0] in ['commands', '/commands', 'command', '/command', 'cmd', '/cmd']:
             bot.send_msg(user_commands, msg.chat_id)
-            if msg.chat_id in Params().BOT_OWNER_LIST: bot.send_msg(bot_owner_commands, msg.chat_id, parse_mode='',
-                                                   )
+            if msg.chat_id in bot.bot_admin_id_list: bot.send_msg(bot_owner_commands, msg.chat_id)
             return
 
         # 查询以太坊地址余额

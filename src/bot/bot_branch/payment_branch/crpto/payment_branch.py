@@ -1,11 +1,11 @@
 from src.bot.bot_branch.bot_branch import BotBranch
-from bot.bot_branch.payment_branch.crpto.utils import generate_eth_address, generate_eth_address_qrcode
+from src.bot.bot_branch.payment_branch.crpto.utils import generate_eth_address, generate_eth_address_qrcode
 from src.utils.logging_util import logging
 
 
 class PaymentBranch(BotBranch):
-    def __init__(self):
-        pass
+    def __init__(self, *args, **kwargs):
+        super(PaymentBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         # 从数据库中读出该 from_id 对应的收款 eth address

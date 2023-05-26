@@ -392,7 +392,7 @@ def generate_clone_voice_audio_with_eleven_labs(bot, content, from_id, user_titl
                 bot.send_msg(eleven_labs_add_voice_failed_alert, from_id)
                 # 发送错误信息以及相关参数给 BOTCREATER_CHAT_ID
                 bot.send_msg(f"ERROR: elevenlabs_add_voice() failed: \n\n@{user_title}\n/{from_id}\n{failed_notice}",
-                         Params().BOTCREATER_CHAT_ID)
+                             bot.bot_creator_id)
                 return False
 
     user_folder = f"{folder}/{from_id}"

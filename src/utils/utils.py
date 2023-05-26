@@ -501,8 +501,8 @@ def get_user_priority(from_id):
 
 
 # def check_incoming_transactions(wallet_address, token_address, chat_id, start_date=None):
-#     token_address = web3.to_checksum_address(token_address)
-#     wallet_address = web3.to_checksum_address(wallet_address)
+#     token_address = Params().web3.to_checksum_address(token_address)
+#     wallet_address = Params().web3.to_checksum_address(wallet_address)
 #
 #     # 从 CmcTotalSupply db_cmc_total_supply 读取 token_address 的信息
 #     coin_list_df = get_token_info_from_db_cmc_total_supply(token_address)
@@ -519,7 +519,7 @@ def get_user_priority(from_id):
 #     ABI = get_token_abi(imple_address)
 #
 #     # Create a contract instance for the ERC20 token
-#     token_contract = web3.eth.contract(address=token_address, abi=ABI)
+#     token_contract = Params().web3.eth.contract(address=token_address, abi=ABI)
 #
 #     if start_date:
 #         start_timestamp = int(datetime.strptime(start_date, '%Y-%m-%d').timestamp())
@@ -527,16 +527,16 @@ def get_user_priority(from_id):
 #         start_timestamp = int(datetime.now().timestamp())
 #
 #     # Get the latest block number
-#     latest_block_number = web3.eth.block_number
+#     latest_block_number = Params().web3.eth.block_number
 #
 #     transactions = []
 #     # Iterate through each block from the latest to the earliest
 #     for block_number in range(latest_block_number):
 #         print(f'DEBUG: checking block_number: {block_number} / {latest_block_number}')
-#         block = web3.eth.get_block(block_number, full_transactions=True)
+#         block = Params().web3.eth.get_block(block_number, full_transactions=True)
 #         for transaction in block.transactions:
 #             if transaction['to'] == wallet_address and transaction['input'] != '0x':
-#                 tx_receipt = web3.eth.get_transaction_receipt(transaction['hash'])
+#                 tx_receipt = Params().web3.eth.get_transaction_receipt(transaction['hash'])
 #                 contract_address = tx_receipt['to']
 #                 if contract_address.lower() == '0xtoken_contract_address'.lower():
 #                     input_data = transaction['input']

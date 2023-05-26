@@ -145,9 +145,9 @@ def get_transactions_info_by_hash_tx(bot, hash_tx, chat_id, user_title, chain='e
 
     # Dealing with erc20_symbol and ABI
     ABI = get_token_abi(imple_address)
-    contract = web3.eth.contract(token_address, abi=ABI)
+    contract = Params().web3.eth.contract(token_address, abi=ABI)
     from_address = trans_info['from_address']
-    from_address = web3.to_checksum_address(from_address)
+    from_address = Params().web3.to_checksum_address(from_address)
     from_addr_balance_wei = contract.functions.balanceOf(from_address).call()
     from_addr_balance = float(from_addr_balance_wei / 10 ** decimals)
     func_obj, func_params = contract.decode_function_input(trans_info.get('input'))

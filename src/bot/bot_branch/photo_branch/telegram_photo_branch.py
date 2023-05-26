@@ -3,9 +3,9 @@ from src.bot.bot_branch.photo_branch.photo_branch import PhotoBranch
 from src.utils.utils import *
 
 
-class TelegramDocumentBranch(PhotoBranch):
+class TelegramPhotoBranch(PhotoBranch):
     def __init__(self):
-        super(PhotoBranch, self).__init__()
+        super(TelegramPhotoBranch, self).__init__()
 
     def handle_single_msg(self, msg, bot):
         logging.debug(f"photo in tg message")

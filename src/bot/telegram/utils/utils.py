@@ -1,4 +1,9 @@
+from urllib.parse import urlencode
+
 import requests
+
+from src.utils.param_singleton import Params
+from src.utils.logging_util import logging
 
 TELEGRAME_BASE_URL = "https://api.telegram.org/bot" + Params().TELEGRAM_BOT_RUNNING + "/"
 
@@ -45,7 +50,7 @@ def local_bot_getUpdates(previous_update_id):
         "limit": 10
         }
     params = urlencode(_params)
-    URL = telegram_base_url + method + params
+    URL = TELEGRAME_BASE_URL + method + params
     r = ''
     try: r = requests.get(URL)
     except Exception as e: logging.error(f"local_bot_getUpdates() failed: \n{e}")

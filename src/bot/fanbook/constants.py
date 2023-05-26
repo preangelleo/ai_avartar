@@ -1,4 +1,4 @@
-from utils.param_singleton import Params
+from src.utils.param_singleton import Params
 
 BASE_URL = 'https://a1.fanbook.mobi/api'
 GET_USER_TOKEN_TIMEOUT_COUNT = 3

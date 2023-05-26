@@ -29,12 +29,20 @@ class Bot(ABC):
                  check_bill_branch_handler,
                  bot_owner_branch_handler,
                  english_teacher_branch_handler,
-                 coinmarketcap_branch_handler,
-                 *args, **kwargs):
+                 coinmarketcap_branch_handler):
         """
+        Init Function of Bot
         :type document_branch_handler: DocumentBranch
+        :type photo_branch_handler: PhotoBranch
+        :type voice_branch_handler: VoiceBranch
+        :type audio_branch_handler: AudioBranch
+        :type improper_branch_handler: ImproperBranch
+        :type text_branch_handler: TextBranch
+        :type payment_branch_handler: PaymentBranch
+        :type check_bill_branch_handler: CheckBillBranch
+        :type english_teacher_branch_handler: EnglishTeacherBranch
+        :type coinmarketcap_branch_handler: CoinMarketCapBranch
         """
-        super(Bot, self).__init__(*args, **kwargs)
         self.document_branch_handler = document_branch_handler
         self.photo_branch_handler = photo_branch_handler
         self.voice_branch_handler = voice_branch_handler

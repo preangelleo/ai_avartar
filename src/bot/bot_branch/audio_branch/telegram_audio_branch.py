@@ -5,7 +5,7 @@ from src.utils.utils import *
 
 class TelegramAudioBranch(AudioBranch):
     def __init__(self):
-        super(AudioBranch, self).__init__()
+        super(TelegramAudioBranch, self).__init__()
 
     def handle_single_msg(self, msg, bot):
         tg_msg = msg.raw_msg

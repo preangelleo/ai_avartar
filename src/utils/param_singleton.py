@@ -18,7 +18,7 @@ import pinecone
 from web3 import Web3
 
 from dotenv import load_dotenv
-from prompt_template import REFILL_TEASER_DEFAULT
+from src.utils.prompt_template import REFILL_TEASER_DEFAULT
 
 
 # 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
@@ -34,7 +34,6 @@ def get_owner_parameters():
         for owner_parameter in owner_parameters: owner_parameters_dict[
             owner_parameter.parameter_name] = owner_parameter.parameter_value
     return owner_parameters_dict
-
 
 
 class Params:

@@ -1,3 +1,10 @@
+from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
+from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import CoinMarketCapBranch
+from src.bot.bot_branch.english_teacher_branch.english_teacher_branch import EnglishTeacherBranch
+from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
+from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
+from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
+from src.bot.bot_branch.text_branch.text_branch import TextBranch
 import requests
 from src.bot.bot import Bot
 import json
@@ -17,7 +24,8 @@ from constants import (
 
 
 class FanbookBot(Bot):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(FanbookBot, self).__init__(*args, **kwargs)
         self.fanbook_client_id = FANBOOK_CLIENT_ID
         self.header_map = json.dumps(
             {
@@ -97,4 +105,16 @@ class FanbookBot(Bot):
 
 
 if __name__ == '__main__':
-    FanbookBot().run()
+    FanbookBot(
+        document_branch_handler=None,
+        photo_branch_handler=None,
+        voice_branch_handler=None,
+        audio_branch_handler=None,
+        improper_branch_handler=ImproperBranch(),
+        text_branch_handler=TextBranch(),
+        payment_branch_handler=PaymentBranch(),
+        check_bill_branch_handler=CheckBillBranch(),
+        bot_owner_branch_handler=BotOwnerBranch(),
+        english_teacher_branch_handler=EnglishTeacherBranch(),
+        coinmarketcap_branch_handler=CoinMarketCapBranch(),
+    ).run()

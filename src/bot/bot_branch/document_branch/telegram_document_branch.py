@@ -15,7 +15,7 @@ from src.utils.utils import insert_dialogue_tone_from_file, insert_system_prompt
 
 class TelegramDocumentBranch(DocumentBranch):
     def __init__(self):
-        super(DocumentBranch, self).__init__()
+        super(TelegramDocumentBranch, self).__init__()
 
     def handle_single_msg(self, msg, bot):
         tg_msg = msg.raw_msg

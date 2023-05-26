@@ -5,9 +5,9 @@ from src.utils.utils import *
 from src.utils.logging_util import logging
 
 
-class ImporperBranch(BotBranch):
+class ImproperBranch(BotBranch):
     def __init__(self):
-        super(ImporperBranch, self).__init__()
+        super(ImproperBranch, self).__init__()
 
     def handle_single_msg(self, msg, bot):
         # 从 emoji_list_for_unhappy 随机选出一个 emoji 回复

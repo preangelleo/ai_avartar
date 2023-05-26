@@ -1,6 +1,17 @@
 import threading
 import time
 
+from src.bot.bot_branch.audio_branch.telegram_audio_branch import TelegramAudioBranch
+from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
+from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import CoinMarketCapBranch
+from src.bot.bot_branch.document_branch.telegram_document_branch import TelegramDocumentBranch
+from src.bot.bot_branch.english_teacher_branch.english_teacher_branch import EnglishTeacherBranch
+from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
+from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
+from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
+from src.bot.bot_branch.photo_branch.telegram_photo_branch import TelegramPhotoBranch
+from src.bot.bot_branch.text_branch.text_branch import TextBranch
+from src.bot.bot_branch.voice_branch.telegram_voice_branch import TelegramVoiceBranch
 from src.bot.single_message import build_from_telegram_msg
 from src.bot.telegram.utils.utils import *
 from src.bot.bot import Bot
@@ -124,4 +135,16 @@ class TelegramBot(Bot):
 
 
 if __name__ == '__main__':
-    TelegramBot().run()
+    TelegramBot(
+        document_branch_handler=TelegramDocumentBranch(),
+        photo_branch_handler=TelegramPhotoBranch(),
+        voice_branch_handler=TelegramVoiceBranch(),
+        audio_branch_handler=TelegramAudioBranch(),
+        improper_branch_handler=ImproperBranch(),
+        text_branch_handler=TextBranch(),
+        payment_branch_handler=PaymentBranch(),
+        check_bill_branch_handler=CheckBillBranch(),
+        bot_owner_branch_handler=BotOwnerBranch(),
+        english_teacher_branch_handler=EnglishTeacherBranch(),
+        coinmarketcap_branch_handler=CoinMarketCapBranch(),
+    ).run()

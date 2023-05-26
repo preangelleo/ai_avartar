@@ -4,7 +4,7 @@ from src.bot.bot_branch.bot_branch import BotBranch
 from src.utils.utils import *
 
 
-class PaymentBranch(BotBranch):
+class CheckBillBranch(BotBranch):
     def __init__(self):
         pass
 

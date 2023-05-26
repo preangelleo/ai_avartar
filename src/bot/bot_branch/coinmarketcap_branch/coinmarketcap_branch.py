@@ -52,7 +52,7 @@ def check_token_symbol_in_db_cmc_total_supply(token_symbol):
         return token_symbol_exists
 
 
-class PaymentBranch(BotBranch):
+class CoinMarketCapBranch(BotBranch):
     def __init__(self):
         pass
 

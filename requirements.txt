@@ -25,3 +25,10 @@ mnemonic
 sqlalchemy
 replicate
 chardet
+python-dotenv
+websocket
+websocket-client
+pre-commit
+black
+flake8
+autopep8

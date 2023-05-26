@@ -36,6 +36,7 @@ def get_owner_parameters():
     return owner_parameters_dict
 
 
+
 class Params:
     _instance = None
     free_user_free_talk_per_month_lock = threading.Lock()

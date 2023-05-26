@@ -1,6 +1,7 @@
 import threading
 import time
 
+from src.bot.single_message import build_from_telegram_msg
 from src.bot.telegram.utils.utils import *
 from src.bot.bot import Bot
 from src.utils.logging_util import logging
@@ -18,7 +19,7 @@ class MessageThread(threading.Thread):
         self.tg_msg = tg_msg
 
     def run(self):
-        self.bot.handle_single_msg(self.tg_msg)
+        self.bot.handle_single_msg(build_from_telegram_msg(tg_msg=self.tg_msg))
 
 
 class TelegramBot(Bot):

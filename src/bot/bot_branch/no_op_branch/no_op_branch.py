@@ -1,7 +1,7 @@
 from src.bot.bot_branch.bot_branch import BotBranch
 
 
-class PaymentBranch(BotBranch):
+class NoOpBranch(BotBranch):
     def __init__(self):
         pass
 

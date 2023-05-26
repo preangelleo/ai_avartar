@@ -8,6 +8,7 @@ pytz
 IPython
 ipywidgets
 xlrd
+gevent==22.8.0
 langchain
 pinecone-client
 eth_account
@@ -16,8 +17,11 @@ moralis
 python-dotenv
 langdetect
 azure-core
+azure-cognitiveservices-speech
 wechaty
 pymysql
 pydub
 mnemonic
 sqlalchemy
+replicate
+chardet

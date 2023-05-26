@@ -36,6 +36,9 @@ class SingleMessage:
         self.caption = caption
         self.reply_to_message_text = reply_to_message_text
 
+        # 如果是群聊但是没有 at 机器人, 则打印完消息后直接返回
+        self.should_be_ignored = False
+
 
 def build_from_telegram_msg(tg_msg):
     # Handle any file if available

@@ -1,12 +1,12 @@
-from bot.bot_branch.payment_branch.crpto.utils import update_user_next_payment_date, markdown_tokentnxs, \
+from src.bot.bot_branch.payment_branch.crpto.utils import update_user_next_payment_date, markdown_tokentnxs, \
     generate_eth_address
 from src.bot.bot_branch.bot_branch import BotBranch
 from src.utils.utils import *
 
 
-class PaymentBranch(BotBranch):
-    def __init__(self):
-        pass
+class CheckBillBranch(BotBranch):
+    def __init__(self, *args, **kwargs):
+        super(CheckBillBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         # 从数据库中读出该 from_id 对应的收款 eth address

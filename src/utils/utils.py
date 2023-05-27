@@ -3,10 +3,8 @@ import chardet
 import hashlib
 import os
 import pytz
-import subprocess
 from urllib.parse import urlencode
 
-import azure.cognitiveservices.speech as speechsdk
 import pandas as pd
 import replicate
 import requests
@@ -17,9 +15,10 @@ from web3 import Web3
 
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
-from third_party_api.chatgpt import chat_gpt_full
+from src.third_party_api.chatgpt import chat_gpt_full
+from src.utils.prompt_template import midjourney_prompt_fomula, midjourney_prompt_1, midjourney_user_prompt_fomula, \
+    midjourney_assistant_prompt_fomula, inproper_words_list
 from src.database.mysql import *
-from src.utils.prompt_template import *
 
 
 def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):
@@ -263,72 +262,6 @@ def convert_mp3_to_wav(mp3_file_path):
     return wav_file_path
 
 
-# Using openai whisper api to convert voice to text
-def from_voice_to_text(audio_path):
-    # Note: you need to be using OpenAI Python v0.27.0 for the code below to work
-    if audio_path.endswith('ogg'):
-        audio_path_mp3 = audio_path.replace('.ogg', '.mp3')
-        command = f"ffmpeg -i {audio_path} {audio_path_mp3}"
-        subprocess.run(command, shell=True)
-    else:
-        audio_path_mp3 = audio_path
-    print(f"DEBUG: from_voice_to_text() audio_path_mp3: {audio_path_mp3}")
-
-    url = "https://api.openai.com/v1/audio/transcriptions"
-    headers = {"Authorization": f"Bearer {Params().OPENAI_API_KEY}"}
-    data = {
-        'model': 'whisper-1',
-    }
-    with open(audio_path_mp3, 'rb') as f:
-        files = {'file': f}
-        response = requests.post(url, headers=headers, data=data, files=files)
-
-    if response.status_code != 200:
-        raise Exception(f"Request to OpenAI failed with status {response.status_code}, {response.text}")
-    '''
-    {
-    "text": "Imagine the wildest idea that you've ever had, and you're curious about how it might scale to something that's a 100, a 1,000 times bigger. This is a place where you can get to do that."
-    }
-    '''
-    return response.json().get('text')
-
-
-def from_voice_to_text_azure(audio_file_path):
-    wave_file_path = convert_mp3_to_wav(audio_file_path)
-
-    speech_config = speechsdk.SpeechConfig(subscription=os.getenv('SPEECH_KEY'), region=os.getenv('SPEECH_REGION'))
-    audio_config = speechsdk.AudioConfig(filename=wave_file_path)
-    speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
-    result = speech_recognizer.recognize_once_async().get()
-    return result.text
-
-
-def deal_with_voice_to_text(file_id, file_unique_id):
-    print(f"DEBUG: deal_with_voice_to_text()")
-    text = ''  # Create an empty text
-    # Create local file name to store voice telegram message
-    local_file_folder_name = f"files/audio/{file_unique_id}.ogg"
-    # Get the file path of the voice message using the Telegram Bot API
-    file_path_url = f"https://api.telegram.org/bot{Params().TELEGRAM_BOT_RUNNING}/getFile?file_id={file_id}"
-    try:
-        file_path_response = requests.get(file_path_url).json()
-    except Exception as e:
-        return print(f"ERROR: deal_with_voice_to_text() download failed: \n{e}")
-
-    file_path = file_path_response["result"]["file_path"]
-    # Download the voice message to your Ubuntu folder
-    voice_message_url = f"https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_RUNNING}/{file_path}"
-    try:
-        with open(local_file_folder_name, "wb") as f:
-            response = requests.get(voice_message_url)
-            f.write(response.content)
-        text = from_voice_to_text(local_file_folder_name)
-        if text: return text
-    except Exception as e:
-        print(f"ERROR: from_voice_to_text() 2 FAILED of: \n\n{e}")
-    return
-
-
 def create_midjourney_prompt(prompt):
     system_prompt = midjourney_prompt_fomula if 'fomula' in prompt else midjourney_prompt_1
     prompt = prompt.replace('fomula', '').strip()
@@ -500,97 +433,6 @@ def get_user_priority(from_id):
     return user_priority
 
 
-# def check_incoming_transactions(wallet_address, token_address, chat_id, start_date=None):
-#     token_address = Params().web3.to_checksum_address(token_address)
-#     wallet_address = Params().web3.to_checksum_address(wallet_address)
-#
-#     # 从 CmcTotalSupply db_cmc_total_supply 读取 token_address 的信息
-#     coin_list_df = get_token_info_from_db_cmc_total_supply(token_address)
-#     if coin_list_df.empty:
-#         send_msg(f"抱歉, {token_address} 不在我的数据库里, 不清楚这是个什么币子, 无法查询. 😰", chat_id)
-#         return
-#
-#     token_address = coin_list_df.iloc[0]['token_address']
-#     imple_address = coin_list_df.iloc[0]['imple_address']
-#     coin = coin_list_df.iloc[0]['symbol']
-#     decimals = int(coin_list_df.iloc[0]['decimals'])
-#
-#     # Dealing with erc20_symbol and ABI
-#     ABI = get_token_abi(imple_address)
-#
-#     # Create a contract instance for the ERC20 token
-#     token_contract = Params().web3.eth.contract(address=token_address, abi=ABI)
-#
-#     if start_date:
-#         start_timestamp = int(datetime.strptime(start_date, '%Y-%m-%d').timestamp())
-#     else:
-#         start_timestamp = int(datetime.now().timestamp())
-#
-#     # Get the latest block number
-#     latest_block_number = Params().web3.eth.block_number
-#
-#     transactions = []
-#     # Iterate through each block from the latest to the earliest
-#     for block_number in range(latest_block_number):
-#         print(f'DEBUG: checking block_number: {block_number} / {latest_block_number}')
-#         block = Params().web3.eth.get_block(block_number, full_transactions=True)
-#         for transaction in block.transactions:
-#             if transaction['to'] == wallet_address and transaction['input'] != '0x':
-#                 tx_receipt = Params().web3.eth.get_transaction_receipt(transaction['hash'])
-#                 contract_address = tx_receipt['to']
-#                 if contract_address.lower() == '0xtoken_contract_address'.lower():
-#                     input_data = transaction['input']
-#                     method_id = input_data[:10]
-#                     if method_id.lower() == '0xa9059cbb':  # Transfer method ID
-#                         token_address = '0x' + input_data[34:74]
-#                         if token_address.lower() == wallet_address.lower():
-#                             token_amount = int(input_data[74:], 16) / 10 ** 18
-#                             token_symbol = token_contract.functions.symbol().call()
-#                             if token_symbol.lower() == coin.lower() and block.timestamp >= start_timestamp:
-#                                 transactions.append({
-#                                     'token_amount': token_amount,
-#                                     'block_number': block_number,
-#                                     'from_address': transaction['from'],
-#                                     'block_timestamp': block.timestamp,
-#                                     'transaction_hash': transaction['hash']
-#                                 })
-#
-#     return transactions
-
-def microsoft_azure_tts(text, voice='zh-CN-YunxiNeural', output_filename='output.wav'):
-    # This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"
-    speech_config = speechsdk.SpeechConfig(subscription=os.getenv('SPEECH_KEY'), region=os.getenv('SPEECH_REGION'))
-    audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=True, filename=output_filename)
-
-    # The language of the voice that speaks.
-    speech_config.speech_synthesis_voice_name = voice
-    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
-    speech_synthesis_result = speech_synthesizer.speak_text_async(text).get()
-
-    if speech_synthesis_result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted: return output_filename
-    return False
-
-
-def create_news_podcast(filepath='', prompt='', openai_model=Params().OPENAI_MODEL):
-    if not filepath and not prompt: return
-
-    if filepath and not prompt:
-        with open(filepath, 'r') as f: prompt = f.read()
-
-    if not prompt: return
-
-    message = chat_gpt_full(prompt, news_reporter_system_prompt, news_reporter_user_prompt,
-                            news_reporter_assistant_prompt, openai_model, Params().OPENAI_API_KEY)
-
-    filepath_news = filepath.replace('_snippet.txt', '_news.txt')
-    with open(filepath_news, 'w') as f:
-        f.write(message)
-
-    filepath_news_mp3 = filepath_news.replace('.txt', '.mp3')
-    if filepath_news: filepath_news_mp3 = microsoft_azure_tts(message, 'en-US-JaneNeural', filepath_news_mp3)
-
-    return filepath_news_mp3
-
 
 # 通过 ffmpeg 合并英文语音文件和中文语音文件
 def merge_audio_files(audio_files):
@@ -741,59 +583,6 @@ def remove_user_blacklist(from_id):
         return update_user_priority(from_id, 'is_blacklist', 0)
     except:
         return False
-
-
-# initiate the avatar_user_priority table, set BOT_OWNER_ID as the owner, set BOT_OWNER_ID as the admin, set BOT_OWNER_ID as the vip, set BOT_OWNER_ID as the paid, set BOT_OWNER_ID as the active, set BOT_OWNER_ID as the deleted, set BOT_OWNER_ID as the priority 100, set BOT_OWNER_ID as the free_until 2099-12-31 23:59:59
-def initialize_user_priority_table():
-    print(f"DEBUG: initialize_user_priority_table()")
-    # Create a new session
-    with Params().Session() as session:
-        for from_id in Params().BOT_OWNER_LIST:
-            # Query the table 'avatar_user_priority' to check if the from_id exists
-            from_id_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
-            if from_id_exists:
-                # Update the key_value
-                session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
-                    {UserPriority.is_admin: 1, UserPriority.is_owner: 1, UserPriority.is_vip: 1,
-                     UserPriority.is_paid: 1, UserPriority.is_active: 1, UserPriority.priority: 100,
-                     UserPriority.free_until: datetime(2099, 12, 31, 23, 59, 59)})
-            else:
-                # Insert the from_id and key_value
-                new_user_priority = UserPriority(user_from_id=from_id, is_admin=1, is_owner=1, is_vip=1, is_paid=1,
-                                                 is_active=1, priority=100,
-                                                 free_until=datetime(2099, 12, 31, 23, 59, 59),
-                                                 update_time=datetime.now())
-                session.add(new_user_priority)
-            # Commit the session
-            session.commit()
-    return True
-
-
-def initialize_owner_parameters_table():
-    print(f"DEBUG: initialize_owner_parameters_table()")
-
-    # Create a new session
-    with Params().Session() as session:
-        # 清空 avatar_owner_parameters 表
-        session.query(OwnerParameter).delete()
-        session.commit()
-        print(f"avatar_owner_parameters 表已清空!")
-        # Read .env to get the owner's parameters
-        with open('.env', 'r') as f:
-            for line in f.readlines():
-                line = line.strip()
-                if not line or line.startswith('#'): continue
-
-                parameter_name, parameter_value = line.split('=', 1)
-                parameter_name = parameter_name.strip()
-                parameter_value = parameter_value.strip()
-
-                # Insert the owner's parameters into the table 'avatar_owner_parameters'
-                new_owner_parameter = OwnerParameter(parameter_name=parameter_name, parameter_value=parameter_value,
-                                                     update_time=datetime.now())
-                session.add(new_owner_parameter)
-                session.commit()
-    return
 
 
 # 更新 avatar_owner_parameters 表中的参数, 判断 input 的参数名称是否存在, 如果存在则更新, 如果不存在则插入
@@ -1128,10 +917,6 @@ Max流通市值:  295,000,000
 
 
 
-
-
-
-
 # code from local_bot.py
 
 # 检查 msg_text 消息内容是否不合规范
@@ -1151,20 +936,6 @@ def is_blacklisted(from_id):
         logging.error(f'occurred while checking if from_id: {from_id} is blacklisted')
         logging.error(f'message: {str(e)}')
     return blacklisted
-
-
-def clear_chat_history(bot, chat_id, message_id):
-    message_id = int(message_id)
-    # 删除之前的聊天记录 (message_id 从大到小直到 0)
-    for i in range(message_id, message_id - 20, -1):
-        try:
-            response = requests.get(
-                f'https://api.telegram.org/bot{Params().TELEGRAM_BOT_RUNNING}/deleteMessage?chat_id={chat_id}&message_id={str(i)}')
-            if response.status_code == 200: bot.send_msg(
-                f"成功删除用户 giiitte < chat_id: {chat_id} > 的聊天记录 message_id: {i}", Params().BOTOWNER_CHAT_ID)
-        except:
-            logging.error(f'Failed to delete User chat_id: {chat_id} message_id: {i}')
-    return
 
 
 '''

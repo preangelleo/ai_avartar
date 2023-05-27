@@ -1,6 +1,17 @@
 import threading
 import time
 
+from src.bot.bot_branch.audio_branch.telegram_audio_branch import TelegramAudioBranch
+from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
+from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import CoinMarketCapBranch
+from src.bot.bot_branch.document_branch.telegram_document_branch import TelegramDocumentBranch
+from src.bot.bot_branch.english_teacher_branch.english_teacher_branch import EnglishTeacherBranch
+from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
+from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
+from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
+from src.bot.bot_branch.photo_branch.telegram_photo_branch import TelegramPhotoBranch
+from src.bot.bot_branch.text_branch.text_branch import TextBranch
+from src.bot.bot_branch.voice_branch.telegram_voice_branch import TelegramVoiceBranch
 from src.bot.single_message import build_from_telegram_msg
 from src.bot.telegram.utils.utils import *
 from src.bot.bot import Bot
@@ -27,7 +38,7 @@ class TelegramBot(Bot):
     def __init__(self, *args, **kwargs):
         super(TelegramBot, self).__init__(*args, **kwargs)
 
-    def send_msg(self, msg, chat_id, parse_mode=None):
+    def send_msg(self, msg: str, chat_id, parse_mode=None):
         if not msg:
             return False
         if not chat_id:
@@ -112,7 +123,7 @@ class TelegramBot(Bot):
             message_thread.start()
 
     def run(self):
-        logging.debug(f"@{Params().TELEGRAM_BOT_NAME} started...")
+        logging.debug(f"@{self.bot_name} started...")
         i = 0
         while True:
             i += 1
@@ -124,4 +135,19 @@ class TelegramBot(Bot):
 
 
 if __name__ == '__main__':
-    TelegramBot().run()
+    TelegramBot(
+        bot_name=Params().TELEGRAM_BOT_NAME,
+        bot_owner_id=Params().TELEGRAM_BOTOWNER_CHAT_ID,
+        bot_creator_id=Params().TELEGRAM_BOTCREATER_CHAT_ID,
+        document_branch_handler=TelegramDocumentBranch(),
+        photo_branch_handler=TelegramPhotoBranch(),
+        voice_branch_handler=TelegramVoiceBranch(),
+        audio_branch_handler=TelegramAudioBranch(),
+        improper_branch_handler=ImproperBranch(),
+        text_branch_handler=TextBranch(),
+        payment_branch_handler=PaymentBranch(),
+        check_bill_branch_handler=CheckBillBranch(),
+        bot_owner_branch_handler=BotOwnerBranch(),
+        english_teacher_branch_handler=EnglishTeacherBranch(),
+        coinmarketcap_branch_handler=CoinMarketCapBranch(),
+    ).run()

@@ -5,11 +5,5 @@ from src.bot.bot import Bot
 
 class BotBranch(ABC):
     @abstractmethod
-    def handle_single_msg(self, msg, bot):
-        """
-        Handle a single msg for a given branch
-
-        :type msg: SingleMessage
-        :type bot: Bot
-        """
+    def handle_single_msg(self, msg: SingleMessage, bot: Bot):
         raise NotImplementedError

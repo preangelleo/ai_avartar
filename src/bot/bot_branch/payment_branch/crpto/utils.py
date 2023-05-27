@@ -183,7 +183,7 @@ def get_transactions_info_by_hash_tx(bot, hash_tx, chat_id, user_title, chain='e
 
         # 检查 to_address 是否在 table avatar_eth_wallet, 如果在, 说明这是用户的充值地址, 需要本次交易的信息写入 avatar_crypto_payments
         from_id = get_from_id_by_eth_address(to_address)
-        if from_id and from_id in [chat_id] + Params().BOT_OWNER_LIST:
+        if from_id and from_id in [chat_id] + bot.bot_admin_id_list:
 
             '''func_params:
             {"to": "0x5e278a70193F214C3536FD6f1D298a5eaeF52795", "value": 100.0, "status": true, "data": "0xa9059cbb0000000000000000000000005e278a70193f214c3536fd6f1d298a5eaef527950000000000000000000000000000000000000000000000000000000005f5e100", "from_address": "0xb411B974c0ac75C88E5039ea0bf63a84aa7B5377", "from_addr_balance": 2512.718824, "token_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "decimals": 6, "coin": "USDC", "block_timestamp": "2023-03-11T22:25:59.000Z"}'''
@@ -509,7 +509,7 @@ def insert_into_avatar_crypto_payments(bot, from_id, coin, to_address, value, ti
             elif mark_user_is_paid(from_id, next_payment_time):
                 bot.send_msg(
                     f"叮咚, {user_title} {from_id} 刚刚到账充值 {format_number(value)} {coin.lower()}\n\n充值地址: \n{markdown_wallet_address(to_address)}\n\n交易哈希:\n{markdown_transaction_hash(hash_tx)}",
-                    Params().BOTOWNER_CHAT_ID, parse_mode='Markdown')
+                    bot.bot_owner_id, parse_mode='Markdown')
                 bot.send_msg(
                     f"亲爱的, 你交来的公粮够我一阵子啦 😍😍😍, 下次交公粮的时间是: \n\n{next_payment_time} \n\n你可别忘了哦, 反正到时候我会提醒你哒, 么么哒 😘",
                     from_id)
@@ -574,3 +574,61 @@ def generate_eth_address(user_from_id):
 
     # Return the generated address, private key, and mnemonic phrase
     return address
+
+
+def check_incoming_transactions(bot, wallet_address, token_address, chat_id, start_date=None):
+    token_address = Params().web3.to_checksum_address(token_address)
+    wallet_address = Params().web3.to_checksum_address(wallet_address)
+
+    # 从 CmcTotalSupply db_cmc_total_supply 读取 token_address 的信息
+    coin_list_df = get_token_info_from_db_cmc_total_supply(token_address)
+    if coin_list_df.empty:
+        bot.send_msg(f"抱歉, {token_address} 不在我的数据库里, 不清楚这是个什么币子, 无法查询. 😰", chat_id)
+        return
+
+    token_address = coin_list_df.iloc[0]['token_address']
+    imple_address = coin_list_df.iloc[0]['imple_address']
+    coin = coin_list_df.iloc[0]['symbol']
+    decimals = int(coin_list_df.iloc[0]['decimals'])
+
+    # Dealing with erc20_symbol and ABI
+    ABI = get_token_abi(imple_address)
+
+    # Create a contract instance for the ERC20 token
+    token_contract = Params().web3.eth.contract(address=token_address, abi=ABI)
+
+    if start_date:
+        start_timestamp = int(datetime.strptime(start_date, '%Y-%m-%d').timestamp())
+    else:
+        start_timestamp = int(datetime.now().timestamp())
+
+    # Get the latest block number
+    latest_block_number = Params().web3.eth.block_number
+
+    transactions = []
+    # Iterate through each block from the latest to the earliest
+    for block_number in range(latest_block_number):
+        print(f'DEBUG: checking block_number: {block_number} / {latest_block_number}')
+        block = Params().web3.eth.get_block(block_number, full_transactions=True)
+        for transaction in block.transactions:
+            if transaction['to'] == wallet_address and transaction['input'] != '0x':
+                tx_receipt = Params().web3.eth.get_transaction_receipt(transaction['hash'])
+                contract_address = tx_receipt['to']
+                if contract_address.lower() == '0xtoken_contract_address'.lower():
+                    input_data = transaction['input']
+                    method_id = input_data[:10]
+                    if method_id.lower() == '0xa9059cbb':  # Transfer method ID
+                        token_address = '0x' + input_data[34:74]
+                        if token_address.lower() == wallet_address.lower():
+                            token_amount = int(input_data[74:], 16) / 10 ** 18
+                            token_symbol = token_contract.functions.symbol().call()
+                            if token_symbol.lower() == coin.lower() and block.timestamp >= start_timestamp:
+                                transactions.append({
+                                    'token_amount': token_amount,
+                                    'block_number': block_number,
+                                    'from_address': transaction['from'],
+                                    'block_timestamp': block.timestamp,
+                                    'transaction_hash': transaction['hash']
+                                })
+
+    return transactions

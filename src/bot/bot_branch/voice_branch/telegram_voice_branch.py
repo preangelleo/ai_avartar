@@ -1,11 +1,13 @@
+from src.bot.telegram.utils.utils import deal_with_voice_to_text
 from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
-from third_party_api.elevenlabs import elevenlabs_user_ready_to_clone, update_elevenlabs_user_original_voice_filepath
+from src.third_party_api.elevenlabs import elevenlabs_user_ready_to_clone, update_elevenlabs_user_original_voice_filepath
+import subprocess
 from src.utils.utils import *
 
 
 class TelegramVoiceBranch(VoiceBranch):
-    def __init__(self):
-        super(VoiceBranch, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(TelegramVoiceBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         tg_msg = msg.raw_msg
@@ -54,12 +56,12 @@ class TelegramVoiceBranch(VoiceBranch):
             # Create local file name to store voice telegram message
             local_file_folder_name = f"{user_original_voice_folder}/{file_unique_id}.ogg"
             # Get the file path of the voice message using the Telegram Bot API
-            file_path_url = f"https://api.telegram.org/bot{Params().TELEGRAM_BOT_RUNNING}/getFile?file_id={file_id}"
+            file_path_url = f"https://api.telegram.org/bot{Params().TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}"
             file_path_response = requests.get(file_path_url).json()
 
             file_path = file_path_response["result"]["file_path"]
             # Download the voice message to your Ubuntu folder
-            voice_message_url = f"https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_RUNNING}/{file_path}"
+            voice_message_url = f"https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_TOKEN}/{file_path}"
 
             with open(local_file_folder_name, "wb") as f:
                 response = requests.get(voice_message_url)

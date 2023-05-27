@@ -3,9 +3,9 @@ from src.bot.bot_branch.photo_branch.photo_branch import PhotoBranch
 from src.utils.utils import *
 
 
-class TelegramDocumentBranch(PhotoBranch):
-    def __init__(self):
-        super(PhotoBranch, self).__init__()
+class TelegramPhotoBranch(PhotoBranch):
+    def __init__(self, *args, **kwargs):
+        super(TelegramPhotoBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         logging.debug(f"photo in tg message")
@@ -15,7 +15,7 @@ class TelegramDocumentBranch(PhotoBranch):
         # 读出 Photo 的caption, 如果有的话
         caption = msg.caption
         if caption and caption.split()[0].lower() in ['group_send_image', 'gsi',
-                                                      'group send image'] and msg.chat_id in Params().BOT_OWNER_LIST:
+                                                      'group send image'] and msg.chat_id in bot.bot_admin_id_list:
             group_send_image = True
             description = ' '.join(caption.split()[1:])
             bot.send_msg(
@@ -41,7 +41,7 @@ class TelegramDocumentBranch(PhotoBranch):
             return
 
         # construct the full URL for the file
-        file_url = f'https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_RUNNING}/{file_path}'
+        file_url = f'https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_TOKEN}/{file_path}'
         # get the content of the file from the URL
         try:
             file_content = requests.get(file_url).content
@@ -55,7 +55,7 @@ class TelegramDocumentBranch(PhotoBranch):
             logging.error(f"photo get file_content failed: \n\n{e}")
             return
 
-        if group_send_image: return bot.send_img_to_all(msg, save_path, description, msg.chat_id)
+        if group_send_image: return bot.send_img_to_all(msg, save_path, description)
 
         img_caption = replicate_img_to_caption(save_path)
         if 'a computer screen' in img_caption: return
@@ -76,7 +76,7 @@ class TelegramDocumentBranch(PhotoBranch):
                 new_record = ChatHistory(
                     first_name='ChatGPT',
                     last_name='Bot',
-                    username=Params().TELEGRAM_BOT_NAME,
+                    username=bot.bot_name,
                     from_id=msg.from_id,
                     chat_id=msg.chat_id,
                     update_time=datetime.now(),

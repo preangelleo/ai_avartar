@@ -14,6 +14,7 @@ class SingleMessage:
                  msg_document,
                  msg_photo,
                  msg_voice,
+                 msg_audio,
                  msg_sticker,
                  caption,
                  reply_to_message_text,
@@ -32,6 +33,7 @@ class SingleMessage:
         self.msg_document = msg_document
         self.msg_photo = msg_photo
         self.msg_voice = msg_voice
+        self.msg_audio = msg_audio
         self.msg_sticker = msg_sticker
         self.caption = caption
         self.reply_to_message_text = reply_to_message_text
@@ -55,7 +57,12 @@ def build_from_telegram_msg(tg_msg):
         msg_document=tg_msg['message'].get('document'),
         msg_photo=tg_msg['message'].get('photo'),
         msg_voice=tg_msg['message'].get('voice'),
+        msg_audio=tg_msg['message'].get('audio'),
         msg_sticker=tg_msg['message'].get('sticker', {}).get('emoji'),
         caption=tg_msg['message'].get('caption', ''),
         reply_to_message_text=tg_msg['message'].get('reply_to_message', {}).get('text')
     )
+
+
+def build_from_fanbook_msg(obj):
+    raise NotImplementedError

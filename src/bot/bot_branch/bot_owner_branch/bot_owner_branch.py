@@ -1,11 +1,12 @@
 from src.bot.bot_branch.bot_branch import BotBranch
 from src.utils.constants import DEAR_USER
 from src.utils.utils import *
+from utils.prompt_template import user_commands, bot_owner_commands
 
 
 class BotOwnerBranch(BotBranch):
-    def __init__(self):
-        pass
+    def __init__(self, *args, **kwargs):
+        super(BotOwnerBranch, self).__init__(*args, **kwargs)
 
     def handle_single_msg(self, msg, bot):
         msg_lower = msg.msg_text.lower()
@@ -41,7 +42,7 @@ class BotOwnerBranch(BotBranch):
         elif msg_lower.startswith('/vip') or msg_lower.startswith('vip') or msg_lower.startswith(
                 '/v') or msg_lower.startswith('v'):
             user_from_id = msg.msg_text.replace('/', '').replace('vip', '').replace('v', '').replace('_',
-                                                                                                         '').strip()
+                                                                                                     '').strip()
             # 判断 from_id 是否是数字
             if user_from_id and user_from_id.isdigit():
                 # return bot.send_msg(f"{user_nick_name}, 你要设置谁为 VIP, 请在命令后面的空格后再加上一个 from_id, 比如: \n\nvip 123456789\n\n这样就是把 from_id 为 123456789 的用户设置为 VIP 了😘。如果你不知道对方的 chat_id, 请对方发送 /vip 或者 /v 给我申请成为 VIP, 我会转达他的申请给你并附带对方的 chat_id, 届时如果你同意, 可以根据提示确认。\n\nP.S. /vip 也可以缩写为 /v", chat_id)
@@ -92,7 +93,7 @@ class BotOwnerBranch(BotBranch):
         # 发送最新的 user_commands 给用户
         elif MSG_SPLIT[0] in ['group_send_commands_list', 'gscl', '/group_send_commands_list', '/gscl']:
             group_send_message_info = f"{DEAR_USER}, /commands 列表更新咯 😙: \n{user_commands}"
-            bot.send_msg_to_all(msg, group_send_message_info, bot_owner_chat_id = msg.chat_id)
+            bot.send_msg_to_all(msg, group_send_message_info)
             bot.send_msg(bot_owner_commands, msg.chat_id)
             return
 
@@ -214,7 +215,7 @@ class BotOwnerBranch(BotBranch):
                 f"{msg.user_nick_name}, 你要群发消息, 请在命令后面的空格后再加上一个字符串, 比如: \n\ngroup_send_message 亲爱的, 我又升级了, 我可以直接读以太坊地址了, 吼吼, 发个钱包地址来看看吧 😘\n\n这样我就会逐条发送给每个用户。\n\nP.S. /group_send_message 也可以缩写为 /gsm",
                 msg.chat_id)
             message_content = ' '.join(MSG_SPLIT[1:])
-            bot.send_msg_to_all(msg, message_content, bot_owner_chat_id = msg.chat_id)
+            bot.send_msg_to_all(msg, message_content)
             return
 
         # 使用 send_file_to_all 将文件发送给所有用户

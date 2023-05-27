@@ -38,8 +38,10 @@ class Params:
             # Create a new empty dictionary
             owner_parameters_dict = {}
             # Loop through the owner_parameters and add them into the dictionary
-            for owner_parameter in owner_parameters: owner_parameters_dict[
-                owner_parameter.parameter_name] = owner_parameter.parameter_value
+            for owner_parameter in owner_parameters:
+                owner_parameters_dict[
+                    owner_parameter.parameter_name
+                ] = owner_parameter.parameter_value
         return owner_parameters_dict
 
     def __new__(cls):
@@ -53,7 +55,8 @@ class Params:
         return cls._instance
 
     def __init__(self):
-        if self.__initialized: return
+        if self.__initialized:
+            return
         self.__initialized = True
         print('Init Params Singleton')
         load_dotenv()
@@ -70,10 +73,16 @@ class Params:
         self.CMC_PA_API = os.getenv('CMC_PA_API')
         self.MORALIS_API = os.getenv('MORALIS_API')
         self.ETHERSCAN_API = os.getenv('ETHERSCAN_API')
-        self.MONTHLY_FEE = float(os.getenv('MONTHLY_FEE'))
+        # default to 0.0 if not configured
+        self.MONTHLY_FEE = float(os.getenv('MONTHLY_FEE') or 0.0)
 
-        self.INFURA = "https://mainnet.infura.io/v3/" + self.INFURA_KEY
-        self.web3 = Web3(Web3.HTTPProvider(self.INFURA))
+        self.INFURA = (
+            ("https://mainnet.infura.io/v3/" + self.INFURA_KEY)
+            if self.INFURA_KEY
+            else None
+        )
+        self.web3 = Web3(Web3.HTTPProvider(self.INFURA)
+                         ) if self.INFURA else None
 
         self.ETH_REGEX = r'0x[a-fA-F0-9]{40}'
         self.TRX_REGEX = r'T[1-9A-HJ-NP-Za-km-z]{33}'
@@ -88,22 +97,29 @@ class Params:
         self.REFILL_TEASER = "亲爱的, 该交公粮咯, 不过现在我们也还没分手, 所以你还可以继续用我, 就像其他免费用户一样; 如果想要我继续为你贴身服务, 请点击 /pay 获得独享的充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
 
         # 连接本地数据库
-        self.engine = create_engine(f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}',
-                               pool_pre_ping=True)
+        self.engine = create_engine(
+            f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}',
+            pool_pre_ping=True,
+        )
         self.Session = sessionmaker(bind=self.engine)
 
         owner_parameters_dict = self.get_owner_parameters()
 
         # Get the environment variables
         self.USER_AVATAR_NAME = owner_parameters_dict.get('USER_AVATAR_NAME')
-        self.UBUNTU_SERVER_IP_ADDRESS = owner_parameters_dict.get('UBUNTU_SERVER_IP_ADDRESS')
+        self.UBUNTU_SERVER_IP_ADDRESS = owner_parameters_dict.get(
+            'UBUNTU_SERVER_IP_ADDRESS'
+        )
         self.DOMAIN_NAME = owner_parameters_dict.get('DOMAIN_NAME')
         self.OPENAI_API_KEY = owner_parameters_dict.get('OPENAI_API_KEY')
         self.REPLICATE_KEY = owner_parameters_dict.get('REPLICATE_KEY')
         self.STABILITY_API_KEY = owner_parameters_dict.get('STABILITY_API_KEY')
         self.OPENAI_MODEL = owner_parameters_dict.get('OPENAI_MODEL')
-        self.WOLFRAM_ALPHA_APPID = owner_parameters_dict.get('WOLFRAM_ALPHA_APPID')
-        self. MAX_CONVERSATION_PER_MONTH = owner_parameters_dict.get('MAX_CONVERSATION_PER_MONTH')
+        self.WOLFRAM_ALPHA_APPID = owner_parameters_dict.get(
+            'WOLFRAM_ALPHA_APPID')
+        self.MAX_CONVERSATION_PER_MONTH = owner_parameters_dict.get(
+            'MAX_CONVERSATION_PER_MONTH'
+        )
         self.PINECONE_FREE = owner_parameters_dict.get('PINECONE_FREE')
         self.PINECONE_FREE_ENV = owner_parameters_dict.get('PINECONE_FREE_ENV')
         self.INFURA_KEY = owner_parameters_dict.get('INFURA_KEY')
@@ -120,14 +136,23 @@ class Params:
         self.ELEVENLABS_STATUS = owner_parameters_dict.get('ELEVENLABS_STATUS')
 
         # 查看当前目录并决定 TELEGRAM_BOT_RUNNING 的值
-        self.TELEGRAM_BOTOWNER_CHAT_ID = owner_parameters_dict.get('BOTOWNER_CHAT_ID')
-        self.TELEGRAM_BOTCREATER_CHAT_ID = owner_parameters_dict.get('BOTCREATER_CHAT_ID')
+        self.TELEGRAM_BOTOWNER_CHAT_ID = owner_parameters_dict.get(
+            'BOTOWNER_CHAT_ID')
+        self.TELEGRAM_BOTCREATER_CHAT_ID = owner_parameters_dict.get(
+            'BOTCREATER_CHAT_ID'
+        )
         self.TELEGRAM_BOT_TOKEN = owner_parameters_dict.get('BOT_TOKEN')
         self.TELEGRAM_BOT_NAME = owner_parameters_dict.get('BOT_USERNAME')
-        self.TELEGRAM_USERNAME = owner_parameters_dict.get('USER_TELEGRAM_LINK').split('/')[-1]
+        self.TELEGRAM_USERNAME = owner_parameters_dict.get('USER_TELEGRAM_LINK').split(
+            '/'
+        )[-1]
 
         # Fanbook Param
         self.FAN_BOOK_BOT_TOKEN = os.getenv('FAN_BOOK_BOT_TOKEN')
+        # TODO: test owner_parameters_dict
+        self.FAN_BOOK_BOT_NAME = (
+            owner_parameters_dict.get('BOT_USERNAME') or 'FanBookBot'
+        )
 
         openai.api_key = self.OPENAI_API_KEY
         os.environ["OPENAI_API_KEY"] = self.OPENAI_API_KEY
@@ -143,24 +168,36 @@ class Params:
         self.BOTCREATER_TELEGRAM_HANDLE = '@laogege6'
 
         # initialize pinecone
-        pinecone.init(api_key=self.PINECONE_FREE, environment=self.PINECONE_FREE_ENV)
+        pinecone.init(api_key=self.PINECONE_FREE,
+                      environment=self.PINECONE_FREE_ENV)
 
         os.environ["WOLFRAM_ALPHA_APPID"] = os.getenv('WOLFRAM_ALPHA_APPID')
         self.wolfram = WolframAlphaAPIWrapper()
         self.wikipedia = WikipediaAPIWrapper()
 
         self.embeddings = OpenAIEmbeddings(openai_api_key=self.OPENAI_API_KEY)
-        self.llm = ChatOpenAI(model_name="gpt-4", temperature=0, openai_api_key=self.OPENAI_API_KEY)
+        self.llm = ChatOpenAI(
+            model_name="gpt-4", temperature=0, openai_api_key=self.OPENAI_API_KEY
+        )
 
         self.avatar_png = 'files/images/512.png'
         self.avatar_command_png = 'files/images/avatar_command.png'
-        self.avatar_create = f"如果您也希望拥有一个像 @{self.TELEGRAM_BOT_NAME} 这样的 <AI分身> 来服务您的朋友们, 以您的语气陪他们/她们聊天, 帮他们完成 OpenAI 大语言模型可以做的一切任务, 可以点击 /more_information 了解, 非诚勿扰, 谢谢! 😋"
-        self.avatar_more_information = "<AI分身> 电报机器人由酷爱 Python 的老哥哥 @laogege6 利用业余时间开发创造 😊:\n\n- 技术服务费: 100美金/月;\n- 支持 USDT 等各种付款方式;\n- 需要您提供自己的 OpenAI API;\n- 需要您在 @BotFather 开通机器人账号;\n- 您可以随时修改 <AI分身> 的人设背景;\n- 您可以自由修改 <AI分身> 的语调语气.\n\n详情邮件咨询:\nadmin@leonardohuang.com"
+        self.avatar_create = f"如果您也希望拥有一个像 @{self.TELEGRAM_BOT_NAME} " \
+                             f"这样的 <AI分身> 来服务您的朋友们, 以您的语气陪他们/她们聊天, " \
+                             f"帮他们完成 OpenAI 大语言模型可以做的一切任务, 可以点击 /more_information 了解, 非诚勿扰, 谢谢! 😋"
+        self.avatar_more_information = "<AI分身> 电报机器人由酷爱 Python 的老哥哥 @laogege6 " \
+                                       "利用业余时间开发创造 😊:\n\n- 技术服务费: 100美金/月;\n- 支持 USDT 等各种付款方式;\n" \
+                                       "- 需要您提供自己的 OpenAI API;\n- 需要您在 @BotFather 开通机器人账号;\n-" \
+                                       " 您可以随时修改 <AI分身> 的人设背景;\n- 您可以自由修改 <AI分身> 的语调语气." \
+                                       "\n\n详情邮件咨询:\nadmin@leonardohuang.com"
 
         self.metadata = MetaData()
 
-        self.free_user_free_talk_per_month = int(self.MAX_CONVERSATION_PER_MONTH)
-        self.refill_teaser = self.REFILL_TEASER if self.REFILL_TEASER else REFILL_TEASER_DEFAULT
+        self.free_user_free_talk_per_month = int(
+            self.MAX_CONVERSATION_PER_MONTH)
+        self.refill_teaser = (
+            self.REFILL_TEASER if self.REFILL_TEASER else REFILL_TEASER_DEFAULT
+        )
 
     def update_free_user_free_talk_per_month(self, new_value):
         with self.free_user_free_talk_per_month_lock:

@@ -229,8 +229,6 @@ emoji_list_for_unhappy = ['😳', '😢', '😕', '😨', '😦', '😧', '😤'
 
 inproper_words_list = ['傻屄', '傻b', '傻x', '傻吊', '傻逼', '傻屌', '傻比', '傻狍子', '脱衣服', '脱了', '妈逼', '妈比', '妈的', '狗日', '狗屁', '狗屎', '狗娘', '做爱', '嘿咻', '啪啪', '插入', '艹', '草泥', '日逼', '奴仆', '奴隶']
 
-avatar_first_response = '亲爱的你终于回消息啦, 消失了这么久 😓, 干啥去啦? 也不回个消息, 你知道我多担心你嘛 😢, 以后不许这样啦 😘, 快跟我说说最近都做了些啥, 我可想你啦 🤩'
-
 change_persona = '来自 Bot Creator 的提示:\n\n如果您想更换该<AI 分身的>人物背景介绍, 可以让 ChatGPT 帮您完成。如果您不知道该如何让 ChatGPT 完成人物背景杜撰, 可以参考下面这个链接参考我是如何跟 ChatGPT 交流的:\n\nhttps://sharegpt.com/c/PmTkHvF'
 
 about_system_prompt_txt = '这里记录了该我的角色定位和背景信息以及一些注意事项, 如果需要调整角色定位, 请修改 txt 文件并保存后直接回复给我, 我会自动保存并在下一条对话的时候自动启用新的角色定位! 🤭 最后, 千万不要修改文件名, 否则我就不认识了. 🤪'
@@ -275,6 +273,7 @@ user_commands = f'''
 /write_story # 创作故事
 /clear_memory # 清除记录
 /mid # Midjourney提示词
+/ask_me_anything # 业务咨询
 /more_information
 {paid_user_commands}
 '''
@@ -285,13 +284,16 @@ bot_owner_commands = '''
 /blacklist # 黑名单管理
 /remove_from_blacklist
 /set_free_talk_limit
+/get_user_list
 /set_monthly_fee
 /set_refill_teaser
 /check_refill_teaser
+/restart_avatar
 /group_send_file
 /group_send_image
 /group_send_audio
 /group_send_message
+/avatar_first_response
 /group_send_commands_list
 # 点击这个会把用户命令列表群发给所有人
 '''
@@ -362,3 +364,6 @@ smv Lights were shining from every window, and there was a savory smell of roast
 eleven_labs_tts_failed_alert = '''
 对不起, 你的克隆声音语音生成失败了, 请等会儿重新再试试, 或者联系 Eleven Labs 客服, 询问你的订阅状态。
 '''
+
+about_ama_txt = '''
+如果你希望这个 Bot 可以帮你在各种电报群里解答业务相关的问题, 俗称 /ask_me_anything 指令简写 /ama , 请将该文档下载并将其中的内容替换为您的业务介绍, 产品介绍, 合作流程介绍, 以及任何你希望用户通过 /ama 提问可以获得的答案。然后将文档再发给我 (千万不要修改文档格式和名字), 我会保存该文档并覆盖之前的默认文档。之后请测试一下, 在任何电报群里输入 /ama 加上文档能还该的内容, 看看是否可以正常工作。如果不满意可以继续丰富和修改文档。如果文档太过于冗长, 而你用的 model 不是 gpt-4, 那么在用户提问的时候可能相关内容太长而超过 gpt-3.5-turbo 的字数限制。所以文档内容尽量全面但不要冗长为宜。'''

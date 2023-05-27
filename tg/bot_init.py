@@ -49,6 +49,7 @@ if place_holder:
     from web3 import Web3, EthereumTesterProvider
     from moralis import evm_api
     from logging_util import logging
+    import chromadb
 
     from dotenv import load_dotenv
     load_dotenv()
@@ -119,7 +120,7 @@ if place_holder:
 
         id = Column(Integer, primary_key=True, autoincrement=True)
         parameter_name = Column(String(255))
-        parameter_value = Column(String(255))
+        parameter_value = Column(Text)
         update_time = Column(DateTime)
 
     # Define the table 'avatar_system_prompt', id is the primary key autoincrement, INT; system_prompt is the TEXT, update_time is the DateTime
@@ -169,6 +170,7 @@ if place_holder:
 
         id = Column(Integer, primary_key=True, autoincrement=True)
         user_from_id = Column(String(255), unique=True)
+        user_title = Column(String(255))
         priority = Column(Integer, default=0)
         is_blacklist = Column(Integer, default=0)
         free_until = Column(DateTime, default=datetime.now())
@@ -341,7 +343,6 @@ if place_holder:
         chat_id = Column(String(255))
         update_time = Column(DateTime)
 
-
     '''定义 ElevenLabsUser 表,
     from_id, string
     user_title, string
@@ -396,21 +397,86 @@ def update_user_priority(from_id, which_key='', key_value='', update_time=dateti
         session.commit()
     return True
 
-def insert_new_from_id_to_user_priority_table(from_id):
-    if debug: print(f"DEBUG: insert_from_id_to_user_priority_table(): {from_id}")
-
+# 给 UserPriority table 里面增加新 from_id 和 user_title , 如果 from_id 存在则更新 user_title, 如果 from_id 不存在则插入 from_id 和 user_title
+def insert_new_from_id_to_user_priority_table(from_id, user_title):
+    if debug: print(f"DEBUG: insert_new_from_id_to_user_priority_table()")
     # Create a new session
     with Session() as session:
-            # Query the table 'avatar_user_priority' to check if the from_id exists
-            from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
-            if from_id_exists: return
-            else:
-                # Insert the from_id and key_value
-                new_user_priority = UserPriority(user_from_id=from_id, is_admin=0, is_owner=0, is_vip=0, is_paid=0, is_active=0, priority=0, free_until=datetime(2099, 12, 31, 23, 59, 59), update_time=datetime.now())
-                session.add(new_user_priority)
-            # Commit the session
-            session.commit()
+        # Query the table 'avatar_user_priority' to check if the from_id exists
+        from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+        if from_id_exists:
+            # Update the key_value
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({UserPriority.user_title: user_title, UserPriority.update_time: datetime.now()})
+        else:
+            # Insert the from_id and key_value
+            new_user_priority = UserPriority(user_from_id=from_id, user_title=user_title, update_time=datetime.now())
+            session.add(new_user_priority)
+        # Commit the session
+        session.commit()
     return True
+
+'''
+    class UserPriority(Base):
+        __tablename__ = 'avatar_user_priority'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        user_from_id = Column(String(255), unique=True)
+        user_title = Column(String(255))
+        priority = Column(Integer, default=0)
+        is_blacklist = Column(Integer, default=0)
+        free_until = Column(DateTime, default=datetime.now())
+        is_admin = Column(Integer, default=0)
+        is_owner = Column(Integer, default=0)
+        is_vip = Column(Integer, default=0)
+        is_paid = Column(Integer, default=0)
+        is_active = Column(Integer, default=0)
+        is_deleted = Column(Integer, default=0)
+        update_time = Column(DateTime, default=datetime.now())
+        next_payment_time = Column(DateTime, default=datetime.now())
+        '''
+
+'''
+    id user_from_id user_title  priority  is_blacklist          free_until  is_admin  is_owner  is_vip  is_paid  is_active  is_deleted         update_time   next_payment_time
+0   5   2118900665       None       100             0 2099-12-31 23:59:59         1         1       1        1          1           0 2023-05-23 02:01:38 2023-05-23 02:01:30
+1   6   5106438350       None         0             0 2099-12-31 23:59:59         0         0       1        0          0           0 2023-05-23 15:32:53 2023-05-23 15:23:22
+'''
+
+
+
+# 给 UserPriority 数据表增加一个 用户
+def add_user_to_user_priority_table(from_id, user_title):
+    if debug: print(f"DEBUG: add_user_to_user_priority_table()")
+    # Create a new session
+    with Session() as session:
+        # Query the table 'avatar_user_priority' to check if the from_id exists
+        from_id_exists = session.query(exists().where(UserPriority.user_from_id == from_id)).scalar()
+        if not from_id_exists:
+            # Insert the from_id and key_value
+            new_user_priority = UserPriority(user_from_id=from_id, user_title=user_title, update_time=datetime.now())
+            session.add(new_user_priority)
+        # Commit the session
+        session.commit()
+    return True
+
+
+# 从 UserPriority 读出所有的参数到 pandas pd 里面
+def read_user_priority_table_to_list():
+    if debug: print(f"DEBUG: read_user_priority_table_to_pd()")
+    # Create a new session
+    with Session() as session:
+        # Query the table 'avatar_user_priority' to check if the from_id exists
+        df = pd.read_sql(session.query(UserPriority).statement, session.bind)
+    string_output_list = []
+    # 把 user_priority_pd 里面每一行的 value 组成一个 string
+    for i in range(df.shape[0]):
+        from_id = df.iloc[i]['user_from_id']
+        user_title = df.iloc[i]['user_title']
+        if not user_title or user_title.lower() == 'none': user_title = update_user_title_for_none_from_chat_history(from_id)
+        status = 'Owner' if df.iloc[i]['is_owner'] else 'VIP' if df.iloc[i]['is_vip'] else 'Paid' if df.iloc[i]['is_paid'] else 'Blacklist' if df.iloc[i]['is_blacklist'] else 'Normal'
+        string_output = f"@{user_title} | {status} \n/{from_id}\n"
+        string_output_list.append(string_output)
+    return string_output_list
+
 
 def set_user_as_vip(from_id):
     if debug: print(f"DEBUG: set_user_as_vip(): {from_id}")
@@ -442,33 +508,35 @@ def remove_user_from_vip_list(from_id):
             session.commit()
             return True
 
+# update user_title for none from ChatHistory
+def update_user_title_for_none_from_chat_history(from_id):
+    if debug: print(f"DEBUG: update_user_title_for_none_from_chat_history(): {from_id}")
+    with Session() as session:
+        user_info = session.query(ChatHistory.username, ChatHistory.first_name, ChatHistory.last_name).filter(ChatHistory.from_id == from_id).first()
+        if user_info:
+            username, first_name, last_name = user_info
+            # create a user_tile based on the username, first_name, last_name, sometime's there's no username , or first_name, or last_name, so need to check if they are None or is there's 'User' in them (means it's a none value)
+            user_title = ' '.join([y for y in [username, first_name, last_name] if 'User' not in y])
+            insert_new_from_id_to_user_priority_table(from_id, user_title)
+            return user_title
 
-# 从 UserPriority 读出 vip from_id 列表, 从 ChatHistory 读出 每一个 vip from_id 的 username, first_name, last_name, hint_text = f"/remove_vip_{from_id} {username} ({first_name} {last_name})", 将 hint_text 加入到一个列表中, 返回这个列表
+
 def get_vip_list_except_owner_and_admin():
     if debug: print(f"DEBUG: get_vip_list_except_owner_and_admin()")
     # Create a new session
     with Session() as session:
-        # Query the table 'avatar_user_priority' to get the vip from_id list, exclude the owner and admin
-        vip_list = session.query(UserPriority.user_from_id).filter(UserPriority.is_vip == 1, UserPriority.is_owner == 0, UserPriority.is_admin == 0).all()
-        # Create a new empty list
-        vip_list_with_hint_text = []
-        # Loop through the vip_list and add them into the list
-        x = 0
-        for vip in vip_list:
-            x += 1
-            # Query the table 'avatar_chat_history' to get the username, first_name, last_name
-            user_info = session.query(ChatHistory.username, ChatHistory.first_name, ChatHistory.last_name).filter(ChatHistory.from_id == vip[0]).first()
-            if user_info:
-                username, first_name, last_name = user_info
-                # create a user_tile based on the username, first_name, last_name, sometime's there's no username , or first_name, or last_name, so need to check if they are None or is there's 'User' in them (means it's a none value)
-                user_title = ' '.join([y for y in [username, first_name, last_name] if 'User' not in y])
-                hint_text = f"{x}. @{user_title}\n/remove_vip_{vip[0]} "
-                vip_list_with_hint_text.append(hint_text)
-            else: 
-                user_title = 'Never_talked_to_me'
-                hint_text = f"{x}. {user_title}\n/remove_vip_{vip[0]} "
-                vip_list_with_hint_text.append(hint_text)
-    return vip_list_with_hint_text
+        # Query the table 'avatar_user_priority' to check if the from_id exists
+        df = pd.read_sql(session.query(UserPriority).statement, session.bind)
+    string_output_list = []
+    # 把 user_priority_pd 里面每一行的 value 组成一个 string
+    for i in range(df.shape[0]):
+        from_id = df.iloc[i]['user_from_id']
+        user_title = df.iloc[i]['user_title']
+        if not user_title or user_title.lower() == 'none': user_title = update_user_title_for_none_from_chat_history(from_id)
+        if df.iloc[i]['is_owner'] or df.iloc[i]['is_admin']: continue
+        string_output = f"{i}. @{user_title}\n/remove_vip_{from_id}"
+        string_output_list.append(string_output)
+    return string_output_list
 
 # Use update_user_priority() function to set a from_id to bliacklist
 def set_user_blacklist(from_id):
@@ -543,7 +611,7 @@ def update_owner_parameter(parameter_name, parameter_value):
             session.add(new_owner_parameter)
         # Commit the session
         session.commit()
-    return
+    return True
 
 # 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
 def get_owner_parameters():
@@ -943,7 +1011,7 @@ def get_token_abi(address):
 
 
 if __name__ == '__main__':
-    print(f"TELEGRAM_BOT initialing for {TELEGRAM_USERNAME}...")
+    print(f"TELEGRAM_BOT initialing for @{TELEGRAM_USERNAME}...")
 
     make_a_choise = input(f"这是系统从镜像 IMAGE 文件启动后的首次初始化还是代码更新后的初始化？\n首次初始化要输入 'first_time_initiate'; \n代码更新后的初始化请直接按回车键: ")
     is_first_time_initiate = True if make_a_choise == 'first_time_initiate' else False
@@ -962,6 +1030,8 @@ if __name__ == '__main__':
                 session.query(UserPriority).delete()
                 session.query(SystemPrompt).delete()
                 session.query(DialogueTone).delete()
+                session.query(GptStory).delete()
+                session.query(ElevenLabsUser).delete()
                 session.commit()
 
     print(f"\nSTEP 3: 更新 Bot Owner 的系统参数 ...")
@@ -990,9 +1060,9 @@ if __name__ == '__main__':
     print(json.dumps(msg_history, indent=2, ensure_ascii=False))
 
     print(f"\nSTEP 9: 测试生成 eth address ...")
-    user_from_id='2118900665'
-    address = generate_eth_address(user_from_id)
-    print(f"{user_from_id} ETH Address: {address}")
+    for from_id in BOT_OWNER_LIST:
+        address = generate_eth_address(from_id)
+        print(f"{from_id} ETH Address: {address}")
 
     print(f"\nSTEP 10: 初始化用户状态列表 ...")
     initialize_user_priority_table()

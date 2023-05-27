@@ -20,3 +20,6 @@ wechaty
 pymysql
 pydub
 mnemonic
+chromadb
+pydantic
+tiktoken

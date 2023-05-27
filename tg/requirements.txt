@@ -21,3 +21,6 @@ moralis
 azure-core
 wechaty
 wechaty-plugin-contrib
+chromadb
+pydantic
+tiktoken

@@ -44,10 +44,14 @@ if __name__ == '__main__':
             elif line.startswith('USER_TELEGRAM_LINK'): USER_TELEGRAM_LINK = line.split('=')[1].strip().strip('"').strip("'")
             elif line.startswith('Transaction_hash'): Transaction_hash = line.split('=')[1].strip().strip('"').strip("'")
 
+    is_paied_bot_owner = 0
     if not Transaction_hash:
-        confirm_not_paid = input(f"WARNING: 未检测到 Transaction_hash, 请确认是否已经支付了服务费? (y/n)")
-        if confirm_not_paid.lower() in ['y', 'yes']: pass
+        confirm_not_paid = input(f"WARNING: 未检测到 Transaction_hash, 请确认是否已经支付了服务费或者可以提供免费服务? (y/n)")
+        if confirm_not_paid.lower() in ['y', 'yes']: 
+            is_paied_bot_owner = 1
+            pass
         else: exit(f"ERROR: 退出程序, 请重新运行并输入正确的选项.")
+    else: is_paied_bot_owner = 1
 
     UBUNTU_SERVER_IP_ADDRESS=input("请输入目标服务器的 IP 地址: ")
     # 判断输入的 IP 地址是否合法
@@ -117,7 +121,8 @@ if __name__ == '__main__':
         "BING_SEARCH_API": BING_SEARCH_API, 
         "SPEECH_KEY": SPEECH_KEY,
         "SPEECH_REGION": SPEECH_REGION,
-        "Transaction_hash": Transaction_hash
+        "Transaction_hash": Transaction_hash,
+        "is_paied_bot_owner": is_paied_bot_owner
     }
 
     # 检查用户输入的变量是否完整
@@ -195,6 +200,9 @@ if __name__ == '__main__':
             elif line.startswith('Transaction_hash'): lines[i] = f'Transaction_hash={Transaction_hash}\n'
 
         with open(avatar_tg_bot_env_file, 'w') as f: f.writelines(lines)
+
+        # 为 avatar_tg_bot_env_file 文件添加 is_paied_bot_owner
+        with open(avatar_tg_bot_env_file, 'a') as f: f.write(f'\n# 是否是付费用户\nis_paied_bot_owner={is_paied_bot_owner}\n')
 
     print(f"SETP 9: 用户个性化变量读取并赋值完成, 文件夹已经成功克隆并修改 .env 文件, 准备开始同步到 {UBUNTU_SERVER_IP_ADDRESS}...")
 

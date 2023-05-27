@@ -1,318 +1,118 @@
-from ama_loader import *
-import threading
+from local_bot import *
+
+AI_AVATAR_CREATOR_BOT_TOKEN = os.getenv('AI_AVATAR_CREATOR_BOT_TOKEN')
+telegram_base_url = f'https://api.telegram.org/bot{AI_AVATAR_CREATOR_BOT_TOKEN}/'
 
 if place_holder:
-    qa = ''
-    last_word_checked = 'nice'
-    dear_user = '亲爱的'
-    user_nick_name = dear_user
+    '''
+    {
+    "USER_AVATAR_NAME": "kaimin",
+    "DOMAIN_NAME": "",
+    "UBUNTU_SERVER_IP_ADDRESS": "13.231.38.159",
+    "UBUNTU_SERVER_ROOT_PASSWORD": "B0hnAyXU4aCkOSM31NKi",
+    "OPENAI_API_KEY": "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",
+    "DB_PASSWORD": "QqBZX1yV",
+    "BOT_USERNAME": "kaimin_simulacrum_bot",
+    "BOT_TOKEN": "6243887259:AAH1izwDhz3PGgKNvaxBV_H4VKZie3Uahds",
+    "BOTOWNER_CHAT_ID": "366780439",
+    "USER_TELEGRAM_LINK": "https://t.me/K1nthesKy",
+    "OPENAI_MODEL": "gpt-3.5-turbo",
+    "REPLICATE_KEY": "c72192ecb136caafa562ff2ccf1035ef93d649b5",
+    "STABILITY_API_KEY": "sk-HPE9SpQxqOCstzT36dnGfbN5sl5NkXeYgfAJmflBHdVqQOGK",
+    "WOLFRAM_ALPHA_APPID": "WA4937-6U5K7UXR74",
+    "PINECONE_FREE": "80e14cc4-21bf-4f34-9a9b-73197c82b868",
+    "PINECONE_FREE_ENV": "us-west1-gcp-free",
+    "MAX_CONVERSATION_PER_MONTH": 1000,
+    "INFURA_KEY": "d9c26bef583c4fbe9a4f4399b8129b28",
+    "CMC_PA_API": "bbac788f-ab81-41c8-88f5-bd930b14f886",
+    "FINNHUB_API": "cb2o472ad3i3uh8vhpng",
+    "ETHERSCAN_API": "NFPJHR4T6UFT6ENWPAAZI6489V4PS73221",
+    "MORALIS_API": "oYa3si8DJ41gaQWoggoNEfEQ5lrmuRTTodYUi7NpMiu8q73cfeo5XwHGS5CVuxLX",
+    "MORALIS_ID": "4aeb95005e52ca251121e7af",
+    "MORALIS_APP_ID": "LuqQgGIT8g5KPSx7KcnWOJKQUxoFXkrIHdv2GFDQ",
+    "DEBANK_API": "66851eb001290da8bdc25434cb78c5bc495da2dd",
+    "MONTHLY_FEE": 20,
+    "DB_HOST": "localhost",
+    "DB_PORT": 3306,
+    "DB_USER": "master",
+    "DB_NAME": "avatar",
+    "BOTCREATER_CHAT_ID": 2118900665,
+    "BING_SEARCH_API": "411a9fd2a8e9487a90073880cb14a5b9",
+    "SPEECH_KEY": "1c7e1fa0721844649a2eee2bc162426b",
+    "SPEECH_REGION": "westus2",
+    "Transaction_hash": ""
+    }'''
 
-    system_prompt_backup_folder = 'files/system_prompt_backup'
-    sys_prompt_file_name = 'system_prompt.txt'
-    dialogue_tone_file_name = 'dialogue_tone.xls'
-    default_system_prompt_file = f'files/{sys_prompt_file_name}'
-    default_dialogue_tone_file = f'files/{dialogue_tone_file_name}'
-    system_prompt_backup_file = f'{system_prompt_backup_folder}/{sys_prompt_file_name}'
-    user_system_prompt_file = default_system_prompt_file if os.path.isfile(default_system_prompt_file) else system_prompt_backup_file
+    class BotOwnerInfo(Base):
+        __tablename__ = 'avatar_bot_owner_info'
 
-# Define a thread class for processing a single message
-class MessageThread(threading.Thread):
-    avatar_UID = -2
-    free_user_free_talk_per_month = int(MAX_CONVERSATION_PER_MONTH)
-    refill_teaser = REFILL_TEASER if REFILL_TEASER else REFILL_TEASER_DEFAULT
-
-    def __init__(self, tg_msg):
-        threading.Thread.__init__(self)
-        self.tg_msg = tg_msg
-
-    def run(self): local_bot_msg_command(self.tg_msg)
-
-lock = threading.Lock()
-
-# 检查 msg_text 消息内容是否不合规范
-def msg_is_inproper(msg_text):
-    msg_text = msg_text.lower().replace(' ', '')
-    for key_words in inproper_words_list:
-        if key_words in msg_text.lower(): return True
-    return False
-
-def is_blacklisted(from_id):
-    try:
-        with Session() as session: blacklisted = session.query(exists().where(ChatHistory.from_id == from_id, ChatHistory.black_list == 1)).scalar()
-    except Exception as e:
-        logging.error(f'occurred while checking if from_id: {from_id} is blacklisted')
-        logging.error(f'message: {str(e)}')
-    return blacklisted
-
-# 从 UserPriority 到处 Unique from_id 到一个 python list
-def get_unique_from_id_list():
-    try:
-        with Session() as session:
-            df = pd.read_sql(session.query(UserPriority).filter(UserPriority.is_deleted == 0).statement, session.bind)
-            if not df.empty: return df['user_from_id'].tolist()
-    except Exception as e: logging.error(f"get_unique_from_id_list() read_sql_query() failed: \n\n{e}")
-    return []
-
-def get_user_chat_history(from_id):
-    SAVE_FOLDER = 'files/chat_history'
-    if not os.path.isdir(SAVE_FOLDER): os.mkdir(SAVE_FOLDER)
-    # 从数据库中查询 from_id 的聊天历史记录
-    with Session() as session:
-        # 用 pandas 从数据库中查询 from_id = from_id or chat_id = from_id 的聊天历史记录, 并按照时间顺序排序
-        df = pd.read_sql(session.query(ChatHistory).filter(or_(ChatHistory.from_id == from_id, ChatHistory.chat_id == from_id)).order_by(ChatHistory.update_time).statement, session.bind)
-        # 如果查询结果不为空
-        if not df.empty:
-            # 将用户的聊天记录逐行写入 txt 文档
-            for i in range(df.shape[0]):
-                username = df.iloc[i]['username'] if df.iloc[i]['username'] else 'User'
-                update_time = df.iloc[i]['update_time']
-                msg_text = df.iloc[i]['msg_text']
-                if msg_text and msg_text != 'None':
-                    with open(f'{SAVE_FOLDER}/{from_id}.txt', 'a') as f: f.write(f"{username} said ({update_time}):\n{msg_text}\n\n")
-    # 将 txt 文件名返回
-    return f'{SAVE_FOLDER}/{from_id}.txt'
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        first_name = Column(String(255))
+        last_name = Column(String(255))
+        username = Column(String(255))
+        from_id = Column(String(255))
+        chat_id = Column(String(255))
+        is_vip = Column(Boolean)
+        monthly_fee = Column(Float)
+        total_payment_so_far = Column(Float)
+        update_time = Column(DateTime)
+        frist_payment_time = Column(DateTime)
+        last_payment_time = Column(DateTime)
+        next_payment_time = Column(DateTime)
+        refered_by_from_id = Column(String(255)) # refered by from_id
+        refered_by_user_title = Column(String(255)) # refered by user_title
+        notes = Column(Text)
+        db_host = Column(String(255))
+        db_port = Column(Integer)
+        db_user = Column(String(255))
+        db_name = Column(String(255))
+        user_avatar_name = Column(String(255))
+        openai_api_key = Column(String(255))
+        elevenlabs_api_key = Column(String(255))
+        bot_username = Column(String(255))
+        bot_token = Column(String(255))
+        user_telegram_link = Column(String(255))
+        bot_owner_email = Column(String(255))
+        server_ip_address = Column(String(255))
+        server_root_password = Column(String(255))
+        openai_model = Column(String(255))
+        replicate_key = Column(String(255))
+        stability_api_key = Column(String(255))
+        wolfram_alpha_appid = Column(String(255))
+        pinecone_free = Column(String(255))
+        pinecone_free_env = Column(String(255))
+        infura_key = Column(String(255))
+        cmc_pa_api = Column(String(255))
+        finnhub_api = Column(String(255))
+        etherscan_api = Column(String(255))
+        moralis_api = Column(String(255))
+        moralis_id = Column(String(255))
+        moralis_app_id = Column(String(255))
+        debank_api = Column(String(255))
+        bing_search_api = Column(String(255))
+        speech_key = Column(String(255))
+        speech_region = Column(String(255))
+        transaction_hash = Column(Text)
 
 
-# Get updates from telegram server
-def local_bot_getUpdates(previous_update_id, telegram_base_url=telegram_base_url):
-    method = "getUpdates?"
-    _params = {
-        "offset": previous_update_id,
-        "timeout": 123,
-        "limit": 10
-        }
-    params = urlencode(_params)
-    URL = telegram_base_url + method + params
-    r = ''
-    try: r = requests.get(URL)
-    except Exception as e: logging.error(f"local_bot_getUpdates() failed: \n{e}")
-    return r
+    # Define a thread class for processing a single message
+    class CreatorMessageThread(threading.Thread):
+        creator_UID = -2
 
-def save_avatar_chat_history(msg_text, chat_id, from_id, username, first_name, last_name):
-    if not chat_id or not msg_text or not from_id: return
+        def __init__(self, tg_msg):
+            threading.Thread.__init__(self)
+            self.tg_msg = tg_msg
 
-    username = username if username else 'None'
-    first_name = first_name if first_name else 'None'
-    last_name = last_name if last_name else 'None'
+        def run(self): creator_bot_msg_command(self.tg_msg)
 
-    try:
-        with Session() as session:
-            new_record = ChatHistory(
-                first_name=first_name,
-                last_name=last_name,
-                username=username,
-                from_id=from_id,
-                chat_id=chat_id,
-                update_time=datetime.now(),
-                msg_text=msg_text,
-                black_list=0
-            )
-            session.add(new_record)
-            session.commit()
-
-    except Exception as e: logging.error(f"avatar_chat_history() FAILED: {e}")
-    return
-
-def check_this_month_total_conversation(from_id, offset=0):
-    try:
-        with Session() as session:
-            # Get the current month
-            today = date.today()
-            current_month = today.strftime('%Y-%m')
-            # Get the count of rows for the given from_id in the current month
-            count_query = text(f"SELECT COUNT(*) FROM avatar_chat_history WHERE from_id = '{from_id}' AND DATE_FORMAT(update_time, '%Y-%m') = '{current_month}'")
-            row_count = session.execute(count_query).scalar()
-            if debug: logging.debug(f"from_id {from_id} 本月({current_month}) 已与 @{TELEGRAM_BOT_NAME} 交流: {row_count} 次...")
-
-            # Check if the row count exceeds the threshold
-            if (row_count - offset) > MessageThread.free_user_free_talk_per_month:
-                send_msg(f"{user_nick_name}, 你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {MessageThread.free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。再这么聊下去, 老板要扣我工资了, 我现在要去开会了, 吼吼 😘。\n\n宝贝, 如果想超越白撸用户的限制, 请回复或点击 /pay , 我会给你生成一个独享的 ERC20 充值地址, 你把 {MONTHLY_FEE} USDT/USDC 转到充值地址, 我就会把你加入 VIP 会员, 享受贴身服务, 你懂的 😉", from_id)
-                return 
-            else: return True
-    except Exception as e: logging.error(f"check_this_month_total_conversation() 2 read_sql_query() failed:\n\n{e}")
-    return
-
-'''定义一个功能, 检查后判断是否要继续为用户服务：通过 给定的 from_id 从 UserPriority 表中查询用户的优先级, 返回一个字典; 如果用户是黑名单用户, 这直接返回 False, 如果用户是 free_until 用户, 则判断此刻有没有过期, 如果没有过期则返回 True, 如果过期了则继续下面的代码; 检查用户最新一次 usdt_paid_in 或者 usdt_paid_in 是 {MONTHLY_FEE} 的 x 倍, 再判断上一次付费到现在是一个月的 y 倍, 如果如果 x > y 则返回 True, 否则返回 False
-'''
-
-def user_is_legit(from_id):
-    if not from_id: return
-    user_priority = get_user_priority(from_id)
-    if  user_priority:  
-        # 如果是 is_owner or is_admin or is_vip 则直接返回 True, 黑名单对三者没有意义
-        if user_priority.get('is_owner') or user_priority.get('is_admin') or user_priority.get('is_vip'): return True
-        
-        # 付费用户在到期前都是可以继续使用的, 到期后可以在每月免费聊天次数内继续使用, 超过免费聊天次数后则不再提供服务, 有效期内黑名单对付费用户无意义
-        if user_priority.get('is_paid'):
-            next_payment_time = user_priority.get('next_payment_time', None)
-            if next_payment_time and next_payment_time > datetime.now(): return True
-            else: 
-                if mark_user_is_not_paid(from_id): send_msg(MessageThread.refill_teaser, from_id)
-                return check_this_month_total_conversation(from_id, offset=MessageThread.free_user_free_talk_per_month)
-
-        # 非 owner, admin, vip, 有效期内的 paid 用户, 如果是黑名单用户则直接返回 False
-        if user_priority.get('is_blacklist'): return False
-
-    return check_this_month_total_conversation(from_id)
-
-# Call chatgpt and restore reply and send to chat_id:
-def local_chatgpt_to_reply(msg_text, from_id, chat_id, message_id=None):
-    openai.api_key = OPENAI_API_KEY
-    reply = ''
-
-    try: df = pd.read_sql_query(f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC", engine)
-    except Exception as e: return logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
-
-    try: 
-        msg_history = get_dialogue_tone()
-        previous_role = 'assistant'
-        for i in range(df.shape[0]):
-            history_conversation = df.iloc[i]
-            user_or_assistant = 'assistant' if history_conversation['username'] in [TELEGRAM_BOT_NAME] else 'user'
-            if user_or_assistant == previous_role: continue
-            if i == df.shape[0] - 1 and user_or_assistant == 'user': continue
-            if len(history_conversation['msg_text']) > 1200: continue
-            need_to_be_appended = {"role": user_or_assistant, "content": history_conversation['msg_text']}
-            msg_history.append(need_to_be_appended)
-            previous_role = user_or_assistant
-        msg_history.append({"role": "user", "content": msg_text})
-
-        response = openai.ChatCompletion.create(
-            model = OPENAI_MODEL,
-            messages=msg_history
-            )
-        reply = response['choices'][0]['message']['content']
-        reply = reply.strip('\n').strip()
-
-    except Exception as e: logging.error(f"local_chatgpt_to_reply chat_gpt() failed: \n\n{e}")
-    
-    if not reply: return
-
-    store_reply = reply.replace("'", "")
-    store_reply = store_reply.replace('"', '')
-    try:
-        with Session() as session:
-            new_record = ChatHistory(
-                first_name='ChatGPT',
-                last_name='Bot',
-                username=TELEGRAM_BOT_NAME,
-                from_id=from_id,
-                chat_id=chat_id,
-                update_time=datetime.now(),
-                msg_text=store_reply,
-                black_list=0
-            )
-            # Add the new record to the session
-            session.add(new_record)
-            # Commit the session
-            session.commit()
-    except Exception as e: return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
-    
-    try: send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url, reply_to_message_id=message_id)
-    except Exception as e: logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
-
-    return reply
-
-# 从 avatar_chat_history 读出 Unique 的 from_id 并群发 files/images/avatar_command.png Image 给他们
-def send_img_to_all(file_id, img_caption, bot_owner_chat_id, base_url=telegram_base_url):
-
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_img_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send image")
-    
-    # create a list of from_id from df
-    chat_ids = df['chat_id'].tolist()
-
-    # 向 from_ids 里的所有用户发送 img_file 图片
-    try:
-        send_msg(f"{user_nick_name}, 我要开始群发图片了, 一共有 {len(chat_ids)} 个用户, 需要一个一个发给他们, 请耐心等待哈 😘", bot_owner_chat_id)
-        for i in range(len(chat_ids)):
-            chat_id = chat_ids[i]
-            if not chat_id: continue
-            if chat_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_img_to_all() {i}/{len(chat_ids)} to: {chat_id}")
-            try: re_send_img_by_id(file_id, chat_id, img_caption, base_url)
-            except Exception as e: logging.error(f"send_img_to_all() send_img() failed: \n\n{e}")
-        # 通知 bot owner 发送成功
-        send_msg(f"亲爱的, 我已经把图片发送给所有 {len(chat_ids)-1} 个用户了啦, 使命必达, 欧耶 😎!", bot_owner_chat_id)
-    except Exception as e: logging.error(f"send_img_to_all() failed: \n\n{e}")
-    return
-
-# 从 avatar_chat_history 读出 Unique 的 from_id 并群发 msg_text 消息给他们
-def send_msg_to_all(msg_text, bot_owner_chat_id=BOTOWNER_CHAT_ID):
-    if debug: logging.debug(f"send_msg_to_all()")
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_msg_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send message")
-
-    try:
-        for i in range(df.shape[0]):
-            from_id = df.iloc[i]['chat_id']
-            if from_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_msg_to_all() {i}/{df.shape[0]} to: {from_id}")
-            send_msg(msg_text, from_id)
-        # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把以下消息发送给所有 {df.shape[0]-1} 个用户了, 消息原文:\n\n{msg_text}", bot_owner_chat_id)
-    except Exception as e: logging.error(f"end_msg_to_all() failed: \n\n{e}")
-    return
-
-# 群发文件给数据库中所有的 from_id
-def send_file_to_all(file_id, file_caption, bot_owner_chat_id, base_url=telegram_base_url):
-
-    # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_file_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send file")
-
-    try:
-        for i in range(df.shape[0]):
-            chat_id = df.iloc[i]['chat_id']
-            if chat_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_file_to_all() {i}/{df.shape[0]} to: {chat_id}")
-            re_send_file_by_id(file_id, chat_id, file_caption, base_url)
-        # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把文件发送给所有 {df.shape[0]-1} 个用户了.", bot_owner_chat_id)
-    except Exception as e: logging.error(f"send_file_to_all() failed: \n\n{e}")
-    return
-
-# 群发音频给数据库中所有的 from_id
-def send_audio_to_all(file_id, audio_caption, bot_owner_chat_id, base_url=telegram_base_url):
-    if debug: logging.debug(f"send_audio_to_all()")
-    # 从数据库里读出所有的 unique from_id, 但不包括黑名单里的用户
-    try: df = pd.read_sql_query(f"SELECT DISTINCT `chat_id` FROM `avatar_chat_history` WHERE `black_list` = 0", engine)
-    except Exception as e: return logging.error(f"send_audio_to_all() read_sql_query() failed: \n\n{e}")
-    
-    if debug: logging.debug(f"totally {df.shape[0]} users to send audio")
-
-    try:
-        for i in range(df.shape[0]):
-            chat_id = df.iloc[i]['chat_id']
-            if not chat_id: continue
-            if chat_id == bot_owner_chat_id: continue
-
-            if debug: logging.debug(f"send_audio_to_all() {i}/{df.shape[0]} to: {chat_id}")
-            try: re_send_audio_by_id(file_id, chat_id, audio_caption, base_url)
-            except Exception as e: logging.error(f"send_audio_to_all() send_audio() failed: \n\n{e}")
-        # 通知 bot owner 发送成功
-        send_msg(f"{user_nick_name}, 我已经把音频文件发送给所有 {df.shape[0]-1} 个用户了.", bot_owner_chat_id)
-    except Exception as e: logging.error(f"send_audio_to_all() failed: \n\n{e}")
-    return
-
+    creator_lock = threading.Lock()
 
 # Dealing with message input
-def local_bot_msg_command(tg_msg):
+def creator_bot_msg_command(tg_msg):
     global qa
     global last_word_checked
     global dear_user
 
-    if not tg_msg.get('message'): return
-    
     # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
     from_id = str(tg_msg['message']['from']['id'])
     if not user_is_legit(from_id): return 
@@ -330,7 +130,6 @@ def local_bot_msg_command(tg_msg):
     
     # 如果是群聊就要在回复的前缀 亲爱的后面加上 user_title
     user_nick_name = dear_user if is_private else f"{dear_user} @{user_title} "
-    message_id = tg_msg['message']['message_id'] if not is_private else None
 
     if BOT_USERNAME in ['Leowang_test_bot', 'leowang_bot']: print(json.dumps(tg_msg, indent=2))
 
@@ -342,17 +141,11 @@ def local_bot_msg_command(tg_msg):
             try:
                 file_name = tg_msg['message']['document'].get('file_name', '')
                 if not file_name: return
-                if file_name in ['dialogue_tone.xls', 'system_prompt.txt', 'ama.txt'] and chat_id not in BOT_OWNER_LIST: return
+                if file_name in ['dialogue_tone.xls', 'system_prompt.txt'] and chat_id not in BOT_OWNER_LIST: return
 
                 file_id = tg_msg['message']['document']['file_id']
-                caption = tg_msg['message'].get('caption', '')
+                # caption = tg_msg['message'].get('caption', '')
 
-                if caption and caption.split()[0].lower() in ['group_send_file', 'gsf', 'group send file']: 
-                    description = ' '.join(caption.split()[1:])
-                    send_msg(f'{user_nick_name}我收到了你发来的文件, 请稍等 1 分钟, 我马上把这个文件发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
-                    send_file_to_all(file_id, description, chat_id, base_url=telegram_base_url)
-                    return
-                
                 file_path = tg_get_file_path(file_id)
                 file_path = file_path.get('file_path', '')
                 if not file_path: return
@@ -364,30 +157,34 @@ def local_bot_msg_command(tg_msg):
                 file_url = f'https://api.telegram.org/file/bot{TELEGRAM_BOT_RUNNING}/{file_path}'
                 with open(save_file_path, 'wb') as f: f.write(requests.get(file_url).content)
 
-                if file_name not in ['system_prompt.txt', 'ama.txt', 'dialogue_tone.xls']:
+                caption = tg_msg['message'].get('caption', '')
+                if caption and caption.split()[0].lower() in ['group_send_file', 'gsf', 'group send file']: 
+                    description = ' '.join(caption.split()[1:])
+                    send_msg(f'{user_nick_name}我收到了你发来的文件, 请稍等 1 分钟, 我马上把这个文件发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
+                    send_file_to_all(save_file_path, bot_owner_chat_id=chat_id)
+                    return
 
-                    loader = ''
-                    if file_name.endswith('.pdf'): loader = PyPDFLoader(save_file_path)
-                    if file_name.endswith('.txt') and file_name not in ['system_prompt.txt', 'ama.txt']: loader = TextLoader(save_file_path, encoding='utf8')
-                    if file_name.endswith('.docx') or file_name.endswith('.doc'): loader = UnstructuredWordDocumentLoader(save_file_path)
-                    if file_name.endswith('.pptx') or file_name.endswith('.ppt'): loader = UnstructuredPowerPointLoader(save_file_path)
+                loader = ''
+                if file_name.endswith('.pdf'): loader = PyPDFLoader(save_file_path)
+                if file_name.endswith('.txt') and file_name != 'system_prompt.txt': loader = TextLoader(save_file_path, encoding='utf8')
+                if file_name.endswith('.docx') or file_name.endswith('.doc'): loader = UnstructuredWordDocumentLoader(save_file_path)
+                if file_name.endswith('.pptx') or file_name.endswith('.ppt'): loader = UnstructuredPowerPointLoader(save_file_path)
 
-                    if loader:
-                        documents = loader.load()
-                        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-                        texts = text_splitter.split_documents(documents)
-                        db = Chroma.from_documents(texts, embeddings)
-                        retriever = db.as_retriever()
-                        qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
+                if loader:
+                    documents = loader.load()
+                    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+                    texts = text_splitter.split_documents(documents)
+                    
+                    db = Chroma.from_documents(texts, embeddings)
+                    retriever = db.as_retriever()
+                    
+                    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
 
-                        send_msg(f"{user_nick_name}, 我收到你发来的 {file_name[-4:].upper()} 文档了, 如果想要了解本文档的相关内容, 可以使用 doc 命令前缀加上你的问题, 我会帮你通过矢量数据进行语义搜索, 找到答案。注意, doc 命令后面需要有空格哦 🙂. 现在我先帮你简单看一下这个文档是说什么的. 请稍等 1 分钟哈。🤩", chat_id)
-                        query = "请简单介绍一下这个文档讲了什么。"
+                    send_msg(f"{user_nick_name}, 我收到你发来的 {file_name[-4:].upper()} 文档了, 如果想要了解本文档的相关内容, 可以使用 doc 命令前缀加上你的问题, 我会帮你通过矢量数据进行语义搜索, 找到答案。注意, doc 命令后面需要有空格哦 🙂. 现在我先帮你简单看一下这个文档是说什么的. 请稍等 1 分钟哈。🤩", chat_id)
 
-                        try:
-                            r = qa.run(query)
-                            if r: send_msg(r, chat_id)
-                        except Exception as e: logging.error(f"qa.run(query) error: {e}")
-
+                    query = "请简单介绍一下这个文档讲了什么。"
+                    r = qa.run(query)
+                    if r: send_msg(r, tg_msg['message']['chat']['id'])
                     # translate_if_is_english(r, tg_msg['message']['chat']['id'])
                 elif file_name == 'dialogue_tone.xls': 
                     r = insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls')
@@ -397,29 +194,24 @@ def local_bot_msg_command(tg_msg):
                     r = insert_system_prompt_from_file(file_path='files/system_prompt.txt')
                     if r: send_msg(f"{user_nick_name}, 我收到你发来的 system_prompt.txt 文档了, 我已经妥善保存, 下一次聊天的时候, 我会按照新的 System Prompt 要求来定位我自己, 放心, 我很聪明的 🙂!", chat_id)
                     else: send_msg(f"{user_nick_name}, 我收到你发来的 system_prompt.txt 文档了, 但是我处理不了, 请你检查一下格式是否正确哈, 然后再发一次给我 😮‍💨", chat_id)
-                elif file_name == 'ama.txt': 
-                    send_msg(f"{user_nick_name}, 我收到你发来的 ama.txt 文档了, 我已经妥善保存, 下一次用户通过 /ama 询问的时候, 我会按照新的 ama.txt 内容来作答 🙂! 但是这个 ama.txt 需要重新装载一下才能生效哦。\n\n请点击 /restart_avatar 重载", chat_id)
-            except Exception as e: 
-                send_msg(f"对不起{user_nick_name}, 你发来的文件我处理不了😮‍💨", chat_id)
-                print(f"ERROR: loading error:\n\n{e}")
-
+            except Exception as e: send_msg(f"对不起{user_nick_name}, 你发来的文件我处理不了😮‍💨", chat_id)
             return 
         
         if 'photo' in tg_msg['message']:
             if debug: logging.debug(f"photo in tg message")
-            # specify the folder path where you want to save the received images
-            SAVE_FOLDER = 'files/images/tg_received/'
-            file_id = tg_msg.get('message').get('photo')[-1].get('file_id')
-
             # 读出 Photo 的caption, 如果有的话
             caption = tg_msg['message'].get('caption', '')
             if caption and caption.split()[0].lower() in ['group_send_image', 'gsi', 'group send image'] and chat_id in BOT_OWNER_LIST: 
+                group_send_image = True
                 description = ' '.join(caption.split()[1:])
                 send_msg(f'{user_nick_name}我收到了你发来的图片, 请稍等 1 分钟, 我马上把这张图片发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
-                return send_img_to_all(file_id, description, chat_id, base_url=telegram_base_url)
-            else: send_msg(f'{user_nick_name}我收到了你发来的图片, 请稍等 1 分钟, 我找副眼镜来仔细看看这张图的内容是什么 😺...', chat_id, parse_mode='', base_url=telegram_base_url)
-
+            else: 
+                group_send_image = False
+                send_msg(f'{user_nick_name}我收到了你发来的图片, 请稍等 1 分钟, 我找副眼镜来仔细看看这张图的内容是什么 😺...', chat_id, parse_mode='', base_url=telegram_base_url)
             try:
+                # specify the folder path where you want to save the received images
+                SAVE_FOLDER = 'files/images/tg_received/'
+                file_id = tg_msg.get('message').get('photo')[-1].get('file_id')
                 if debug: logging.debug(f"photo file_id: {file_id}")
                 # use the Telegram bot API to get the file path
                 file_path = tg_get_file_path(file_id)
@@ -441,6 +233,8 @@ def local_bot_msg_command(tg_msg):
             except Exception as e: 
                 logging.error(f"photo get file_content failed: \n\n{e}")
                 return
+            
+            if group_send_image: return send_img_to_all(save_path, description, chat_id)
 
             img_caption = replicate_img_to_caption(save_path)
             if 'a computer screen' in img_caption: return
@@ -542,10 +336,20 @@ def local_bot_msg_command(tg_msg):
         if 'audio' in tg_msg['message']: 
             audio_caption = tg_msg['message'].get('caption', '')
             if audio_caption and audio_caption.split()[0].lower() in ['group_send_audio', 'gsa'] and chat_id in BOT_OWNER_LIST:
-                audio_caption = audio_caption.replace(audio_caption.split()[0], '').strip()
+                file_name = tg_msg['message']['audio'].get('file_name', '')
                 file_id = tg_msg['message']['audio']['file_id']
+                # caption = tg_msg['message'].get('caption', '')
+                file_path = tg_get_file_path(file_id)
+                file_path = file_path.get('file_path', '')
+                if not file_path: return
+
+                SAVE_FOLDER = 'files/tg_received'
+                save_file_path = f'{SAVE_FOLDER}/{file_name}'
+                file_url = f'https://api.telegram.org/file/bot{TELEGRAM_BOT_RUNNING}/{file_path}'
+                with open(save_file_path, 'wb') as f: f.write(requests.get(file_url).content)
+
                 send_msg(f'{user_nick_name}我收到了你发来的语音, 请稍等 1 分钟, 我马上把这个语音发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
-                send_audio_to_all(file_id, audio_caption, chat_id, base_url=telegram_base_url)
+                send_audio_to_all(save_file_path, bot_owner_chat_id=chat_id)
                 return
             
         if 'sticker' in tg_msg['message']:  tg_msg['message']['text'] = tg_msg['message']['sticker']['emoji']
@@ -556,7 +360,7 @@ def local_bot_msg_command(tg_msg):
     if not msg_text: return 
 
     # 如果是群聊但是没有 at 机器人, 则先标记好, 后面打印完消息后直接返回
-    will_ignore = True if not is_private and TELEGRAM_BOT_NAME.lower() not in msg_text.lower() else False
+    will_ignore = True if not is_private and TELEGRAM_BOT_NAME not in msg_text else False
 
     # 判断用户发来的消息是不是不合规的, 如果骂人就拉黑
     if msg_is_inproper(msg_text): 
@@ -629,24 +433,6 @@ def local_bot_msg_command(tg_msg):
         except Exception as e: send_msg(f"对不起{user_nick_name}, 你发来的链接我看不了 💦", chat_id)
         return
 
-    elif MSG_SPLIT[0] in ['ama', '/ama', 'ask_me_anything', '/ask_me_anything']:
-        query = ' '.join(MSG_SPLIT[1:])
-        if not query: 
-            send_msg(f"{user_nick_name}, 请在 /ask_me_anything 命令后面的空格后再加上你要问的问题, 比如: \n\n/ama 请问如何在 BitMart 上币? 有什么流程?\n\nP.S. /ask_me_anything 也可以缩写为 /ama, 而且前面的 / 可有可无。", chat_id)
-            query = "请简单介绍一下这个AMA文档讲了什么。请用文档使用的相同的语言回答。"
-            if chat_id in BOT_OWNER_LIST: 
-                send_msg(about_ama_txt, chat_id, parse_mode='', base_url=telegram_base_url)
-                send_msg(f"Bot Owner 使用手册: \n{about_ama_txt}", chat_id)
-
-        try:
-            r = ama_qa.run(query)
-            if r: send_msg(r, chat_id)
-        except Exception as e: 
-            logging.error(f"ama_qa.run(query) error: {e}")
-            send_msg(f"无法回答 @{user_title} 的问题:\n\n{query}\n\n因为OpenAI model {OPENAI_MODEL} token 超过上限, 请使用 'gpt-4' model 或者人工回答。如需人工回答, 可以直接回复: \n\n/{chat_id} 此处替换为要回答的内容\n\n以上方式可以直接通过 Bot 将问题的答复发送给用户。", BOTCREATER_CHAT_ID)
-
-        return
-
     # 用户可以通过 save_chat_history /from_id 指令来保存聊天记录
     elif MSG_SPLIT[0] in ['save_chat_history', '/save_chat_history', 'sch', '/sch'] or msg_text == f"/{from_id}":
         file_path = get_user_chat_history(from_id)
@@ -679,8 +465,6 @@ def local_bot_msg_command(tg_msg):
                 send_msg(change_persona, chat_id, parse_mode='', base_url=telegram_base_url)
                 bot_owner_command_help_info = f"作为 Bot Onwer, 你有一些特殊的管理命令用来维护我, 请点击查看各自的功能和使用方式吧:\n{bot_owner_commands}\n最后, 请记住, 随时回复 /start 或者 /help 就可以看到这个指令集。"
                 send_msg(bot_owner_command_help_info, chat_id, parse_mode='', base_url=telegram_base_url)
-                send_file(chat_id, ama_file_name)
-                send_msg(about_ama_txt, chat_id, parse_mode='', base_url=telegram_base_url)
             else: send_msg(avatar_create, chat_id, parse_mode='', base_url=telegram_base_url)
             return 
     
@@ -939,7 +723,7 @@ def local_bot_msg_command(tg_msg):
         return 
     
     # chatpdf function
-    elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier-investor', 'outlierinvestor', 'ol', '/outlier', '/oi', '/outlier-investor', '/outlierinvestor', '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and TELEGRAM_BOT_NAME.lower() in BOTCREATER_TEST_BOT:
+    elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier-investor', 'outlierinvestor', 'ol', '/outlier', '/oi', '/outlier-investor', '/outlierinvestor', '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and TELEGRAM_BOT_NAME.lower() in ['leowang_bot']:
         if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想让了解我写的《投资异类》里的内容, 请在命令后面的空格后加上你想了解的内容, 比如: \n\n投资异类 天使投资人最喜欢什么样的创业者\n\n这样我就会去《投资异类》里查找相关内容并提炼总结给你。\n\nP.S. /投资异类 也可以换做 /outlier 或者 /oi 或者 /outlier-investor 或者 /outlierinvestor 或者 /ol", chat_id)
         query = ' '.join(MSG_SPLIT[1:])
         send_msg("WoW, 你想了解我写的《投资异类》啊, 真是感动. 稍等 1 分钟, 你问的问题我认真写给你, 哈哈哈 😁", chat_id)
@@ -971,7 +755,7 @@ def local_bot_msg_command(tg_msg):
                     session.execute(stmt)
                     session.commit()
                     send_msg(f"{user_nick_name}, 我已经删除所有用户的聊天记录, 大家可以重新开始跟我聊天了。😘", chat_id)
-            except Exception as e: logging.error(f"local_bot_msg_command() clear_memory() FAILED:\n\n{e}")
+            except Exception as e: logging.error(f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}")
             return 
 
         # Delete chat records in avatar_chat_history with from_id = from_id
@@ -981,7 +765,7 @@ def local_bot_msg_command(tg_msg):
                 session.execute(stmt)
                 session.commit()
                 send_msg(f"{user_nick_name}, 我已经删除你的聊天记录, 你可以重新开始跟我聊天了。😘", chat_id)
-        except Exception as e: logging.error(f"local_bot_msg_command() clear_memory() FAILED:\n\n{e}")
+        except Exception as e: logging.error(f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}")
         return
 
     # 为用户输入的内容生成音频并发送
@@ -1038,25 +822,19 @@ def local_bot_msg_command(tg_msg):
             if r: send_msg(f"{user_nick_name}, 你的 /avatar_first_response 已经被修改为: \n\n{avatar_first_response}\n\n现在可以发送或点击 /start 看看效果哈 😘", chat_id)
             return
 
-        elif msg_text in ['/restart_avatar']:
-            send_msg(f"收到重启 Avatar 的指令, 立刻执行! 😘", chat_id)
-            # Run the terminal command
-            subprocess.run(['pm2', 'restart', 'tg'])
-            return 
-
         elif MSG_SPLIT[0][1:].isdigit():
             try:
-                # 如果消息以@开头则@后面的内容是 user_from_id 
-                user_from_id = MSG_SPLIT[0].replace('@', '').replace('/', '')
-                # if user_from_id in get_unique_from_id_list():
-                # 如果消息以 @ or / 开头则 @ or / 后面的内容是 from_id, 如果后面还有内容, 则是要发给 user_from_id 的消息
-                if MSG_LEN > 1: send_msg(' '.join(msg_text.split()[1:]), user_from_id)
-                # 如果后面没有内容, 则是要查询 from_id 的聊天历史记录，保存为 txt 文档并发给 BOT OWNER
-                else:
-                    file_path = get_user_chat_history(user_from_id)
-                    if os.path.isfile(file_path): send_file(chat_id, file_path, description=f"Bot 和 {user_from_id} 之间的的聊天记录")
-                    else: send_msg(f"{user_nick_name}, user_from_id {user_from_id} 没有聊天记录, 是不是他通过 /clear_memory 指令清空了? 也可能 {chat_id} 是一个群 ID", chat_id)
-                # else: send_msg(f"{user_nick_name}, user_from_id {user_from_id} 没有聊天记录, 他应该没有和 Bot 聊过😘 \n\nP.S. 功能性指令交互不会记录到聊天记录里哦.", chat_id)
+                # 如果消息以@开头则@后面的内容是 from_id 
+                from_id = MSG_SPLIT[0].replace('@', '').replace('/', '')
+                if from_id in get_unique_from_id_list():
+                    # 如果消息以 @ or / 开头则 @ or / 后面的内容是 from_id, 如果后面还有内容, 则是要发给 from_id 的消息
+                    if MSG_LEN > 1: send_msg(' '.join(MSG_SPLIT[1:]), from_id)
+                    # 如果后面没有内容, 则是要查询 from_id 的聊天历史记录，保存为 txt 文档并发给 BOT OWNER
+                    else:
+                        file_path = get_user_chat_history(from_id)
+                        if os.path.isfile(file_path): send_file(chat_id, file_path, description=f"Bot 和 {from_id} 之间的的聊天记录")
+                        else: send_msg(f"{user_nick_name}, from_id {from_id} 没有聊天记录, 是不是他通过 /clear_memory 指令清空了? ", chat_id)
+                else: send_msg(f"{user_nick_name}, from_id {from_id} 没有聊天记录, 他应该没有和 Bot 聊过😘 \n\nP.S. 功能性指令交互不会记录到聊天记录里哦.", chat_id)
             except Exception as e: logging.error(f"local_bot_msg_command() get_user_chat_history() FAILED: \n\n{e}")
             return
 
@@ -1106,6 +884,7 @@ def local_bot_msg_command(tg_msg):
                     execution_help_info = f"您一共有 {vip_count} 位 VIP 用户, 拷贝用户名下面的 /remove_vip_xxxxxxxx 指令然后发给我即可将相应的用户从 VIP 列表中移除"
                     with open(file_name, 'w') as f: f.write(f"{execution_help_info}\n\n{text_format}")
                     send_file(chat_id, file_name, description=f"您的 {vip_count} 位 VIP 用户列表")
+            
             return
 
         # 发送最新的 user_commands 给用户
@@ -1187,7 +966,7 @@ def local_bot_msg_command(tg_msg):
 
         elif MSG_SPLIT[0] in ['group_send_message', 'gsm', '/gsm', '/group_send_message']:
             if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要群发消息, 请在命令后面的空格后再加上一个字符串, 比如: \n\ngroup_send_message 亲爱的, 我又升级了, 我可以直接读以太坊地址了, 吼吼, 发个钱包地址来看看吧 😘\n\n这样我就会逐条发送给每个用户。\n\nP.S. /group_send_message 也可以缩写为 /gsm", chat_id)
-            message_content = ' '.join(msg_text().split()[1:])
+            message_content = ' '.join(MSG_SPLIT[1:])
             send_msg_to_all(message_content, bot_owner_chat_id=chat_id)
             return
         
@@ -1255,44 +1034,42 @@ def local_bot_msg_command(tg_msg):
     try: save_avatar_chat_history(msg_text, chat_id, from_id, username, first_name, last_name)
     except Exception as e: return logging.error(f"save_avatar_chat_history() failed: {e}")
     
-    try: local_chatgpt_to_reply(msg_text, from_id, chat_id, message_id)
+    try: local_chatgpt_to_reply(msg_text, from_id, chat_id)
     except Exception as e: logging.error(f"local_chatgpt_to_reply() FAILED from local_bot_msg_command() : {e}")
 
     return
 
 # Telegram bot iterate new update messages
-def check_local_bot_updates():
-    r = local_bot_getUpdates(MessageThread.avatar_UID + 1, telegram_base_url)
+def check_creator_bot_updates():
+    r = local_bot_getUpdates(CreatorMessageThread.creator_UID + 1, telegram_base_url)
     if not r or r.status_code != 200: return 
+
     updates = r.json().get('result', [])
     if not updates: return
 
-    if MessageThread.avatar_UID != updates[0]['update_id']: 
-        with lock: MessageThread.avatar_UID = updates[0]['update_id']
+    if CreatorMessageThread.creator_UID != updates[0]['update_id']: 
+        with creator_lock: CreatorMessageThread.creator_UID = updates[0]['update_id']
     else: return
 
     for tg_msg in updates:
 
         # Create a separate thread for processing each message
-        message_thread = MessageThread(tg_msg)
+        message_thread = CreatorMessageThread(tg_msg)
         message_thread.start()
 
     return
 
 if __name__ == '__main__':
-    if debug: 
-        logging.debug(f"@{TELEGRAM_BOT_NAME} started...")
-        for chat_id in set(BOT_OWNER_LIST): send_msg(f"@{TELEGRAM_BOT_NAME} started...", chat_id, parse_mode='', base_url=telegram_base_url)
-        
+    if debug: logging.debug(f"@AI_Avatar_Creator_Bot started...")
     i = 0
     while True:
         i += 1
         if debug and (i % 100 == 0): logging.debug(f"loop {i}")
         try:
             # Create an instance of the update thread
-            update_thread = threading.Thread(target=check_local_bot_updates)
+            update_thread = threading.Thread(target=check_creator_bot_updates)
             # Start the update thread
             update_thread.start()
             time.sleep(1)
-        except Exception as e: logging.error(f"{i} check_local_bot_updates() failed: {e}")
+        except Exception as e: logging.error(f"{i} check_creator_bot_updates() failed: {e}")
 

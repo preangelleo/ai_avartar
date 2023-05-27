@@ -29,6 +29,20 @@ do
     # 打开 folder_name 里面的 configuration.json , 读出 UBUNTU_SERVER_IP_ADDRESS 的值, rsync -avz --exclude=".DS_Store" "$folder_name/tg" root@UBUNTU_SERVER_IP_ADDRESS:/root/
     rsync -avz --exclude=".DS_Store" --exclude="__pycache__" --exclude="test_inlocal.py" --exclude="files/audio/clone_voice" "$folder_name/tg" root@$(cat "$folder_name/configuration.json" | jq -r '.UBUNTU_SERVER_IP_ADDRESS'):/root/
 
+    # Connect to remote server
+    ssh -T root@$(cat "$folder_name/configuration.json" | jq -r '.UBUNTU_SERVER_IP_ADDRESS') << EOF
+
+# Change directory and activate conda environment
+cd /root/tg && conda activate av
+
+# Restart the pm2 process
+pm2 restart tg
+
+# Exit the remote server
+exit
+
+EOF
+
     # Print a success message
     echo "成功同步到: $(basename $folder_name) 文件夹"
 done

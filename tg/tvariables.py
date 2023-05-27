@@ -53,6 +53,8 @@ if place_holder:
 
     BOTCREATER_TELEGRAM_HANDLE = '@laogege6'
 
+    BOTCREATER_TEST_BOT = ['leowang_bot', 'leowang_test_bot']
+
     # Telegram base URL
     telegram_base_url = "https://api.telegram.org/bot" + TELEGRAM_BOT_RUNNING + "/"    
     # initialize pinecone
@@ -63,12 +65,31 @@ if place_holder:
     wikipedia = WikipediaAPIWrapper()
 
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-    llm = ChatOpenAI(model_name="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
+    
+    OpenAI_Model_llm = 'gpt-4' if TELEGRAM_BOT_NAME in BOTCREATER_TEST_BOT else OPENAI_MODEL
+
+    llm = ChatOpenAI(model_name=OpenAI_Model_llm, temperature=0, openai_api_key=OPENAI_API_KEY)
 
     avatar_png = 'files/images/512.png'
     avatar_command_png = 'files/images/avatar_command.png'
     avatar_create = f"如果您也希望拥有一个像 @{TELEGRAM_BOT_NAME} 这样的 <AI分身> 来服务您的朋友们, 以您的语气陪他们/她们聊天, 帮他们完成 OpenAI 大语言模型可以做的一切任务, 可以点击 /more_information 了解, 非诚勿扰, 谢谢! 😋"
     avatar_more_information = "<AI分身> 电报机器人由酷爱 Python 的老哥哥 @laogege6 利用业余时间开发创造 😊:\n\n- 技术服务费: 100美金/月;\n- 支持 USDT 等各种付款方式;\n- 需要您提供自己的 OpenAI API;\n- 需要您在 @BotFather 开通机器人账号;\n- 您可以随时修改 <AI分身> 的人设背景;\n- 您可以自由修改 <AI分身> 的语调语气.\n\n详情邮件咨询:\nadmin@leonardohuang.com"
+
+# 根据 from_id 读取用户的 elevenlabs_api_key 和 original_voice_filepath 和 voice_id
+def get_elevenlabs_api_key(from_id):
+    with Session() as session:
+        # 读出 ElevenLabsUser 表中 from_id 用户的 elevenlabs_api_key 和 original_voice_filepath 和 voice_id 和 user_title
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
+        if elevenlabs_user: return elevenlabs_user.elevenlabs_api_key, elevenlabs_user.original_voice_filepath, elevenlabs_user.voice_id, elevenlabs_user.user_title, elevenlabs_user.test_count
+        else: return None, None, None, None, None
+
+# 读出 ElevenLabsUser 表中的所有的 from_id != BOTOWNER_CHAT_ID 并且 elevenlabs_api_key 为空的 voice_id 和对应的 from_id, 并且将 from_id 和 voice_id 的集合组成 dict 返回
+def get_elevenlabs_voice_id_list_for_no_api_users():
+    with Session() as session:
+        # 读出 ElevenLabsUser 表中的所有的 from_id != BOTOWNER_CHAT_ID 并且 elevenlabs_api_key 为空的 voice_id 和对应的 from_id
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id != BOTOWNER_CHAT_ID).filter(ElevenLabsUser.elevenlabs_api_key == None).all()
+        if elevenlabs_user: return {user.voice_id: user.from_id for user in elevenlabs_user}
+        else: return None
 
 def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):
     utc_timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
@@ -327,7 +348,7 @@ def chat_gpt_full(prompt, system_prompt='', user_prompt='', assistant_prompt='',
 
     return reply
 
-def send_msg(message, chat_id, parse_mode='', base_url=telegram_base_url):
+def send_msg(message, chat_id, parse_mode='', base_url=telegram_base_url, reply_to_message_id=None):
     if not message: return
     if not chat_id: return print(f"DEBUG: NO chat_id, only print:\n\n{message}")
 
@@ -337,7 +358,7 @@ def send_msg(message, chat_id, parse_mode='', base_url=telegram_base_url):
         "parse_mode": parse_mode,
         "disable_web_page_preview": True,
         "disable_notification": True,
-        "reply_to_message_id": None,
+        "reply_to_message_id": reply_to_message_id,
         "chat_id": chat_id
     }
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -359,6 +380,22 @@ def send_audio(audio_path, chat_id, base_url=telegram_base_url):
     except Exception as e: print(f"ERROR: send_audio() failed : {e}")
     return
 
+def re_send_audio_by_id(audio_file_id, chat_id, caption='', base_url=telegram_base_url):
+
+    # Send the audio file to the target chat ID
+    url = base_url + 'sendAudio'
+    params = {
+        'chat_id': chat_id,
+        'audio': audio_file_id,
+        'caption': caption
+    }
+    response = requests.get(url, params=params)
+
+    # Check the response status
+    if response.status_code == 200: logging.info('Forwarded the audio file.')
+    else: logging.error('Failed to forward the audio file.')
+    return 
+
 def send_img(chat_id, file_path, description='', base_url=telegram_base_url):
     if not file_path or not chat_id: return
     method = "sendPhoto?"
@@ -370,6 +407,24 @@ def send_img(chat_id, file_path, description='', base_url=telegram_base_url):
     except Exception as e: print(f"ERROR: send_img() failed : \n{e}")
     return r
 
+
+def re_send_img_by_id(img_file_id, chat_id, caption='', base_url=telegram_base_url):
+    
+    # Send the image file to the target chat ID
+    url = base_url + 'sendPhoto'
+    params = {
+        'chat_id': chat_id,
+        'photo': img_file_id,
+        'caption': caption
+    }
+    response = requests.get(url, params=params)
+
+    # Check the response status
+    if response.status_code == 200: logging.info('Forwarded the image file.')
+    else: logging.error('Failed to forward the image file.')
+    return
+
+
 def send_file(chat_id, file_path, description='', base_url=telegram_base_url):
     if not file_path or not chat_id: return
     method = "sendDocument?"
@@ -380,6 +435,22 @@ def send_file(chat_id, file_path, description='', base_url=telegram_base_url):
     try: r = requests.post(URL, files=files)
     except Exception as e: print(f"ERROR: send_file() failed : \n{e}")
     return r
+
+def re_send_file_by_id(file_id, chat_id, caption='', base_url=telegram_base_url):
+        
+    # Send the file to the target chat ID
+    url = base_url + 'sendDocument'
+    params = {
+        'chat_id': chat_id,
+        'document': file_id,
+        'caption': caption
+    }
+    response = requests.get(url, params=params)
+
+    # Check the response status
+    if response.status_code == 200: logging.info('Forwarded the file.')
+    else: logging.error('Failed to forward the file.')
+    return
 
 def tg_get_file_path(file_id):
     url = telegram_base_url + "getFile"
@@ -712,6 +783,7 @@ def get_user_priority(from_id):
     except Exception as e: print(f"ERROR: get_user_priority() failed: {e}")
     return user_priority
 
+# 从 UserPriority 取出所有 的 f"/{from_id} @{user_title}
 
 # 从 Coinmarketcap 查询给定 token 的 cmc_rank、price、market_cap、volume_24h、 percent_change_24h、market_cap、fully_diluted_market_cap、circulating_supply、total_supply、last_updated 等数据, 返回一个字典
 def get_token_info_from_coinmarketcap_output_chinese(token_symbol):
@@ -1408,14 +1480,6 @@ def check_and_save_elevenlabs_api_key(elevenlabs_api_key, from_id):
             return send_msg(failed_notice, from_id)
     else: return send_msg(elevenlabs_not_activate, from_id)
 
-# 根据 from_id 读取用户的 elevenlabs_api_key 和 original_voice_filepath 和 voice_id
-def get_elevenlabs_api_key(from_id):
-    with Session() as session:
-        # 读出 ElevenLabsUser 表中 from_id 用户的 elevenlabs_api_key 和 original_voice_filepath 和 voice_id 和 user_title
-        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
-        if elevenlabs_user: return elevenlabs_user.elevenlabs_api_key, elevenlabs_user.original_voice_filepath, elevenlabs_user.voice_id, elevenlabs_user.user_title
-        else: return None, None, None, None
-
 # 将 ElevenLabsUser 表中 from_id 的 ready_to_clone 字段更新为 1, user_title 更新为 user_title
 def update_elevenlabs_user_ready_to_clone(from_id, user_title):
     with Session() as session:
@@ -1455,8 +1519,11 @@ def update_elevenlabs_user_ready_to_clone_to_0(from_id, user_title, cmd = 'close
         # 更新 ready_to_clone 字段为 0
         session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'ready_to_clone': 0})
         session.commit()
+
     if cmd == 'close_clone_voice': send_msg(f"@{user_title} 你已经成功关闭了克隆声音功能, 以后你发来的语音我就当跟我聊天了, 不会用来当做训练克隆声音的素材, 放心哈。", from_id)
-    if cmd == 'confirm_my_voice': send_msg(f"@{user_title}, 你的声音训练素材已经保存好了, 以后你发来的语音我就当跟我聊天了, 不会用来当做训练克隆声音的素材, 放心哈。", from_id)
+    if cmd == 'confirm_my_voice': 
+        update_elevenlabs_user_voice_id_to_last_time_voice_id(from_id)
+        send_msg(f"@{user_title}, 你的声音训练素材已经保存好了, 以后你发来的语音我就当跟我聊天了, 不会用来当做训练克隆声音的素材, 放心哈。", from_id)
     return True
 
 # 检查 ElevenLabsUser 表中 from_id 的 ready_to_clone 字段是否为 1
@@ -1474,9 +1541,24 @@ def update_elevenlabs_user_voice_id(voice_id, from_id):
         session.commit()
     return voice_id
 
+# 将 from_id 的 voice_id 更新为 None
+def update_elevenlabs_user_voice_id_to_None(from_id):
+    with Session() as session:
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'voice_id': None})
+        session.commit()
+    return True
+
+# 将 from_id 的 voice_id 赋值给 last_time_voice_id, 然后将 voice_id 更新为 None
+def update_elevenlabs_user_voice_id_to_last_time_voice_id(from_id):
+    with Session() as session:
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'last_time_voice_id': ElevenLabsUser.voice_id, 'voice_id': None})
+        session.commit()
+    return True
+
 
 # 为 elevenlabs 添加新的 voice
 def elevenlabs_add_voice(name, from_id, original_voice_filepath, elevenlabs_api_key):
+
     url = "https://api.elevenlabs.io/v1/voices/add"
     headers = {
     "Accept": "application/json",
@@ -1492,7 +1574,7 @@ def elevenlabs_add_voice(name, from_id, original_voice_filepath, elevenlabs_api_
     ]
 
     response = requests.post(url, headers=headers, data=data, files=files)
-    print(response.text)
+    # print(response.text)
     voice_id = response.json().get('voice_id', None)
     if voice_id: return update_elevenlabs_user_voice_id(voice_id, from_id)
 
@@ -1549,8 +1631,8 @@ def get_elevenlabs_voices(user_eleven_labs_api_key):
   "yuchen": "h3TnXnm8yL5bQdjZsiWE"
 }
 '''
-# r = get_elevenlabs_voices()
-# print(json.dumps(r, indent=2))
+
+# 通过 get_elevenlabs_voices 获得的 voices_dict, 如果 length 大于 30, 则读出 botowner_elevenlabs_api_key, *_ = get_elevenlabs_api_key(BOTOWNER_CHAT_ID), 并删除 v != botowner_elevenlabs_api_key 的 v
 
 '''
 {
@@ -1575,7 +1657,7 @@ def get_elevenlabs_voices(user_eleven_labs_api_key):
 }
 '''
 
-def eleven_labs_tts(content, from_id, tts_file_name, voice_id, user_eleven_labs_api_key):
+def eleven_labs_tts(content, from_id, chat_id, tts_file_name, voice_id, user_eleven_labs_api_key, voice_id_need_to_be_deleted=False):
     if debug: print(f"DEBUG: eleven_labs_tts() voice_id: {voice_id}")
 
     subscription_started = get_elevenlabs_userinfo(user_eleven_labs_api_key)
@@ -1611,7 +1693,7 @@ def eleven_labs_tts(content, from_id, tts_file_name, voice_id, user_eleven_labs_
 具体的激活方法如下:
 登录 https://beta.elevenlabs.io/subscription 找到 Enable usage based billing (surpass 100000 characters), 把它右边的按钮打开即可。
 '''
-        send_msg(out_range, from_id, parse_mode='', base_url=telegram_base_url)
+        send_msg(out_range, chat_id, parse_mode='', base_url=telegram_base_url)
         return 
     
     API_URL = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -1620,7 +1702,7 @@ def eleven_labs_tts(content, from_id, tts_file_name, voice_id, user_eleven_labs_
     data = {
         "text": content,
         "voice_settings": {
-            "stability": 0.95,
+            "stability": 0.35,
             "similarity_boost": 0.95
         }
     }
@@ -1628,7 +1710,7 @@ def eleven_labs_tts(content, from_id, tts_file_name, voice_id, user_eleven_labs_
     if response.status_code == 200:
         with open(tts_file_name, "wb") as f: f.write(response.content)
 
-        if os.path.isfile(tts_file_name): send_audio(tts_file_name, from_id, base_url=telegram_base_url)
+        if os.path.isfile(tts_file_name): send_audio(tts_file_name, chat_id, base_url=telegram_base_url)
 
         subscription_finished = get_elevenlabs_userinfo(user_eleven_labs_api_key)
         '''
@@ -1653,7 +1735,17 @@ def eleven_labs_tts(content, from_id, tts_file_name, voice_id, user_eleven_labs_
 
         usd_cost = ((words_used - words_remained) / 1000) * 0.3 if words_used > words_remained and can_extend_character_limit else 0
         usd_cost = round(usd_cost, 2)
-        send_msg(f"本次调用 Eleven Labs API 合成语音一共用量 {format_number(words_used)} 个单词, 实际消费 {usd_cost} usd, 本月剩余可用单词数 {format_number(subscription_finished['character_limit'] - subscription_finished['character_count'])}", from_id, parse_mode='', base_url=telegram_base_url)
+
+        # Convert Unix timestamp to a datetime object
+        dt = datetime.fromtimestamp(subscription_finished['next_character_count_reset_unix'])
+
+        # Convert datetime object to a human-readable string format
+        formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        next_character_count_reset_unix_diff = subscription_finished['next_character_count_reset_unix'] - int(time.time())
+        next_character_count_reset_unix_diff = round(next_character_count_reset_unix_diff / 3600 / 24, 2)
+
+        if not voice_id_need_to_be_deleted: send_msg(f"本次调用 Eleven Labs API 合成语音一共用量 {format_number(words_used)} 个单词, 实际消费 {usd_cost} usd, 本月剩余可用单词数 {format_number(subscription_finished['character_limit'] - subscription_finished['character_count'])}, Token 重置时间: {formatted_time}, 还剩 {next_character_count_reset_unix_diff} 天", chat_id, parse_mode='', base_url=telegram_base_url)
         ''' response dir
         ['__attrs__', '__bool__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__enter__', '__eq__', '__exit__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__iter__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__nonzero__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_content', '_content_consumed', '_next', 'apparent_encoding', 'close', 'connection', 'content', 'cookies', 'elapsed', 'encoding', 'headers', 'history', 'is_permanent_redirect', 'is_redirect', 'iter_content', 'iter_lines', 'json', 'links', 'next', 'ok', 'raise_for_status', 'raw', 'reason', 'request', 'status_code', 'text', 'url']
         '''
@@ -1664,16 +1756,79 @@ def eleven_labs_tts(content, from_id, tts_file_name, voice_id, user_eleven_labs_
 
         return True
 
-def generate_clone_voice_audio_with_eleven_labs(content, from_id, user_title, folder='files/audio/clone_voice'):
-    
-    elevenlabs_api_key, original_voice_filepath, voice_id, user_title_read = get_elevenlabs_api_key(from_id)
-    if not elevenlabs_api_key: 
-        send_msg(eleven_labs_no_apikey_alert, from_id, parse_mode='', base_url=telegram_base_url)
-        return False
+ 
+def eleven_labs_delete_voice(voice_id, from_id, user_eleven_labs_api_key):
+    url = f"https://api.elevenlabs.io/v1/voices/{voice_id}"
+    headers = {"Accept": "application/json", "xi-api-key": user_eleven_labs_api_key}
+    response = requests.delete(url, headers=headers)
+    if response.status_code == 200: return update_elevenlabs_user_voice_id_to_None(from_id)
+
+# from_id = BOTCREATER_CHAT_ID
+# user_eleven_labs_api_key = ELEVEN_API_KEY
+# r = get_elevenlabs_voices(ELEVEN_API_KEY)
+# print(json.dumps(r, indent=2))
+
+# 从 botowner的 elevenlabs 账号下批量删除自己没有 elevenlabs_api_key 的用户的 voice_id
+def eleven_labs_delete_all_voices_if_over_30(botowner_elevenlabs_api_key):
+    voice_list = get_elevenlabs_voices(botowner_elevenlabs_api_key)
+    if len(voice_list) < 30: return
+
+    voice_id_dict = get_elevenlabs_voice_id_list_for_no_api_users()
+    for voice_id in voice_list:
+        if voice_id in voice_id_dict: eleven_labs_delete_voice(voice_id, voice_id_dict[voice_id], botowner_elevenlabs_api_key)
+    return True
+
+
+
+def user_is_legit_for_paid_service(from_id):
+    user_priority = get_user_priority(from_id)
+    if  user_priority:  
+        # 如果是 is_owner or is_admin or is_vip 则直接返回 True, 黑名单对三者没有意义
+        if user_priority.get('is_owner'): return True
+        # 付费用户在到期前都是可以继续使用的, 到期后可以在每月免费聊天次数内继续使用, 超过免费聊天次数后则不再提供服务, 有效期内黑名单对付费用户无意义
+        if user_priority.get('is_paid'):
+            next_payment_time = user_priority.get('next_payment_time', None)
+            if next_payment_time and next_payment_time > datetime.now(): return True
+    return
+
+# 将 ElevenLabsUser test_count 的值改为 1
+def update_elevenlabs_user_test_count_to_1(from_id):
+    with Session() as session:
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({ElevenLabsUser.test_count: 1})
+        session.commit()
+        return True
+
+def generate_clone_voice_audio_with_eleven_labs(content, from_id, chat_id, user_title, folder='files/audio/clone_voice'):
+    elevenlabs_api_key, original_voice_filepath, voice_id, user_title_read, test_count = get_elevenlabs_api_key(from_id)
+    is_legit = user_is_legit_for_paid_service(from_id)
+    voice_id_need_to_be_deleted = False
+
+    if not is_legit and test_count: 
+        send_msg(f"非常抱歉, 本功能仅限付费用户使用哈。您有一次免费体验的机会, 但是已经用完了, 如果想继续使用这个功能, 请点击 /pay 升级为付费用户 😍...\n\n免费用户可以点击 /make_voice 试试微软 Azure 的 AI 语音合成功能, 也是很不错的。", chat_id, parse_mode='', base_url=telegram_base_url)
+        return 
+
+    if not elevenlabs_api_key:
+        if test_count: 
+            send_msg(eleven_labs_no_apikey_alert, chat_id, parse_mode='', base_url=telegram_base_url)
+            return False
+        
+        else: 
+            # send_msg(f"您还没有设置自己的 Eleven Labs API Key, 不过你有一次免费名额使用我的 API Key 帮你生成一段体验音频, 不过免费试用功能会把你输入的内容截短到 500 个单词以内哈。", chat_id)
+            botowner_elevenlabs_api_key, *_ = get_elevenlabs_api_key(BOTOWNER_CHAT_ID)
+            if not botowner_elevenlabs_api_key:
+                send_msg(eleven_labs_no_apikey_alert, chat_id, parse_mode='', base_url=telegram_base_url)
+                return
+            eleven_labs_delete_all_voices_if_over_30(botowner_elevenlabs_api_key)
+            elevenlabs_api_key = botowner_elevenlabs_api_key
+            content = ' '.join(content.split()[:500])
+            voice_id_need_to_be_deleted = True
+
     if not original_voice_filepath: 
-        send_msg(eleven_labs_no_original_voice_alert, from_id, parse_mode='', base_url=telegram_base_url)
+        send_msg(eleven_labs_no_original_voice_alert, chat_id, parse_mode='', base_url=telegram_base_url)
         return False
+    
     if not user_title_read or user_title_read != user_title: update_elevenlabs_user_original_voice_filepath(original_voice_filepath, from_id, user_title)
+
     if not voice_id: 
         voice_id = elevenlabs_add_voice(name=user_title, from_id=from_id, original_voice_filepath=original_voice_filepath, elevenlabs_api_key=elevenlabs_api_key)
         if not voice_id: 
@@ -1682,7 +1837,7 @@ def generate_clone_voice_audio_with_eleven_labs(content, from_id, user_title, fo
                 subscription_string = '\n'.join([f"{k}: {v}" for k, v in subscription.items()])
                 failed_notice = f"Eleven Labs 订阅信息如下, 请仔细查看是哪一项有问题:\n\n{subscription_string}"
                 eleven_labs_add_voice_failed_alert = f"{user_title}, 用你的克隆声音创建音频失败了, 😭😭😭...\n\n{failed_notice}"
-                send_msg(eleven_labs_add_voice_failed_alert, from_id, parse_mode='', base_url=telegram_base_url)
+                send_msg(eleven_labs_add_voice_failed_alert, chat_id, parse_mode='', base_url=telegram_base_url)
                 # 发送错误信息以及相关参数给 BOTCREATER_CHAT_ID
                 send_msg(f"ERROR: elevenlabs_add_voice() failed: \n\n@{user_title}\n/{from_id}\n{failed_notice}", BOTCREATER_CHAT_ID)
                 return False
@@ -1690,16 +1845,20 @@ def generate_clone_voice_audio_with_eleven_labs(content, from_id, user_title, fo
     user_folder = f"{folder}/{from_id}"
     hashed_content = hashlib.md5(content.lower().encode('utf-8')).hexdigest()
     new_file_name = f"{from_id}_{user_title}_{hashed_content[-7:]}.mp3"
-    tts_file_name = f"{user_folder}/{new_file_name}.mp3"
+    tts_file_name = f"{user_folder}/{new_file_name}"
     if os.path.isfile(tts_file_name): 
         send_audio(tts_file_name, from_id, base_url=telegram_base_url)
         return True
 
-    send_msg(f"正在用你的声音克隆语音哈, 请稍等 1 分钟, 做好了马上发给你哦 😘", from_id, parse_mode='', base_url=telegram_base_url)
-    r = eleven_labs_tts(content, from_id, tts_file_name, voice_id, elevenlabs_api_key)
-    if r: return True
+    send_msg(f"正在用你的声音克隆语音哈, 请稍等 1 分钟, 做好了马上发给你哦 😘", chat_id, parse_mode='', base_url=telegram_base_url)
+    r = eleven_labs_tts(content, from_id, chat_id, tts_file_name, voice_id, elevenlabs_api_key, voice_id_need_to_be_deleted)
+    if r: 
+        if voice_id_need_to_be_deleted == True: 
+            eleven_labs_delete_voice(voice_id, from_id, elevenlabs_api_key)
+            update_elevenlabs_user_test_count_to_1(from_id)
+        return True
     else:
-        send_msg(f"{eleven_labs_tts_failed_alert}\n如果你的账号正常, 请转发本消息给 @laogege6 帮忙诊断一下把。", from_id, parse_mode='', base_url=telegram_base_url)
+        send_msg(f"{eleven_labs_tts_failed_alert}\n如果你的账号正常, 请转发本消息给 @laogege6 帮忙诊断一下把。", chat_id, parse_mode='', base_url=telegram_base_url)
         return False
 
 

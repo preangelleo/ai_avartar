@@ -1,7 +1,7 @@
 from src.bot.bot_branch.bot_branch import BotBranch
 from src.utils.constants import DEAR_USER
 from src.utils.utils import *
-from utils.prompt_template import user_commands, bot_owner_commands
+from src.utils.prompt_template import user_commands, bot_owner_commands
 
 
 class BotOwnerBranch(BotBranch):

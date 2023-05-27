@@ -1,9 +1,9 @@
 import json
 import sqlalchemy
-from src.utils.param_singleton import Params, get_owner_parameters
+from src.utils.param_singleton import Params
 from src.bot.bot_branch.payment_branch.crpto.utils import generate_eth_address
 from src.database.mysql import *
-from utils.utils import insert_system_prompt_from_file, get_system_prompt, insert_dialogue_tone_from_file, \
+from src.utils.utils import insert_system_prompt_from_file, get_system_prompt, insert_dialogue_tone_from_file, \
     get_dialogue_tone
 
 
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     initialize_owner_parameters_table()
 
     print(f"\nSTEP 4: 读取并打印出 Bot Owner 的系统参数 ...")
-    owner_parameters_dict = get_owner_parameters()
+    owner_parameters_dict = Params().get_owner_parameters()
     for parameter_name, parameter_value in owner_parameters_dict.items(): print(f"{parameter_name}: {parameter_value}")
 
     if is_first_time_initiate:

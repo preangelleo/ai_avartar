@@ -1,6 +1,7 @@
 from src.bot.telegram.utils.utils import tg_get_file_path
 from src.bot.bot_branch.photo_branch.photo_branch import PhotoBranch
 from src.utils.utils import *
+from third_party_api.chatgpt import create_midjourney_prompt
 
 
 class TelegramPhotoBranch(PhotoBranch):

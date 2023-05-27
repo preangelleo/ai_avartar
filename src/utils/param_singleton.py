@@ -21,32 +21,41 @@ from dotenv import load_dotenv
 from src.utils.prompt_template import REFILL_TEASER_DEFAULT
 
 
-# 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
-def get_owner_parameters():
-    print(f"DEBUG: get_owner_parameters()")
-    # Create a new session
-    with Params().Session() as session:
-        # Query the table 'avatar_owner_parameters'
-        owner_parameters = session.query(OwnerParameter).all()
-        # Create a new empty dictionary
-        owner_parameters_dict = {}
-        # Loop through the owner_parameters and add them into the dictionary
-        for owner_parameter in owner_parameters: owner_parameters_dict[
-            owner_parameter.parameter_name] = owner_parameter.parameter_value
-    return owner_parameters_dict
-
-
 class Params:
+    __initialized = False
     _instance = None
+    _lock = threading.Lock()
     free_user_free_talk_per_month_lock = threading.Lock()
     refill_teaser_lock = threading.Lock()
 
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super().__new__(cls)
+    # 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
+    def get_owner_parameters(self):
+        print(f"DEBUG: get_owner_parameters()")
+        # Create a new session
+        with self.Session() as session:
+            # Query the table 'avatar_owner_parameters'
+            owner_parameters = session.query(OwnerParameter).all()
+            # Create a new empty dictionary
+            owner_parameters_dict = {}
+            # Loop through the owner_parameters and add them into the dictionary
+            for owner_parameter in owner_parameters: owner_parameters_dict[
+                owner_parameter.parameter_name] = owner_parameter.parameter_value
+        return owner_parameters_dict
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                # Another thread could have created the instance
+                # before we acquired the lock. So check that the
+                # instance is still nonexistent.
+                if not cls._instance:
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
+        if self.__initialized: return
+        self.__initialized = True
+        print('Init Params Singleton')
         load_dotenv()
 
         # 获取环境变量
@@ -81,8 +90,9 @@ class Params:
         # 连接本地数据库
         self.engine = create_engine(f'mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}',
                                pool_pre_ping=True)
+        self.Session = sessionmaker(bind=self.engine)
 
-        owner_parameters_dict = get_owner_parameters()
+        owner_parameters_dict = self.get_owner_parameters()
 
         # Get the environment variables
         self.USER_AVATAR_NAME = owner_parameters_dict.get('USER_AVATAR_NAME')
@@ -148,7 +158,6 @@ class Params:
         self.avatar_more_information = "<AI分身> 电报机器人由酷爱 Python 的老哥哥 @laogege6 利用业余时间开发创造 😊:\n\n- 技术服务费: 100美金/月;\n- 支持 USDT 等各种付款方式;\n- 需要您提供自己的 OpenAI API;\n- 需要您在 @BotFather 开通机器人账号;\n- 您可以随时修改 <AI分身> 的人设背景;\n- 您可以自由修改 <AI分身> 的语调语气.\n\n详情邮件咨询:\nadmin@leonardohuang.com"
 
         self.metadata = MetaData()
-        self.Session = sessionmaker(bind=self.engine)
 
         self.free_user_free_talk_per_month = int(self.MAX_CONVERSATION_PER_MONTH)
         self.refill_teaser = self.REFILL_TEASER if self.REFILL_TEASER else REFILL_TEASER_DEFAULT

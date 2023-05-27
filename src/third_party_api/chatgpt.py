@@ -3,12 +3,15 @@ import pandas as pd
 
 from database.mysql import ChatHistory
 from src.utils.logging_util import logging
-from src.utils.param_singleton import Params
 from src.utils.prompt_template import \
     english_system_prompt, english_user_prompt, english_assistant_prompt, confirm_read_story_guide, \
     kids_story_system_prompt, kids_story_user_prompt, kids_story_assistant_prompt
 from src.utils.utils import get_dialogue_tone, insert_gpt_story
 from datetime import datetime
+
+from src.utils.param_singleton import Params
+from src.utils.prompt_template import midjourney_prompt_fomula, midjourney_prompt_1, midjourney_user_prompt_fomula, \
+    midjourney_assistant_prompt_fomula
 
 
 def chat_gpt_full(prompt, system_prompt='', user_prompt='', assistant_prompt='', dynamic_model=Params().OPENAI_MODEL,
@@ -171,3 +174,18 @@ def chat_gpt_write_story(bot, chat_id, from_id, prompt, gpt_model=Params().OPENA
     except Exception as e:
         logging.error(f"chat_gpt_write_story():\n\n{e}")
     return
+
+
+def create_midjourney_prompt(prompt):
+    system_prompt = midjourney_prompt_fomula if 'fomula' in prompt else midjourney_prompt_1
+    prompt = prompt.replace('fomula', '').strip()
+
+    try:
+        beautiful_midjourney_prompt = chat_gpt_full(prompt, system_prompt, midjourney_user_prompt_fomula,
+                                                    midjourney_assistant_prompt_fomula, dynamic_model=Params().OPENAI_MODEL,
+                                                    chatgpt_key=Params().OPENAI_API_KEY)
+    except Exception as e:
+        print(f"ERROR: create_midjourney_prompt() failed with error: \n{e}")
+        return
+
+    return beautiful_midjourney_prompt

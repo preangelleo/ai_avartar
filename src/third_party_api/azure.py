@@ -5,8 +5,8 @@ from src.utils.utils import convert_mp3_to_wav
 import azure.cognitiveservices.speech as speechsdk
 
 from src.third_party_api.chatgpt import chat_gpt_full
-from utils.param_singleton import Params
-from utils.prompt_template import news_reporter_system_prompt, news_reporter_user_prompt, news_reporter_assistant_prompt
+from src.utils.param_singleton import Params
+from src.utils.prompt_template import news_reporter_system_prompt, news_reporter_user_prompt, news_reporter_assistant_prompt
 
 
 def from_voice_to_text_azure(audio_file_path):

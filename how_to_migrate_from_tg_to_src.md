@@ -13,12 +13,10 @@ pip install -e .
 
 export PYTHONPATH=/root/ai_avartar
 
-## test with this succeed:
-python src/bot/telegram/telegram_bot.py
-
-### Still debugging pm2:
+cp ./tg/.env ai_avartar/.env
 pm2 stop all
 pm2 delete all
+
 vi .bash_aliases and change this:
-   pmtg='pm2 start src/bot/telegram/telegram_bot.py --name tg --interpreter python3'
-cp ./tg/.env ai_avartar/.env
+   pmtg='pm2 start ai_avartar/src/bot/telegram/telegram_bot.py --name tg --interpreter python3'
+pmtg

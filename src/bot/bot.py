@@ -23,7 +23,7 @@ import json
 import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
-from utils.prompt_template import reply_emoji_list, emoji_list_for_happy
+from src.utils.prompt_template import reply_emoji_list, emoji_list_for_happy
 
 
 class Bot(ABC):

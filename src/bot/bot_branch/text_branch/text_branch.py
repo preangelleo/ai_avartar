@@ -19,6 +19,7 @@ from src.utils.utils import *
 from src.third_party_api.azure import create_news_podcast, microsoft_azure_tts
 from src.third_party_api.chatgpt import chat_gpt_regular, chat_gpt_full, chat_gpt_write_story
 from src.utils.prompt_template import *
+from third_party_api.chatgpt import create_midjourney_prompt
 
 
 def create_news_and_audio_from_bing_search(bot, query, chat_id):

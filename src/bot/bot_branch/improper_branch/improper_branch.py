@@ -1,7 +1,7 @@
 import random
 
 from src.bot.bot_branch.bot_branch import BotBranch
-from utils.prompt_template import emoji_list_for_unhappy
+from src.utils.prompt_template import emoji_list_for_unhappy
 from src.utils.utils import *
 
 

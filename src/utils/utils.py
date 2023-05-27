@@ -15,9 +15,7 @@ from web3 import Web3
 
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
-from src.third_party_api.chatgpt import chat_gpt_full
-from src.utils.prompt_template import midjourney_prompt_fomula, midjourney_prompt_1, midjourney_user_prompt_fomula, \
-    midjourney_assistant_prompt_fomula, inproper_words_list
+from src.utils.prompt_template import inproper_words_list
 from src.database.mysql import *
 
 
@@ -260,21 +258,6 @@ def convert_mp3_to_wav(mp3_file_path):
     # Export the sound as a WAV file with the specified parameters
     sound.export(wav_file_path, format="wav", parameters=["-f", "wav", "-ac", "1", "-ar", "16000"])
     return wav_file_path
-
-
-def create_midjourney_prompt(prompt):
-    system_prompt = midjourney_prompt_fomula if 'fomula' in prompt else midjourney_prompt_1
-    prompt = prompt.replace('fomula', '').strip()
-
-    try:
-        beautiful_midjourney_prompt = chat_gpt_full(prompt, system_prompt, midjourney_user_prompt_fomula,
-                                                    midjourney_assistant_prompt_fomula, dynamic_model=Params().OPENAI_MODEL,
-                                                    chatgpt_key=Params().OPENAI_API_KEY)
-    except Exception as e:
-        print(f"ERROR: create_midjourney_prompt() failed with error: \n{e}")
-        return
-
-    return beautiful_midjourney_prompt
 
 
 def stability_generate_image(text_prompts, cfg_scale=7, clip_guidance_preset="FAST_BLUE", height=512, width=512,
@@ -604,21 +587,6 @@ def update_owner_parameter(parameter_name, parameter_value):
         # Commit the session
         session.commit()
     return
-
-
-# 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
-def get_owner_parameters():
-    print(f"DEBUG: get_owner_parameters()")
-    # Create a new session
-    with Params().Session() as session:
-        # Query the table 'avatar_owner_parameters'
-        owner_parameters = session.query(OwnerParameter).all()
-        # Create a new empty dictionary
-        owner_parameters_dict = {}
-        # Loop through the owner_parameters and add them into the dictionary
-        for owner_parameter in owner_parameters: owner_parameters_dict[
-            owner_parameter.parameter_name] = owner_parameter.parameter_value
-    return owner_parameters_dict
 
 
 def insert_system_prompt(system_prompt):

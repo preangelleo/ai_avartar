@@ -1,4 +1,5 @@
 from ama_loader import *
+from tvariables import *
 import threading
 
 if place_holder:

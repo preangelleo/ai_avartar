@@ -16,7 +16,7 @@ def build_from_fanbook_msg(obj):
         username=obj.get('data').get('author').get('username'),
         first_name=obj.get('data').get('author').get('nickname'),
         # there is no last name or firstname in fanbook
-        last_name=obj.get('data').get('author').get('nickname'),
+        last_name=None,
         # 判断是私聊还是群聊
         is_private=channel_type == PRIVATE_CHANNEL_TYPE,
         msg_text=data_dict.get('text'),

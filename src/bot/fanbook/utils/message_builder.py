@@ -4,6 +4,7 @@ from src.bot.fanbook.utils.constants import (
     PRIVATE_CHANNEL_TYPE,
 )
 
+
 def build_from_fanbook_msg(obj):
     data_str = obj.get('data').get('content')
     data_dict = json.loads(data_str)

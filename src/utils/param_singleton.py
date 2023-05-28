@@ -144,7 +144,7 @@ class Params:
         )
         self.TELEGRAM_BOT_TOKEN = owner_parameters_dict.get('BOT_TOKEN')
         self.TELEGRAM_BOT_NAME = owner_parameters_dict.get('BOT_USERNAME')
-        self.TELEGRAM_USERNAME = owner_parameters_dict.get('USER_TELEGRAM_LINK').split(
+        self.TELEGRAM_BOTOWNER_NAME = owner_parameters_dict.get('USER_TELEGRAM_LINK').split(
             '/'
         )[-1]
 

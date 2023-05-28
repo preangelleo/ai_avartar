@@ -107,7 +107,7 @@ class BotOwnerBranch(BotBranch):
                 r = set_user_blacklist(msg.from_id_to_blacklist)
                 if r:
                     bot.send_msg(
-                        f"{msg.user_nick_name}, 我已经把你拉黑了, 如果你想解除黑名单, 请转发本消息给 @@{Params().TELEGRAM_USERNAME}\n\n申请解除黑名单: \n\nremove_from_blacklist {msg.from_id_to_blacklist}",
+                        f"{msg.user_nick_name}, 我已经把你拉黑了, 如果你想解除黑名单, 请转发本消息给 @@{bot.bot_owner_name}\n\n申请解除黑名单: \n\nremove_from_blacklist {msg.from_id_to_blacklist}",
                         msg.from_id_to_blacklist)
                     bot.send_msg(f"msg.from_id: {msg.from_id_to_blacklist} 已被成功加入黑名单并已经发消息告知.",
                                  msg.chat_id)

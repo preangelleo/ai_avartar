@@ -285,7 +285,7 @@ class TextBranch(BotBranch):
             insert_new_from_id_to_user_priority_table(msg.from_id)
             # 通知用户申请发送成功
             bot.send_msg(
-                f"{msg.user_nick_name}, 你的 VIP 申请已经发送给 @{Params().TELEGRAM_USERNAME} 了, 请耐心等待老板审批哦 😘",
+                f"{msg.user_nick_name}, 你的 VIP 申请已经发送给 @{bot.bot_owner_name} 了, 请耐心等待老板审批哦 😘",
                 msg.chat_id,
             )
             # 给 bot onwer 发送申请消息
@@ -466,7 +466,7 @@ class TextBranch(BotBranch):
         elif MSG_SPLIT[0] in ['feedback', '/feedback', '/owner', 'owner']:
             if MSG_LEN == 1:
                 return bot.send_msg(
-                    f"{msg.user_nick_name}, 你要给我的老板反馈信息或者提意见, 请在命令后面的空格后再加上你要反馈的信息, 比如: \n\nfeedback 你好, 我是你的粉丝, 我觉得你的机器人很好用, 但是我觉得你的机器人还可以加入xxx功能, 这样就更好用了。\n\n这样我就会把你的反馈信息转发给我老板哈 😋。另外 /feedback 和 /owner 通用\n\n当然, 你也可以跟他私聊哦 @{Params().TELEGRAM_USERNAME}",
+                    f"{msg.user_nick_name}, 你要给我的老板反馈信息或者提意见, 请在命令后面的空格后再加上你要反馈的信息, 比如: \n\nfeedback 你好, 我是你的粉丝, 我觉得你的机器人很好用, 但是我觉得你的机器人还可以加入xxx功能, 这样就更好用了。\n\n这样我就会把你的反馈信息转发给我老板哈 😋。另外 /feedback 和 /owner 通用\n\n当然, 你也可以跟他私聊哦 @{bot.bot_owner_name}",
                     msg.chat_id,
                 )
             feedback = ' '.join(MSG_SPLIT[1:])

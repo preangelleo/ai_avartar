@@ -66,7 +66,7 @@ def initialize_owner_parameters_table():
 
 
 if __name__ == '__main__':
-    print(f"TELEGRAM_BOT initialing for {Params().TELEGRAM_USERNAME}...")
+    print(f"TELEGRAM_BOT initialing for {bot.bot_owner_name}...")
 
     make_a_choise = input(
         f"这是系统从镜像 IMAGE 文件启动后的首次初始化还是代码更新后的初始化？\n首次初始化要输入 'first_time_initiate'; \n代码更新后的初始化请直接按回车键: ")
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     print(f"\nSTEP 10: 初始化用户状态列表 ...")
     initialize_user_priority_table()
 
-    print(f"\nTELEGRAM_BOT initialing for {Params().TELEGRAM_USERNAME} finished!")
+    print(f"\nTELEGRAM_BOT initialing for {bot.bot_owner_name} finished!")
 
 
 

@@ -32,6 +32,7 @@ class Bot(ABC):
 
     def __init__(self,
                  bot_name: str,
+                 bot_owner_name: str,
                  bot_owner_id: str,
                  bot_creator_id: str,
                  document_branch_handler: DocumentBranch,
@@ -47,6 +48,7 @@ class Bot(ABC):
                  coinmarketcap_branch_handler: CoinMarketCapBranch):
 
         self.bot_name = bot_name
+        self.bot_owner_name = bot_owner_name
         self.bot_owner_id = bot_owner_id
         self.bot_creator_id = bot_creator_id
         self.bot_admin_id_list = [bot_owner_id, bot_creator_id]

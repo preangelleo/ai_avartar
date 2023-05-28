@@ -137,6 +137,7 @@ class TelegramBot(Bot):
 if __name__ == '__main__':
     TelegramBot(
         bot_name=Params().TELEGRAM_BOT_NAME,
+        bot_owner_name=Params().TELEGRAM_BOTOWNER_NAME,
         bot_owner_id=Params().TELEGRAM_BOTOWNER_CHAT_ID,
         bot_creator_id=Params().TELEGRAM_BOTCREATER_CHAT_ID,
         document_branch_handler=TelegramDocumentBranch(),

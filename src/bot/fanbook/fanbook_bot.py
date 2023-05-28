@@ -10,6 +10,9 @@ from websocket._core import create_connection
 import time
 from src.bot.fanbook.utils.constants import (
     FANBOOK_BOT_NAME,
+    FANBOOK_BOT_OWNER_NAME,
+    FANBOOK_BOT_OWNER_ID,
+    FANBOOK_BOT_CREATOR_ID,
     FANBOOK_GET_ME_URL,
     FANBOOK_SEND_MSG_URL,
     HEAT_BEAT_INTERVAL,
@@ -126,7 +129,7 @@ if __name__ == '__main__':
         bot_owner_branch_handler=NoOpBranch(),
         english_teacher_branch_handler=NoOpBranch(),
         coinmarketcap_branch_handler=NoOpBranch(),
-        bot_owner_id='',
-        bot_creator_id='',
-        bot_owner_name='bot_owner_name_placeholder',
+        bot_owner_id=FANBOOK_BOT_OWNER_ID,
+        bot_creator_id=FANBOOK_BOT_CREATOR_ID,
+        bot_owner_name=FANBOOK_BOT_OWNER_NAME,
     ).run()

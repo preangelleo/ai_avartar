@@ -25,7 +25,7 @@ class SingleMessage:
         self.chat_id = str(chat_id)
         self.username = username
         self.user_title = ' '.join(
-            [v for v in [username, first_name, last_name] if 'User' not in v]
+            [v for v in [username, first_name, last_name] if v is not None and 'User' not in v]
         )
         self.is_private = is_private
         # 如果是群聊就要在回复的前缀 亲爱的后面加上 user_title

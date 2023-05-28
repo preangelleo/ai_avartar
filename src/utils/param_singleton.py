@@ -151,9 +151,11 @@ class Params:
         # Fanbook Param
 
         self.FANBOOK_BOT_TOKEN = os.getenv('FANBOOK_BOT_TOKEN')
-        self.FANBOOK_BOT_NAME = (
-            owner_parameters_dict.get('BOT_USERNAME') or 'FanBookBot'
-        )
+        self.FANBOOK_BOT_NAME = owner_parameters_dict.get('BOT_USERNAME')
+        self.FANBOOK_BOT_OWNER_ID = owner_parameters_dict.get('FANBOOK_BOT_OWNER_ID')
+        self.FANBOOK_BOT_CREATOR_ID = owner_parameters_dict.get('FANBOOK_BOT_CREATOR_ID')
+        self.FANBOOK_BOT_OWNER_NAME = owner_parameters_dict.get('FANBOOK_BOT_OWNER_NAME')
+
         logging.info(f'FANBOOK_BOT_NAME: {self.FANBOOK_BOT_NAME}')
 
         openai.api_key = self.OPENAI_API_KEY

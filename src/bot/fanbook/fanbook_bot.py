@@ -19,7 +19,7 @@ from src.bot.fanbook.utils.constants import (
     GET_USER_TOKEN_TIMEOUT_COUNT,
 )
 from third_party_api.chatgpt import local_chatgpt_to_reply
-from utils.utils import save_avatar_chat_history
+from src.utils.utils import save_avatar_chat_history
 
 
 class FanbookBot(Bot):

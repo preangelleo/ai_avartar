@@ -1,5 +1,5 @@
-from src.bot.single_message import build_from_fanbook_msg, SingleMessage
 from src.utils.logging_util import logging
+from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg
 
 import requests
 from src.bot.bot import Bot
@@ -18,8 +18,7 @@ from src.bot.fanbook.utils.constants import (
     FANBOOK_VERSION,
     GET_USER_TOKEN_TIMEOUT_COUNT,
 )
-from third_party_api.chatgpt import local_chatgpt_to_reply
-from src.utils.utils import save_avatar_chat_history
+from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
 
 
 class FanbookBot(Bot):
@@ -73,28 +72,6 @@ class FanbookBot(Bot):
         logging.info(f'handle_push(): {obj}')
         self.handle_single_msg(build_from_fanbook_msg(obj))
 
-    def handle_single_msg(self, msg: SingleMessage):
-        # TODO: slowly migrate and test functions from bot.py
-        try:
-            save_avatar_chat_history(
-                msg.msg_text,
-                msg.chat_id,
-                msg.from_id,
-                msg.username,
-                msg.first_name,
-                msg.last_name,
-            )
-        except Exception as e:
-            return logging.error(f'save_avatar_chat_history() failed: {e}')
-
-        reply = local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
-
-        if reply:
-            try:
-                self.send_msg(reply, msg.chat_id)
-            except Exception as e:
-                logging.error(f'local_chatgpt_to_reply() send_msg() failed : {e}')
-
     def send_msg(self, msg: str, chat_id, parse_mode=None):
         headers = {'Content-type': 'application/json'}
         payload = {'chat_id': int(chat_id), 'text': msg, 'desc': msg}
@@ -130,6 +107,7 @@ class FanbookBot(Bot):
             logging.error('WebSocketError: ', e)
 
     def run(self):
+        logging.debug(f"@{self.bot_name} started...")
         self.handle_websocket_connection()
 
 
@@ -141,13 +119,13 @@ if __name__ == '__main__':
         photo_branch_handler=None,
         voice_branch_handler=None,
         audio_branch_handler=None,
-        improper_branch_handler=None,
-        text_branch_handler=None,
-        payment_branch_handler=None,
-        check_bill_branch_handler=None,
-        bot_owner_branch_handler=None,
-        english_teacher_branch_handler=None,
-        coinmarketcap_branch_handler=None,
+        improper_branch_handler=NoOpBranch(),
+        text_branch_handler=NoOpBranch(),
+        payment_branch_handler=NoOpBranch(),
+        check_bill_branch_handler=NoOpBranch(),
+        bot_owner_branch_handler=NoOpBranch(),
+        english_teacher_branch_handler=NoOpBranch(),
+        coinmarketcap_branch_handler=NoOpBranch(),
         bot_owner_id='',
         bot_creator_id='',
         bot_owner_name='bot_owner_name_placeholder',

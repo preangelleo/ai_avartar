@@ -1,3 +1,4 @@
+import logging
 import threading
 
 from database.mysql import OwnerParameter
@@ -58,7 +59,6 @@ class Params:
         if self.__initialized:
             return
         self.__initialized = True
-        print('Init Params Singleton')
         load_dotenv()
 
         # 获取环境变量
@@ -149,11 +149,12 @@ class Params:
         ).split('/')[-1]
 
         # Fanbook Param
+
         self.FANBOOK_BOT_TOKEN = os.getenv('FANBOOK_BOT_TOKEN')
-        # TODO: test owner_parameters_dict
         self.FANBOOK_BOT_NAME = (
             owner_parameters_dict.get('BOT_USERNAME') or 'FanBookBot'
         )
+        logging.info(f'FANBOOK_BOT_NAME: {self.FANBOOK_BOT_NAME}')
 
         openai.api_key = self.OPENAI_API_KEY
         os.environ["OPENAI_API_KEY"] = self.OPENAI_API_KEY

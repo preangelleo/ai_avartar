@@ -144,14 +144,14 @@ class Params:
         )
         self.TELEGRAM_BOT_TOKEN = owner_parameters_dict.get('BOT_TOKEN')
         self.TELEGRAM_BOT_NAME = owner_parameters_dict.get('BOT_USERNAME')
-        self.TELEGRAM_BOTOWNER_NAME = owner_parameters_dict.get('USER_TELEGRAM_LINK').split(
-            '/'
-        )[-1]
+        self.TELEGRAM_BOTOWNER_NAME = owner_parameters_dict.get(
+            'USER_TELEGRAM_LINK'
+        ).split('/')[-1]
 
         # Fanbook Param
-        self.FAN_BOOK_BOT_TOKEN = os.getenv('FAN_BOOK_BOT_TOKEN')
+        self.FANBOOK_BOT_TOKEN = os.getenv('FANBOOK_BOT_TOKEN')
         # TODO: test owner_parameters_dict
-        self.FAN_BOOK_BOT_NAME = (
+        self.FANBOOK_BOT_NAME = (
             owner_parameters_dict.get('BOT_USERNAME') or 'FanBookBot'
         )
 

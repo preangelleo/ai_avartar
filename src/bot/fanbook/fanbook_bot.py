@@ -9,9 +9,9 @@ import threading
 from websocket._core import create_connection
 import time
 from src.bot.fanbook.utils.constants import (
-    FAN_BOOK_BOT_NAME,
-    FAN_BOOK_GET_ME_URL,
-    FAN_BOOK_SEND_MSG_URL,
+    FANBOOK_BOT_NAME,
+    FANBOOK_GET_ME_URL,
+    FANBOOK_SEND_MSG_URL,
     HEAT_BEAT_INTERVAL,
     FANBOOK_CLIENT_ID,
     DEVICE_ID,
@@ -57,7 +57,7 @@ class FanbookBot(Bot):
 
     def get_user_token(self):
         response = requests.get(
-            FAN_BOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT
+            FANBOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT
         )
         return response.json()['result']['user_token']
 
@@ -100,7 +100,7 @@ class FanbookBot(Bot):
         payload = {'chat_id': int(chat_id), 'text': msg, 'desc': msg}
 
         response = requests.post(
-            FAN_BOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers
+            FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers
         )
         logging.debug(f'send_msg(): {response.json()}')
         return response.json()
@@ -135,7 +135,7 @@ class FanbookBot(Bot):
 
 if __name__ == '__main__':
     FanbookBot(
-        bot_name=FAN_BOOK_BOT_NAME,
+        bot_name=FANBOOK_BOT_NAME,
         # TODO(kezhang@): You should either implement these 4 branch for Fanbook or replace them with NoOpBranch
         document_branch_handler=None,
         photo_branch_handler=None,
@@ -150,4 +150,5 @@ if __name__ == '__main__':
         coinmarketcap_branch_handler=None,
         bot_owner_id='',
         bot_creator_id='',
+        bot_owner_name='bot_owner_name_placeholder',
     ).run()

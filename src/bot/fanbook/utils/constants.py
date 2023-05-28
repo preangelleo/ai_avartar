@@ -1,7 +1,7 @@
 from src.utils.param_singleton import Params
 
 # TODO(kezhang@): implement this im params
-FANBOOK_BOT_NAME = Params().FANBOOK_BOT_NAME
+FAN_BOOK_BOT_NAME = Params().FAN_BOOK_BOT_NAME
 
 BASE_URL = 'https://a1.fanbook.mobi/api'
 GET_USER_TOKEN_TIMEOUT_COUNT = 3

@@ -1,10 +1,3 @@
-from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
-from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import CoinMarketCapBranch
-from src.bot.bot_branch.english_teacher_branch.english_teacher_branch import EnglishTeacherBranch
-from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
-from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
-from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
-from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.single_message import build_from_fanbook_msg, SingleMessage
 from src.utils.logging_util import logging
 
@@ -16,7 +9,7 @@ import threading
 from websocket._core import create_connection
 import time
 from src.bot.fanbook.utils.constants import (
-    FANBOOK_BOT_NAME,
+    FAN_BOOK_BOT_NAME,
     FAN_BOOK_GET_ME_URL,
     FAN_BOOK_SEND_MSG_URL,
     HEAT_BEAT_INTERVAL,
@@ -25,6 +18,8 @@ from src.bot.fanbook.utils.constants import (
     FANBOOK_VERSION,
     GET_USER_TOKEN_TIMEOUT_COUNT,
 )
+from third_party_api.chatgpt import local_chatgpt_to_reply
+from utils.utils import save_avatar_chat_history
 
 
 class FanbookBot(Bot):
@@ -66,24 +61,39 @@ class FanbookBot(Bot):
         )
         return response.json()['result']['user_token']
 
-    def handle_single_msg(self, message: SingleMessage):
-        # TODO(kezhang@): It's fine for now if you just want to test the `hello world` logic
-        #  But ideally we should not override tghis function and should reuse all the logic in Bot.handle_single_msg
-        self.handle_push(message)
-
     def handle_push(self, obj):
-        # TODO(kezhang@): It's fine for tesing now
-        #  Ideally this function should be removed and reuse all the logic in Bot.handle_single_msg
         is_bot = obj.get('data').get('author').get('bot')
         if is_bot:
             return
-
         channel_id = obj.get('data').get('channel_id')
         author = obj.get('data').get('author').get('nickname')
         if not channel_id or not author:
             return
 
-        self.send_msg('hello', channel_id)
+        logging.info(f'handle_push(): {obj}')
+        self.handle_single_msg(build_from_fanbook_msg(obj))
+
+    def handle_single_msg(self, msg: SingleMessage):
+        # TODO: slowly migrate and test functions from bot.py
+        try:
+            save_avatar_chat_history(
+                msg.msg_text,
+                msg.chat_id,
+                msg.from_id,
+                msg.username,
+                msg.first_name,
+                msg.last_name,
+            )
+        except Exception as e:
+            return logging.error(f'save_avatar_chat_history() failed: {e}')
+
+        reply = local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
+
+        if reply:
+            try:
+                self.send_msg(reply, msg.chat_id)
+            except Exception as e:
+                logging.error(f'local_chatgpt_to_reply() send_msg() failed : {e}')
 
     def send_msg(self, msg: str, chat_id, parse_mode=None):
         headers = {'Content-type': 'application/json'}
@@ -92,7 +102,7 @@ class FanbookBot(Bot):
         response = requests.post(
             FAN_BOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers
         )
-        logging.debug(f"send_msg(): {response.json()}")
+        logging.debug(f'send_msg(): {response.json()}')
         return response.json()
 
     def send_ping(self, ws):
@@ -113,7 +123,7 @@ class FanbookBot(Bot):
                 s = ws.recv().decode('utf8')
                 obj = json.loads(s)
                 if obj.get('action') == 'push':
-                    self.handle_single_msg(build_from_fanbook_msg(obj))
+                    self.handle_push(obj)
         except ConnectionError:
             logging.error('WebSocketClosed')
         except Exception as e:
@@ -125,17 +135,19 @@ class FanbookBot(Bot):
 
 if __name__ == '__main__':
     FanbookBot(
-        bot_name=FANBOOK_BOT_NAME,
+        bot_name=FAN_BOOK_BOT_NAME,
         # TODO(kezhang@): You should either implement these 4 branch for Fanbook or replace them with NoOpBranch
         document_branch_handler=None,
         photo_branch_handler=None,
         voice_branch_handler=None,
         audio_branch_handler=None,
-        improper_branch_handler=ImproperBranch(),
-        text_branch_handler=TextBranch(),
-        payment_branch_handler=PaymentBranch(),
-        check_bill_branch_handler=CheckBillBranch(),
-        bot_owner_branch_handler=BotOwnerBranch(),
-        english_teacher_branch_handler=EnglishTeacherBranch(),
-        coinmarketcap_branch_handler=CoinMarketCapBranch(),
+        improper_branch_handler=None,
+        text_branch_handler=None,
+        payment_branch_handler=None,
+        check_bill_branch_handler=None,
+        bot_owner_branch_handler=None,
+        english_teacher_branch_handler=None,
+        coinmarketcap_branch_handler=None,
+        bot_owner_id='',
+        bot_creator_id='',
     ).run()

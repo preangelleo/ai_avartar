@@ -15,10 +15,5 @@ repos:
       - flake8-bugbear
       - flake8-builtins
       - flake8-comprehensions
-      - flake8-quotes
       - flake8-tidy-imports
-- repo: https://github.com/pre-commit/mirrors-autopep8
-  rev: v2.0.2
-  hooks:
-  - id: autopep8
 

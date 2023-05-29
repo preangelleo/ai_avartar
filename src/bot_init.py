@@ -50,6 +50,7 @@ def initialize_owner_parameters_table():
         # Read .env to get the owner's parameters
         with open('.env', 'r') as f:
             for line in f.readlines():
+                print(f"DEBUG: line = {line}")
                 line = line.strip()
                 if not line or line.startswith('#'): continue
 

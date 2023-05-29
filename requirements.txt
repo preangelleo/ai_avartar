@@ -8,7 +8,7 @@ pytz
 IPython
 ipywidgets
 xlrd
-gevent==22.8.0
+gevent
 langchain
 pinecone-client
 eth_account

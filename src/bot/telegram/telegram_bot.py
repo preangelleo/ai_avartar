@@ -12,7 +12,7 @@ from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
 from src.bot.bot_branch.photo_branch.telegram_photo_branch import TelegramPhotoBranch
 from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.bot_branch.voice_branch.telegram_voice_branch import TelegramVoiceBranch
-from src.bot.single_message import build_from_telegram_msg
+from src.bot.telegram.utils.message_builder import build_from_telegram_msg
 from src.bot.telegram.utils.utils import *
 from src.bot.bot import Bot
 from src.utils.logging_util import logging

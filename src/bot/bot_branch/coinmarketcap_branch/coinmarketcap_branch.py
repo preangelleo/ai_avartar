@@ -8,7 +8,10 @@ def get_token_info_from_coinmarketcap(token_symbol):
     # CoinMarketCap API endpoint
     url = f'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol={token_symbol}'
 
-    headers = {'Accepts': 'application/json', 'X-CMC_PRO_API_KEY': Params().CMC_PA_API}
+    headers = {
+        'Accepts': 'application/json',
+        'X-CMC_PRO_API_KEY': Params().CMC_PA_API,
+    }
 
     response = requests.get(url, headers=headers)
     data = response.json()
@@ -49,9 +52,7 @@ def check_token_symbol_in_db_cmc_total_supply(token_symbol):
     # Create a new session
     with Params().Session() as session:
         # Query the table 'db_cmc_total_supply' to check if the token_symbol exists
-        token_symbol_exists = session.query(
-            sqlalchemy.exists().where(CmcTotalSupply.symbol == token_symbol)
-        ).scalar()
+        token_symbol_exists = session.query(sqlalchemy.exists().where(CmcTotalSupply.symbol == token_symbol)).scalar()
         return token_symbol_exists
 
 
@@ -68,7 +69,5 @@ class CoinMarketCapBranch(BotBranch):
             r = get_token_info_from_coinmarketcap_output_chinese(msg_text)
             bot.send_msg(r, msg.chat_id)
         except Exception as e:
-            logging.error(
-                f"local_bot_msg_command() get_token_info_from_coinmarketcap_output_chinese() FAILED: \n\n{e}"
-            )
+            logging.error(f"local_bot_msg_command() get_token_info_from_coinmarketcap_output_chinese() FAILED: \n\n{e}")
         return

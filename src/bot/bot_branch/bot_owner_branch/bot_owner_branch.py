@@ -43,9 +43,7 @@ class BotOwnerBranch(BotBranch):
                         msg.chat_id,
                     )
             except Exception as e:
-                logging.error(
-                    f"local_bot_msg_command() get_user_chat_history() FAILED: \n\n{e}"
-                )
+                logging.error(f"local_bot_msg_command() get_user_chat_history() FAILED: \n\n{e}")
             return
 
         # 用 vip 命令设置用户成为 VIP, 当 msg_lower 以 /vip, vip, /vip_, vip_, /v, v, /v_, v_ 开头时, 会触发这个命令, 而 msg_lower 中的数字部分是 from_id
@@ -55,13 +53,7 @@ class BotOwnerBranch(BotBranch):
             or msg_lower.startswith('/v')
             or msg_lower.startswith('v')
         ):
-            user_from_id = (
-                msg.msg_text.replace('/', '')
-                .replace('vip', '')
-                .replace('v', '')
-                .replace('_', '')
-                .strip()
-            )
+            user_from_id = msg.msg_text.replace('/', '').replace('vip', '').replace('v', '').replace('_', '').strip()
             # 判断 from_id 是否是数字
             if user_from_id and user_from_id.isdigit():
                 # return bot.send_msg(f"{user_nick_name}, 你要设置谁为 VIP, 请在命令后面的空格后再加上一个 from_id, 比如: \n\nvip 123456789\n\n这样就是把 from_id 为 123456789 的用户设置为 VIP 了😘。如果你不知道对方的 chat_id, 请对方发送 /vip 或者 /v 给我申请成为 VIP, 我会转达他的申请给你并附带对方的 chat_id, 届时如果你同意, 可以根据提示确认。\n\nP.S. /vip 也可以缩写为 /v", chat_id)
@@ -81,22 +73,19 @@ class BotOwnerBranch(BotBranch):
 
         # Remove user from VIP list
         elif msg_lower.startswith('/remove_vip') or msg_lower.startswith('remove_vip'):
-            user_from_id = (
-                msg.msg_text.replace('/', '')
-                .replace('remove_vip', '')
-                .replace('_', '')
-                .strip()
-            )
+            user_from_id = msg.msg_text.replace('/', '').replace('remove_vip', '').replace('_', '').strip()
 
             if user_from_id and user_from_id.isdigit():
                 r = remove_user_from_vip_list(user_from_id)
                 if r:
                     return bot.send_msg(
-                        f"msg.from_id: {user_from_id} 已被成功移出 VIP 列表!", msg.chat_id
+                        f"msg.from_id: {user_from_id} 已被成功移出 VIP 列表!",
+                        msg.chat_id,
                     )
                 else:
                     return bot.send_msg(
-                        f"msg.from_id: {user_from_id} 本来就不在 VIP 列表中哈。", msg.chat_id
+                        f"msg.from_id: {user_from_id} 本来就不在 VIP 列表中哈。",
+                        msg.chat_id,
                     )
 
             vip_list_with_hint_text = get_vip_list_except_owner_and_admin()
@@ -116,11 +105,15 @@ class BotOwnerBranch(BotBranch):
                     if not os.path.exists(SAVE_FOLDER):
                         os.makedirs(SAVE_FOLDER)
                     file_name = f"{SAVE_FOLDER}/vip_list.txt"
-                    execution_help_info = f"您一共有 {vip_count} 位 VIP 用户, 拷贝用户名下面的 /remove_vip_xxxxxxxx 指令然后发给我即可将相应的用户从 VIP 列表中移除"
+                    execution_help_info = (
+                        f"您一共有 {vip_count} 位 VIP 用户, 拷贝用户名下面的 /remove_vip_xxxxxxxx 指令然后发给我即可将相应的用户从 VIP 列表中移除"
+                    )
                     with open(file_name, 'w') as f:
                         f.write(f"{execution_help_info}\n\n{text_format}")
                     bot.send_file(
-                        msg.chat_id, file_name, description=f"您的 {vip_count} 位 VIP 用户列表"
+                        msg.chat_id,
+                        file_name,
+                        description=f"您的 {vip_count} 位 VIP 用户列表",
                     )
 
             return
@@ -132,9 +125,7 @@ class BotOwnerBranch(BotBranch):
             '/group_send_commands_list',
             '/gscl',
         ]:
-            group_send_message_info = (
-                f"{DEAR_USER}, /commands 列表更新咯 😙: \n{user_commands}"
-            )
+            group_send_message_info = f"{DEAR_USER}, /commands 列表更新咯 😙: \n{user_commands}"
             bot.send_msg_to_all(msg, group_send_message_info)
             bot.send_msg(bot_owner_commands, msg.chat_id)
             return
@@ -159,9 +150,7 @@ class BotOwnerBranch(BotBranch):
                         msg.chat_id,
                     )
             except Exception as e:
-                logging.error(
-                    f"local_bot_msg_command() set_user_blacklist() FAILED: \n\n{e}"
-                )
+                logging.error(f"local_bot_msg_command() set_user_blacklist() FAILED: \n\n{e}")
             return
 
         elif MSG_SPLIT[0] in [
@@ -185,12 +174,11 @@ class BotOwnerBranch(BotBranch):
                         msg.from_id_to_remove,
                     )
                     bot.send_msg(
-                        f"msg.from_id: {msg.from_id_to_remove} 已被成功移出黑名单!", msg.chat_id
+                        f"msg.from_id: {msg.from_id_to_remove} 已被成功移出黑名单!",
+                        msg.chat_id,
                     )
             except Exception as e:
-                logging.error(
-                    f"local_bot_msg_command() remove_user_blacklist() FAILED: \n\n{e}"
-                )
+                logging.error(f"local_bot_msg_command() remove_user_blacklist() FAILED: \n\n{e}")
             return
 
         elif MSG_SPLIT[0] in [
@@ -221,16 +209,19 @@ class BotOwnerBranch(BotBranch):
             try:
                 update_owner_parameter('MAX_CONVERSATION_PER_MONTH', MSG_SPLIT[1])
             except Exception as e:
-                return logging.error(
-                    f"local_bot_msg_command() update_owner_parameter() FAILED: \n\n{e}"
-                )
+                return logging.error(f"local_bot_msg_command() update_owner_parameter() FAILED: \n\n{e}")
 
             return bot.send_msg(
                 f"{msg.user_nick_name}, 我已经把免费用户每月的免费对话次数设置为 {MSG_SPLIT[1]} 次了, 系统参数表也更新了, 请放心, 参数立刻生效 😘",
                 msg.chat_id,
             )
 
-        elif MSG_SPLIT[0] in ['set_monthly_fee', 'smf', '/set_monthly_fee', '/smf']:
+        elif MSG_SPLIT[0] in [
+            'set_monthly_fee',
+            'smf',
+            '/set_monthly_fee',
+            '/smf',
+        ]:
             if MSG_LEN == 1:
                 return bot.send_msg(
                     f"{msg.user_nick_name}, 你要设置每月的收费金额, 请在命令后面的空格后再加上一个整数, 比如: \n\nset_monthly_fee 10\n\n这样就是设置每月的收费金额为 10 美元了. 😘 \n\nP.S. /set_monthly_fee 也可以缩写为 /smf\n\n重要: 如果 BOT OWNER 不希望任何付费用户来使用你的 Bot, 仅限 Owner 以及定向邀请或批准的 VIP 用户 (白名单), 那么请将月费金额设置成天文数字, 并用 /set_free_talk_limit 指令将每月每个用户的免费聊天次数设置为 0 ",
@@ -248,16 +239,19 @@ class BotOwnerBranch(BotBranch):
             try:
                 update_owner_parameter('MONTHLY_FEE', MSG_SPLIT[1])
             except Exception as e:
-                return logging.error(
-                    f"local_bot_msg_command() update_owner_parameter() FAILED: \n\n{e}"
-                )
+                return logging.error(f"local_bot_msg_command() update_owner_parameter() FAILED: \n\n{e}")
 
             return bot.send_msg(
                 f"{msg.user_nick_name}, 我已经把每月的收费金额设置为 {MSG_SPLIT[1]} 美元了, 系统参数表也更新了, 但是需要后台重启服务才能生效, 请联系 @laogege6 帮你重启吧 😘",
                 msg.chat_id,
             )
 
-        elif MSG_SPLIT[0] in ['set_refill_teaser', 'srt', '/set_refill_teaser', '/srt']:
+        elif MSG_SPLIT[0] in [
+            'set_refill_teaser',
+            'srt',
+            '/set_refill_teaser',
+            '/srt',
+        ]:
             if MSG_LEN == 1:
                 return bot.send_msg(
                     f"{msg.user_nick_name}, 你要设置用户充值提醒的内容, 请在命令后面的空格后再加上你希望使用的充值引导内容, 比如: \n\nset_refill_teaser 亲爱的, 你的免费对话次数已经用完了, 请充值后继续使用哦. 😘\n\n这样就是设置好了。\n\nP.S. /set_refill_teaser 也可以缩写为 /srt , 如果你想查看当正在使用的充值引导内容, 请点击 /check_refill_teaser 或者 /crt",
@@ -291,7 +285,12 @@ class BotOwnerBranch(BotBranch):
                 msg.chat_id,
             )
 
-        elif MSG_SPLIT[0] in ['group_send_image', 'gsi', '/group_send_image', '/gsi']:
+        elif MSG_SPLIT[0] in [
+            'group_send_image',
+            'gsi',
+            '/group_send_image',
+            '/gsi',
+        ]:
             bot.send_msg(
                 f"{msg.user_nick_name}, 你要群发图片, 请直接将图片拖拽给我或者发给我, 但是切记发送前一定要在图片 caption 里填写 /group_send_image 或者简写 /gsi , 这样我才知道这张图片是要求我依次轮询发给所有用户的。",
                 msg.chat_id,
@@ -324,7 +323,12 @@ class BotOwnerBranch(BotBranch):
             return
 
         # 使用 send_file_to_all 将文件发送给所有用户
-        elif MSG_SPLIT[0] in ['group_send_file', 'gsf', '/group_send_file', '/gsf']:
+        elif MSG_SPLIT[0] in [
+            'group_send_file',
+            'gsf',
+            '/group_send_file',
+            '/gsf',
+        ]:
             bot.send_msg(
                 f"{msg.user_nick_name}, 你要群发文件, 请直接将文件拖拽给我或者发给我, 但是切记发送前一定要在文件 caption 里填写 /group_send_file 或者简写 /gsf , 这样我才知道这个文件是要求我依次轮询发给所有用户的。不知道 caption 怎么填写可以参考 /group_send_image 的帮助图片哈, 都一样的 😋",
                 msg.chat_id,
@@ -332,7 +336,12 @@ class BotOwnerBranch(BotBranch):
             return
 
         # 使用 send_audio_to_all 将 audio 文件发送给所有用户
-        elif MSG_SPLIT[0] in ['group_send_audio', 'gsa', '/group_send_audio', '/gsa']:
+        elif MSG_SPLIT[0] in [
+            'group_send_audio',
+            'gsa',
+            '/group_send_audio',
+            '/gsa',
+        ]:
             bot.send_msg(
                 f"{msg.user_nick_name}, 你要群发语音文件 (mp3 或者 wav), 请直接将文件拖拽给我或者发给我, 但是切记发送前一定要在文件 caption 里填写 /group_send_audio 或者简写 /gsa , 这样我才知道这个Audio文件是要求我依次轮询发给所有用户的。不知道 caption 怎么填写可以参考 /group_send_image 的帮助图片哈, 都一样的 😋",
                 msg.chat_id,

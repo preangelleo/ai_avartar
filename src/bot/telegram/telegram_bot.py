@@ -1,7 +1,9 @@
 import threading
 import time
 
-from src.bot.bot_branch.audio_branch.telegram_audio_branch import TelegramAudioBranch
+from src.bot.bot_branch.audio_branch.telegram_audio_branch import (
+    TelegramAudioBranch,
+)
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
 from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import (
     CoinMarketCapBranch,
@@ -13,11 +15,17 @@ from src.bot.bot_branch.english_teacher_branch.english_teacher_branch import (
     EnglishTeacherBranch,
 )
 from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
-from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
+from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import (
+    CheckBillBranch,
+)
 from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
-from src.bot.bot_branch.photo_branch.telegram_photo_branch import TelegramPhotoBranch
+from src.bot.bot_branch.photo_branch.telegram_photo_branch import (
+    TelegramPhotoBranch,
+)
 from src.bot.bot_branch.text_branch.text_branch import TextBranch
-from src.bot.bot_branch.voice_branch.telegram_voice_branch import TelegramVoiceBranch
+from src.bot.bot_branch.voice_branch.telegram_voice_branch import (
+    TelegramVoiceBranch,
+)
 from src.bot.telegram.utils.message_builder import build_from_telegram_msg
 from src.bot.telegram.utils.utils import *
 from src.bot.bot import Bot
@@ -47,9 +55,7 @@ class TelegramBot(Bot):
         if not msg:
             return False
         if not chat_id:
-            logging.error(
-                f"Missing chat_id: msg_object={msg}, chat_id={chat_id}, parse_mode={parse_mode}"
-            )
+            logging.error(f"Missing chat_id: msg_object={msg}, chat_id={chat_id}, parse_mode={parse_mode}")
             return
 
         url = get_send_msg_url()
@@ -61,14 +67,15 @@ class TelegramBot(Bot):
             "reply_to_message_id": None,
             "chat_id": chat_id,
         }
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
 
         try:
             requests.post(url, json=payload, headers=headers)
         except Exception as e:
-            return print(
-                f"ERROR: send_msg() failed for:\n{e}\n\nOriginal message:\n{msg}"
-            )
+            return print(f"ERROR: send_msg() failed for:\n{e}\n\nOriginal message:\n{msg}")
         logging.debug(f"send_msg(): {msg}")
         return True
 
@@ -81,9 +88,7 @@ class TelegramBot(Bot):
         # send the audio message to the user
         try:
             with open(audio_path, 'rb') as audio_file:
-                requests.post(
-                    url, data={'chat_id': chat_id}, files={'audio': audio_file}
-                )
+                requests.post(url, data={'chat_id': chat_id}, files={'audio': audio_file})
         except Exception as e:
             print(f"ERROR : send_audio() failed : {e}")
         return
@@ -94,9 +99,7 @@ class TelegramBot(Bot):
         try:
             files = {'photo': open(file_path, 'rb')}
         except Exception as e:
-            return print(
-                f"ERROR: send_img() failed for:\n{e}\n\nOriginal message:\n{file_path}\n\nCan't open file."
-            )
+            return print(f"ERROR: send_img() failed for:\n{e}\n\nOriginal message:\n{file_path}\n\nCan't open file.")
         url = get_send_img_url(chat_id, description)
         r = ''
         try:
@@ -111,9 +114,7 @@ class TelegramBot(Bot):
         try:
             files = {'document': open(file_path, 'rb')}
         except Exception as e:
-            return print(
-                f"ERROR: send_file() failed for:\n{e}\n\nOriginal message:\n{file_path}\n\nCan't open file."
-            )
+            return print(f"ERROR: send_file() failed for:\n{e}\n\nOriginal message:\n{file_path}\n\nCan't open file.")
         url = get_send_file_url(chat_id, description)
         r = ''
         try:

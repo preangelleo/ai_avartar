@@ -14,7 +14,10 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma, Pinecone
 from langchain.chains.question_answering import load_qa_chain
 
-from src.utils.constants import default_system_prompt_file, default_dialogue_tone_file
+from src.utils.constants import (
+    default_system_prompt_file,
+    default_dialogue_tone_file,
+)
 
 from src.third_party_api.elevenlabs import *
 from src.utils.utils import *
@@ -36,9 +39,7 @@ def create_news_and_audio_from_bing_search(bot, query, chat_id):
         i = 1
         for line in file:
             if 'SNIPPET: ' in line:
-                snippet_total.append(
-                    line.replace('-', '').replace('SNIPPET: ', f'{str(i)}. ')
-                )
+                snippet_total.append(line.replace('-', '').replace('SNIPPET: ', f'{str(i)}. '))
                 i += 1
 
     snippet_text_filepath = filepath.replace('.txt', '_snippet.txt')
@@ -68,9 +69,7 @@ def create_news_and_audio_from_bing_search(bot, query, chat_id):
     bot.send_file(chat_id, filepath_news_txt, description='中英文内容 Text 文件')
 
     filepath_news_mp3_cn = filepath_news_mp3.replace('.mp3', '_cn.mp3')
-    filepath_news_mp3_cn = microsoft_azure_tts(
-        text_cn, 'zh-CN-YunxiNeural', filepath_news_mp3_cn
-    )
+    filepath_news_mp3_cn = microsoft_azure_tts(text_cn, 'zh-CN-YunxiNeural', filepath_news_mp3_cn)
 
     merged_audio = merge_audio_files([filepath_news_mp3, filepath_news_mp3_cn])
     bot.send_audio(merged_audio, chat_id)
@@ -86,11 +85,7 @@ def create_news_and_audio_from_bing_search(bot, query, chat_id):
 def create_audio_from_text(bot, text, chat_id=''):
     if not text:
         return
-    filepath = (
-        f"files/audio/{chat_id}_{text[:10]}.mp3"
-        if chat_id
-        else f"files/audio/no_chat_id_{text[:10]}.mp3"
-    )
+    filepath = f"files/audio/{chat_id}_{text[:10]}.mp3" if chat_id else f"files/audio/no_chat_id_{text[:10]}.mp3"
 
     if is_english(text):
         new_filepath = microsoft_azure_tts(text, 'en-US-JennyNeural', filepath)
@@ -123,7 +118,8 @@ class TextBranch(BotBranch):
                 return
             if 'youtube' in msg_text:
                 bot.send_msg(
-                    "{msg.user_nick_name}我看不了 Youtube 哈, 你发个别的链接给我吧 😂", msg.chat_id
+                    "{msg.user_nick_name}我看不了 Youtube 哈, 你发个别的链接给我吧 😂",
+                    msg.chat_id,
                 )
 
             if '/tx/0x' in msg_text:
@@ -135,15 +131,11 @@ class TextBranch(BotBranch):
                     msg.chat_id,
                 )
                 try:
-                    r = get_transactions_info_by_hash_tx(
-                        bot, hash_tx, msg.chat_id, msg.user_title, chain='eth'
-                    )
+                    r = get_transactions_info_by_hash_tx(bot, hash_tx, msg.chat_id, msg.user_title, chain='eth')
                     if r:
                         bot.send_msg(r, msg.chat_id)
                 except Exception as e:
-                    logging.error(
-                        f"local_bot_msg_command() get_transactions_info_by_hash_tx() FAILED: \n\n{e}"
-                    )
+                    logging.error(f"local_bot_msg_command() get_transactions_info_by_hash_tx() FAILED: \n\n{e}")
                 return
 
             if 'address/0x' in msg_text:
@@ -166,9 +158,7 @@ class TextBranch(BotBranch):
                             msg.chat_id,
                         )
                 except Exception as e:
-                    return logging.error(
-                        f"local_bot_msg_command() check_address_balance() FAILED: \n\n{e}"
-                    )
+                    return logging.error(f"local_bot_msg_command() check_address_balance() FAILED: \n\n{e}")
                 return
 
             try:
@@ -180,9 +170,7 @@ class TextBranch(BotBranch):
                 db = Chroma.from_documents(texts, Params().embeddings)
                 retriever = db.as_retriever()
 
-                bot.qa = RetrievalQA.from_chain_type(
-                    llm=Params().llm, chain_type="stuff", retriever=retriever
-                )
+                bot.qa = RetrievalQA.from_chain_type(llm=Params().llm, chain_type="stuff", retriever=retriever)
 
                 query = (
                     ' '.join(MSG_SPLIT[1:])
@@ -215,8 +203,7 @@ class TextBranch(BotBranch):
 
         # 用户可以通过 save_chat_history /from_id 指令来保存聊天记录
         elif (
-            MSG_SPLIT[0] in ['save_chat_history', '/save_chat_history', 'sch', '/sch']
-            or msg_text == f"/{msg.from_id}"
+            MSG_SPLIT[0] in ['save_chat_history', '/save_chat_history', 'sch', '/sch'] or msg_text == f"/{msg.from_id}"
         ):
             file_path = get_user_chat_history(msg.from_id)
             help_info = f'{msg.user_nick_name} 你可以随时发送 /{msg.from_id} 或者 /Save_Chat_History (or /sch) 给我来保存咱俩的聊天记录哈. 😘'
@@ -265,9 +252,7 @@ class TextBranch(BotBranch):
             return bot.send_msg(Params().avatar_more_information, msg.chat_id)
 
         elif MSG_SPLIT[0] in ['whoami', '/whoami'] or msg_lower in ['who am i']:
-            fn_and_ln = ' '.join(
-                [n for n in [msg.first_name, msg.last_name] if 'User' not in n]
-            )
+            fn_and_ln = ' '.join([n for n in [msg.first_name, msg.last_name] if 'User' not in n])
             bot.send_msg(
                 f"你是 {fn_and_ln} 呀, 我的宝贝! 😘\n\nmsg.chat_id:\n{msg.chat_id}\n电报链接:\nhttps://t.me/{msg.username}",
                 msg.chat_id,
@@ -289,12 +274,8 @@ class TextBranch(BotBranch):
             )
 
         # 提交用户自己的 elevenlabs_api_key
-        elif msg_text.startswith('/elevenlabs_api_key') or msg_text.startswith(
-            'elevenlabs_api_key'
-        ):
-            elevenlabs_api_key = (
-                msg_text.replace('/', '').replace('elevenlabs_api_key', '').strip()
-            )
+        elif msg_text.startswith('/elevenlabs_api_key') or msg_text.startswith('elevenlabs_api_key'):
+            elevenlabs_api_key = msg_text.replace('/', '').replace('elevenlabs_api_key', '').strip()
             if not elevenlabs_api_key:
                 return bot.send_msg(eleven_labs_apikey_retrieve_guide, msg.chat_id)
             r = check_and_save_elevenlabs_api_key(bot, elevenlabs_api_key, msg.from_id)
@@ -317,15 +298,11 @@ class TextBranch(BotBranch):
 
         # close_clone_voice
         elif MSG_SPLIT[0] in ['close_clone_voice', '/close_clone_voice']:
-            return update_elevenlabs_user_ready_to_clone_to_0(
-                bot, msg.from_id, msg.user_title
-            )
+            return update_elevenlabs_user_ready_to_clone_to_0(bot, msg.from_id, msg.user_title)
 
         # update_elevenlabs_user_ready_to_clone_to_0(from_id) if msg_text in ['/confirm_my_voice', 'confirm_my_voice'] else None
         elif MSG_SPLIT[0] in ['confirm_my_voice', '/confirm_my_voice']:
-            r = update_elevenlabs_user_ready_to_clone_to_0(
-                bot, msg.from_id, msg.user_title, cmd='confirm_my_voice'
-            )
+            r = update_elevenlabs_user_ready_to_clone_to_0(bot, msg.from_id, msg.user_title, cmd='confirm_my_voice')
             if r:
                 generate_clone_voice_audio_with_eleven_labs(
                     bot,
@@ -337,7 +314,12 @@ class TextBranch(BotBranch):
             return
 
             # /speak_my_voice 命令, 用来引导用户用自己的声音朗读英文
-        elif MSG_SPLIT[0] in ['speak_my_voice', '/speak_my_voice', '/smv', 'smv']:
+        elif MSG_SPLIT[0] in [
+            'speak_my_voice',
+            '/speak_my_voice',
+            '/smv',
+            'smv',
+        ]:
             if MSG_LEN == 1:
                 return bot.send_msg(speak_my_voice_guide, msg.chat_id)
             content = ' '.join(msg_text.split()[1:]).strip()
@@ -374,14 +356,12 @@ class TextBranch(BotBranch):
             title, story = get_gpt_story(msg.from_id)
             generated_with_my_clone_voice = False
             if is_english(story):
-                generated_with_my_clone_voice = (
-                    generate_clone_voice_audio_with_eleven_labs(
-                        bot,
-                        story,
-                        msg.from_id,
-                        msg.user_title,
-                        folder='files/audio/clone_voice',
-                    )
+                generated_with_my_clone_voice = generate_clone_voice_audio_with_eleven_labs(
+                    bot,
+                    story,
+                    msg.from_id,
+                    msg.user_title,
+                    folder='files/audio/clone_voice',
                 )
             if not generated_with_my_clone_voice:
                 create_audio_from_text(bot, story, msg.chat_id)
@@ -391,14 +371,10 @@ class TextBranch(BotBranch):
             # 生成一个长度为 1 位的随机英文字符
             password_prefix = ''.join(random.sample(string.ascii_letters, 1))
             # 生成一个长度为 16 位的随机密码, 不包括特殊字符
-            password_temp = ''.join(
-                random.sample(string.ascii_letters + string.digits, 15)
-            )
+            password_temp = ''.join(random.sample(string.ascii_letters + string.digits, 15))
             password = password_prefix + password_temp
             # 生成一个长度为 18 位的随机密码, 包括特殊字符, 开头一定要用英文字符, 特殊字符只能在中间, 数字放在结尾
-            special_password_temp = ''.join(
-                random.sample(string.ascii_letters + string.digits + '@$-%^&_*', 17)
-            )
+            special_password_temp = ''.join(random.sample(string.ascii_letters + string.digits + '@$-%^&_*', 17))
             special_password = password_prefix + special_password_temp
             bot.send_msg(
                 f"{msg.user_nick_name}, 我为你生成了两个密码:\n\n16位不包含特殊字符密码: \n{password}\n\n18位包含特殊字符密码是: \n{special_password}\n\n请记住你的密码, 你可以把它们复制下来, 然后把这条消息删除, 以免被别人看到哈 😘",
@@ -482,9 +458,7 @@ class TextBranch(BotBranch):
                         try:
                             bot.send_img(msg.chat_id, file, prompt)
                         except:
-                            logging.error(
-                                f"local_bot_msg_command() bot.send_img({file}) FAILED"
-                            )
+                            logging.error(f"local_bot_msg_command() bot.send_img({file}) FAILED")
 
             except Exception as e:
                 logging.error(f"stability_generate_image() {e}")
@@ -518,9 +492,7 @@ class TextBranch(BotBranch):
             query = ' '.join(MSG_SPLIT[1:])
             try:
                 if bot.qa is not None:
-                    reply = bot.qa.run(
-                        f"{query}\n Please reply with the same language as above prompt."
-                    )
+                    reply = bot.qa.run(f"{query}\n Please reply with the same language as above prompt.")
                     bot.send_msg(reply, msg.chat_id)
             except Exception as e:
                 bot.send_msg(f"对不起{msg.user_nick_name}, 我没查到你要的信息. 😫", msg.chat_id)
@@ -599,9 +571,7 @@ class TextBranch(BotBranch):
                     chatgpt_key=Params().OPENAI_API_KEY,
                 )
             except Exception as e:
-                return bot.send_msg(
-                    f"{msg.user_nick_name}对不起, 刚才断线了, 你可以再发一次吗 😂", msg.chat_id
-                )
+                return bot.send_msg(f"{msg.user_nick_name}对不起, 刚才断线了, 你可以再发一次吗 😂", msg.chat_id)
 
             try:
                 bot.send_msg(reply, msg.chat_id)
@@ -626,7 +596,8 @@ class TextBranch(BotBranch):
                 )
             query = ' '.join(MSG_SPLIT[1:])
             bot.send_msg(
-                f"好嘞, 我帮你去 WolframAlpha 去查一下 「{query}」, 请稍等 1 分钟哦 😁", msg.chat_id
+                f"好嘞, 我帮你去 WolframAlpha 去查一下 「{query}」, 请稍等 1 分钟哦 😁",
+                msg.chat_id,
             )
             try:
                 reply = Params().wolfram.run(query)
@@ -694,9 +665,7 @@ class TextBranch(BotBranch):
                 reply = chat_gpt_regular(prompt)
                 bot.send_msg(reply, msg.chat_id)
             except Exception as e:
-                bot.send_msg(
-                    f"抱歉{msg.user_nick_name}, 刚断网了, 没弄好, 要不你再发一次 😐", msg.chat_id
-                )
+                bot.send_msg(f"抱歉{msg.user_nick_name}, 刚断网了, 没弄好, 要不你再发一次 😐", msg.chat_id)
             return
 
         elif MSG_SPLIT[0] in ['summarize', '/summarize', 'smrz', '/smrz']:
@@ -711,9 +680,7 @@ class TextBranch(BotBranch):
                 reply = chat_gpt_regular(prompt)
                 bot.send_msg(reply, msg.chat_id)
             except Exception as e:
-                bot.send_msg(
-                    f"抱歉{msg.user_nick_name}, 刚断网了, 没弄好, 要不你再发一次 😐", msg.chat_id
-                )
+                bot.send_msg(f"抱歉{msg.user_nick_name}, 刚断网了, 没弄好, 要不你再发一次 😐", msg.chat_id)
             return
 
         elif MSG_SPLIT[0] in ['bing', '/bing']:
@@ -758,15 +725,14 @@ class TextBranch(BotBranch):
                 )
             query = ' '.join(MSG_SPLIT[1:])
             bot.send_msg(
-                "WoW, 你想了解我写的《投资异类》啊, 真是感动. 稍等 1 分钟, 你问的问题我认真写给你, 哈哈哈 😁", msg.chat_id
+                "WoW, 你想了解我写的《投资异类》啊, 真是感动. 稍等 1 分钟, 你问的问题我认真写给你, 哈哈哈 😁",
+                msg.chat_id,
             )
             try:
                 index_name = 'outlier-investor'
                 # docsearch = Pinecone.from_texts([t.page_content for t in texts], embeddings, index_name=index_name)
 
-                docsearch = Pinecone.from_existing_index(
-                    index_name, Params().embeddings
-                )
+                docsearch = Pinecone.from_existing_index(index_name, Params().embeddings)
 
                 chain = load_qa_chain(Params().llm, chain_type="stuff")
                 docs = docsearch.similarity_search(query)
@@ -774,7 +740,8 @@ class TextBranch(BotBranch):
                 bot.send_msg(reply, msg.chat_id)
             except Exception as e:
                 bot.send_msg(
-                    f"{msg.user_nick_name}对不起, 我想不起来我书里还有这个内容了, 让你失望了. ", msg.chat_id
+                    f"{msg.user_nick_name}对不起, 我想不起来我书里还有这个内容了, 让你失望了. ",
+                    msg.chat_id,
                 )
                 logging.error(f"local_bot_msg_command() chatpdf(投资异类) FAILED: \n\n{e}")
 
@@ -790,11 +757,7 @@ class TextBranch(BotBranch):
             return
 
         elif MSG_SPLIT[0] in ['clear_memory', 'clm', '/clear_memory', '/clm']:
-            if (
-                MSG_LEN >= 2
-                and msg.chat_id in bot.bot_admin_id_list
-                and MSG_SPLIT[1] == 'all'
-            ):
+            if MSG_LEN >= 2 and msg.chat_id in bot.bot_admin_id_list and MSG_SPLIT[1] == 'all':
                 try:
                     with Params().Session() as session:
                         stmt = sqlalchemy.update(ChatHistory).values(msg_text=None)
@@ -805,9 +768,7 @@ class TextBranch(BotBranch):
                             msg.chat_id,
                         )
                 except Exception as e:
-                    logging.error(
-                        f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}"
-                    )
+                    logging.error(f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}")
                 return
 
                 # Delete chat records in avatar_chat_history with from_id = from_id
@@ -825,9 +786,7 @@ class TextBranch(BotBranch):
                         msg.chat_id,
                     )
             except Exception as e:
-                logging.error(
-                    f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}"
-                )
+                logging.error(f"local_bot_msg_command() clear_chat_history() FAILED:\n\n{e}")
             return
 
         # 为用户输入的内容生成音频并发送
@@ -894,15 +853,11 @@ class TextBranch(BotBranch):
                         msg.chat_id,
                     )
             except Exception as e:
-                return logging.error(
-                    f"local_bot_msg_command() check_address_balance() FAILED: \n\n{e}"
-                )
+                return logging.error(f"local_bot_msg_command() check_address_balance() FAILED: \n\n{e}")
             try:
                 read_and_send_24h_outgoing_trans(bot, eth_address, msg.chat_id)
             except Exception as e:
-                return logging.error(
-                    f"read_and_send_24h_outgoing_trans() FAILED: \n\n{e}"
-                )
+                return logging.error(f"read_and_send_24h_outgoing_trans() FAILED: \n\n{e}")
             return
 
         # 查询以太坊链上交易 Transaction Hash
@@ -911,13 +866,9 @@ class TextBranch(BotBranch):
         ):
             hash_tx = msg_text.replace('/', '')
             try:
-                r = get_transactions_info_by_hash_tx(
-                    bot, hash_tx, msg.chat_id, msg.user_title, chain='eth'
-                )
+                r = get_transactions_info_by_hash_tx(bot, hash_tx, msg.chat_id, msg.user_title, chain='eth')
                 if r:
                     bot.send_msg(r, msg.chat_id)
             except Exception as e:
-                logging.error(
-                    f"local_bot_msg_command() get_transactions_info_by_hash_tx() FAILED: \n\n{e}"
-                )
+                logging.error(f"local_bot_msg_command() get_transactions_info_by_hash_tx() FAILED: \n\n{e}")
             return

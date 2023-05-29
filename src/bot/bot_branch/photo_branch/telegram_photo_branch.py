@@ -17,8 +17,7 @@ class TelegramPhotoBranch(PhotoBranch):
         caption = msg.caption
         if (
             caption
-            and caption.split()[0].lower()
-            in ['group_send_image', 'gsi', 'group send image']
+            and caption.split()[0].lower() in ['group_send_image', 'gsi', 'group send image']
             and msg.chat_id in bot.bot_admin_id_list
         ):
             group_send_image = True

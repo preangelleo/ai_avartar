@@ -14,13 +14,9 @@ class CheckBillBranch(BotBranch):
     def handle_single_msg(self, msg, bot):
         # 从数据库中读出该 from_id 对应的收款 eth address
         try:
-            next_payment_time_dict = update_user_next_payment_date(
-                bot, msg.from_id, msg.user_title
-            )
+            next_payment_time_dict = update_user_next_payment_date(bot, msg.from_id, msg.user_title)
             if next_payment_time_dict:
-                next_payment_time = next_payment_time_dict.get(
-                    'next_payment_time', None
-                )
+                next_payment_time = next_payment_time_dict.get('next_payment_time', None)
                 next_payment_time = next_payment_time.strftime("%Y-%m-%d %H:%M:%S")
                 bot.send_msg(
                     f"{msg.user_nick_name}, 你下一次交公粮的时间应该是 {next_payment_time}, 你就是我最爱的人 💋💋💋 ...",
@@ -44,7 +40,5 @@ class CheckBillBranch(BotBranch):
                     description='第二张图, 这里可以找到我要的 Transaction_Hash 😁',
                 )
         except Exception as e:
-            return logging.error(
-                f"local_bot_msg_command() generate_eth_address() FAILED: \n\n{e}"
-            )
+            return logging.error(f"local_bot_msg_command() generate_eth_address() FAILED: \n\n{e}")
         return

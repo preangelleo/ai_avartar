@@ -20,38 +20,27 @@ from src.database.mysql import *
 def check_and_save_elevenlabs_api_key(bot, elevenlabs_api_key, from_id):
     subscription = get_elevenlabs_userinfo(elevenlabs_api_key)
     if subscription:
-        if (
-            subscription.get('status') == 'active'
-            and subscription.get('can_use_instant_voice_cloning') == True
-        ):
+        if subscription.get('status') == 'active' and subscription.get('can_use_instant_voice_cloning') == True:
             print(f"DEBUG: check_elevenlabs_api_key() subscription: {subscription}")
             # 将 from_id, elevenlabs_api_key 插入ElevenLabsUser
             with Params().Session() as session:
                 # 如果表单不存在则创建表单
                 Base.metadata.create_all(Params().engine, checkfirst=True)
                 # 检查 from_id 是否在 ElevenLabsUser 表中, 如果不在, 则创建新的记录, 如果在, 则更新 elevenlabs_api_key
-                elevenlabs_user = (
-                    session.query(ElevenLabsUser)
-                    .filter(ElevenLabsUser.from_id == from_id)
-                    .first()
-                )
+                elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
                 if not elevenlabs_user:
-                    elevenlabs_user = ElevenLabsUser(
-                        from_id=from_id, elevenlabs_api_key=elevenlabs_api_key
-                    )
+                    elevenlabs_user = ElevenLabsUser(from_id=from_id, elevenlabs_api_key=elevenlabs_api_key)
                     session.add(elevenlabs_user)
                 else:
                     # 更新 ElevenLabsUser 表中 from_id 用户的 elevenlabs_api_key
-                    session.query(ElevenLabsUser).filter(
-                        ElevenLabsUser.from_id == from_id
-                    ).update({'elevenlabs_api_key': elevenlabs_api_key})
+                    session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update(
+                        {'elevenlabs_api_key': elevenlabs_api_key}
+                    )
                 session.commit()
             bot.send_msg(elevenlabs_apikey_saved, from_id)
             return subscription
         else:
-            subscription_string = '\n'.join(
-                [f"{k}: {v}" for k, v in subscription.items()]
-            )
+            subscription_string = '\n'.join([f"{k}: {v}" for k, v in subscription.items()])
             failed_notice = f"{elevenlabs_not_activate}\n\n你的订阅信息如下, 请仔细查看是哪一项有问题:\n\n{subscription_string}"
             return bot.send_msg(failed_notice, from_id)
     else:
@@ -108,11 +97,7 @@ def get_elevenlabs_userinfo(elevenlabs_api_key):
 def get_elevenlabs_api_key(from_id):
     with Params().Session() as session:
         # 读出 ElevenLabsUser 表中 from_id 用户的 elevenlabs_api_key 和 original_voice_filepath 和 voice_id 和 user_title
-        elevenlabs_user = (
-            session.query(ElevenLabsUser)
-            .filter(ElevenLabsUser.from_id == from_id)
-            .first()
-        )
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
         if elevenlabs_user:
             return (
                 elevenlabs_user.elevenlabs_api_key,
@@ -128,28 +113,20 @@ def get_elevenlabs_api_key(from_id):
 def update_elevenlabs_user_ready_to_clone(from_id, user_title):
     with Params().Session() as session:
         # 如果用户存在, 则更新 ready_to_clone 字段为 1, 如果不存在则顺便创建
-        elevenlabs_user = (
-            session.query(ElevenLabsUser)
-            .filter(ElevenLabsUser.from_id == from_id)
-            .first()
-        )
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
         if not elevenlabs_user:
-            elevenlabs_user = ElevenLabsUser(
-                from_id=from_id, ready_to_clone=1, user_title=user_title
-            )
+            elevenlabs_user = ElevenLabsUser(from_id=from_id, ready_to_clone=1, user_title=user_title)
             session.add(elevenlabs_user)
         else:
-            session.query(ElevenLabsUser).filter(
-                ElevenLabsUser.from_id == from_id
-            ).update({'ready_to_clone': 1, 'user_title': user_title})
+            session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update(
+                {'ready_to_clone': 1, 'user_title': user_title}
+            )
         session.commit()
     return True
 
 
 # 将输入的 original_voice_filepath 和 from_id 和 user_title 更新到 ElevenLabsUser 表中
-def update_elevenlabs_user_original_voice_filepath(
-    original_voice_filepath, from_id, user_title
-):
+def update_elevenlabs_user_original_voice_filepath(original_voice_filepath, from_id, user_title):
     with Params().Session() as session:
         session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update(
             {
@@ -162,21 +139,13 @@ def update_elevenlabs_user_original_voice_filepath(
 
 
 # 并将 ready_to_clone 字段更新为 0
-def update_elevenlabs_user_ready_to_clone_to_0(
-    bot, from_id, user_title, cmd='close_clone_voice'
-):
+def update_elevenlabs_user_ready_to_clone_to_0(bot, from_id, user_title, cmd='close_clone_voice'):
     with Params().Session() as session:
         # 读取表中的 original_voice_filepath, 如果为空, 则说明用户没有上传过语音文件, 返回 False
-        elevenlabs_user = (
-            session.query(ElevenLabsUser)
-            .filter(ElevenLabsUser.from_id == from_id)
-            .first()
-        )
+        elevenlabs_user = session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).first()
         if not elevenlabs_user:
             # 将 from_id, user_title 插入ElevenLabsUser
-            elevenlabs_user = ElevenLabsUser(
-                from_id=from_id, ready_to_clone=0, user_title=user_title
-            )
+            elevenlabs_user = ElevenLabsUser(from_id=from_id, ready_to_clone=0, user_title=user_title)
             session.add(elevenlabs_user)
             session.commit()
 
@@ -188,9 +157,7 @@ def update_elevenlabs_user_ready_to_clone_to_0(
             return
 
             # 更新 ready_to_clone 字段为 0
-        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update(
-            {'ready_to_clone': 0}
-        )
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'ready_to_clone': 0})
         session.commit()
     if cmd == 'close_clone_voice':
         bot.send_msg(
@@ -212,7 +179,8 @@ def elevenlabs_user_ready_to_clone(from_id):
         elevenlabs_user = (
             session.query(ElevenLabsUser)
             .filter(
-                ElevenLabsUser.from_id == from_id, ElevenLabsUser.ready_to_clone == 1
+                ElevenLabsUser.from_id == from_id,
+                ElevenLabsUser.ready_to_clone == 1,
             )
             .first()
         )
@@ -225,9 +193,7 @@ def elevenlabs_user_ready_to_clone(from_id):
 # 将 voice_id 添加到 ElevenLabsUser 表中
 def update_elevenlabs_user_voice_id(voice_id, from_id):
     with Params().Session() as session:
-        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update(
-            {'voice_id': voice_id}
-        )
+        session.query(ElevenLabsUser).filter(ElevenLabsUser.from_id == from_id).update({'voice_id': voice_id})
         session.commit()
     return voice_id
 
@@ -236,7 +202,11 @@ def update_elevenlabs_user_voice_id(voice_id, from_id):
 def elevenlabs_add_voice(name, from_id, original_voice_filepath, elevenlabs_api_key):
     url = "https://api.elevenlabs.io/v1/voices/add"
     headers = {"Accept": "application/json", "xi-api-key": elevenlabs_api_key}
-    data = {'name': name, 'labels': '{"accent": "American"}', 'description': from_id}
+    data = {
+        'name': name,
+        'labels': '{"accent": "American"}',
+        'description': from_id,
+    }
     files = [
         (
             'files',
@@ -259,9 +229,7 @@ def elevenlabs_add_voice(name, from_id, original_voice_filepath, elevenlabs_api_
 # print(json.dumps(r, indent=2))
 
 
-def elevenlabs_update_voice(
-    voice_id, voice_name, audio_file_path, user_eleven_labs_api_key
-):
+def elevenlabs_update_voice(voice_id, voice_name, audio_file_path, user_eleven_labs_api_key):
     curl_command = (
         f"curl -X 'POST' "
         f"'https://api.elevenlabs.io/v1/voices/{voice_id}/edit' "
@@ -274,9 +242,7 @@ def elevenlabs_update_voice(
     )
 
     # Execute the curl command
-    process = subprocess.Popen(
-        curl_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    process = subprocess.Popen(curl_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
 
     # Check if the command was successful
@@ -294,7 +260,10 @@ def elevenlabs_update_voice(
 
 def get_elevenlabs_voices(user_eleven_labs_api_key):
     url = 'https://api.elevenlabs.io/v1/voices'
-    headers = {'accept': 'application/json', 'xi-api-key': user_eleven_labs_api_key}
+    headers = {
+        'accept': 'application/json',
+        'xi-api-key': user_eleven_labs_api_key,
+    }
     response = requests.get(url, headers=headers).json()
     # print(f"DEBUG: {response}")
     voices_dict = {}
@@ -344,9 +313,7 @@ def get_elevenlabs_voices(user_eleven_labs_api_key):
 '''
 
 
-def eleven_labs_tts(
-    bot, content, from_id, tts_file_name, voice_id, user_eleven_labs_api_key
-):
+def eleven_labs_tts(bot, content, from_id, tts_file_name, voice_id, user_eleven_labs_api_key):
     print(f"DEBUG: eleven_labs_tts() voice_id: {voice_id}")
 
     subscription_started = get_elevenlabs_userinfo(user_eleven_labs_api_key)
@@ -368,10 +335,7 @@ def eleven_labs_tts(
     }
     '''
 
-    words_remained = (
-        subscription_started['character_limit']
-        - subscription_started['character_count']
-    )
+    words_remained = subscription_started['character_limit'] - subscription_started['character_count']
     len_content = len(content)
     can_extend_character_limit = subscription_started['can_extend_character_limit']
     if len_content > words_remained and not can_extend_character_limit:
@@ -422,10 +386,7 @@ def eleven_labs_tts(
         }
         '''
 
-        words_used = (
-            subscription_finished['character_count']
-            - subscription_started['character_count']
-        )
+        words_used = subscription_finished['character_count'] - subscription_started['character_count']
 
         usd_cost = (
             ((words_used - words_remained) / 1000) * 0.3
@@ -448,9 +409,7 @@ def eleven_labs_tts(
         return True
 
 
-def generate_clone_voice_audio_with_eleven_labs(
-    bot, content, from_id, user_title, folder='files/audio/clone_voice'
-):
+def generate_clone_voice_audio_with_eleven_labs(bot, content, from_id, user_title, folder='files/audio/clone_voice'):
     (
         elevenlabs_api_key,
         original_voice_filepath,
@@ -464,9 +423,7 @@ def generate_clone_voice_audio_with_eleven_labs(
         bot.send_msg(eleven_labs_no_original_voice_alert, from_id)
         return False
     if not user_title_read or user_title_read != user_title:
-        update_elevenlabs_user_original_voice_filepath(
-            original_voice_filepath, from_id, user_title
-        )
+        update_elevenlabs_user_original_voice_filepath(original_voice_filepath, from_id, user_title)
     if not voice_id:
         voice_id = elevenlabs_add_voice(
             name=user_title,
@@ -477,15 +434,9 @@ def generate_clone_voice_audio_with_eleven_labs(
         if not voice_id:
             subscription = get_elevenlabs_userinfo(elevenlabs_api_key)
             if subscription:
-                subscription_string = '\n'.join(
-                    [f"{k}: {v}" for k, v in subscription.items()]
-                )
-                failed_notice = (
-                    f"Eleven Labs 订阅信息如下, 请仔细查看是哪一项有问题:\n\n{subscription_string}"
-                )
-                eleven_labs_add_voice_failed_alert = (
-                    f"{user_title}, 用你的克隆声音创建音频失败了, 😭😭😭...\n\n{failed_notice}"
-                )
+                subscription_string = '\n'.join([f"{k}: {v}" for k, v in subscription.items()])
+                failed_notice = f"Eleven Labs 订阅信息如下, 请仔细查看是哪一项有问题:\n\n{subscription_string}"
+                eleven_labs_add_voice_failed_alert = f"{user_title}, 用你的克隆声音创建音频失败了, 😭😭😭...\n\n{failed_notice}"
                 bot.send_msg(eleven_labs_add_voice_failed_alert, from_id)
                 # 发送错误信息以及相关参数给 BOTCREATER_CHAT_ID
                 bot.send_msg(
@@ -503,9 +454,7 @@ def generate_clone_voice_audio_with_eleven_labs(
         return True
 
     bot.send_msg(f"正在用你的声音克隆语音哈, 请稍等 1 分钟, 做好了马上发给你哦 😘", from_id)
-    r = eleven_labs_tts(
-        bot, content, from_id, tts_file_name, voice_id, elevenlabs_api_key
-    )
+    r = eleven_labs_tts(bot, content, from_id, tts_file_name, voice_id, elevenlabs_api_key)
     if r:
         return True
     else:

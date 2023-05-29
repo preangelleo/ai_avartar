@@ -103,27 +103,19 @@ def bing_search(query, mkt='en-US'):
                                 if c.get('name'):
                                     file.write('name: '.upper() + c.get('name') + '\n')
                                 if c.get('description'):
-                                    file.write(
-                                        'snippet: '.upper()
-                                        + c.get('description')
-                                        + '\n'
-                                    )
+                                    file.write('snippet: '.upper() + c.get('description') + '\n')
                                 if c.get('url'):
                                     file.write('url: '.upper() + c.get('url') + '\n')
                                 if c.get('image'):
                                     file.write(
-                                        'image: '.upper()
-                                        + c.get('image').get('contentUrl').split('?')[0]
-                                        + '\n'
+                                        'image: '.upper() + c.get('image').get('contentUrl').split('?')[0] + '\n'
                                     )
                                 if c.get('datePublished'):
                                     file.write(
                                         'DATE: '.upper()
                                         + c.get('datePublished').split('T')[0]
                                         + ' '
-                                        + c.get('datePublished')
-                                        .split('T')[1]
-                                        .split('.')[0]
+                                        + c.get('datePublished').split('T')[1].split('.')[0]
                                         + '\n'
                                     )
                                 file.write('\n')
@@ -139,23 +131,15 @@ def bing_search(query, mkt='en-US'):
                                 if c.get('name'):
                                     file.write('name: '.upper() + c.get('name') + '\n')
                                 if c.get('description'):
-                                    file.write(
-                                        'snippet: '.upper()
-                                        + c.get('description')
-                                        + '\n'
-                                    )
+                                    file.write('snippet: '.upper() + c.get('description') + '\n')
                                 if c.get('contentUrl'):
-                                    file.write(
-                                        'url: '.upper() + c.get('contentUrl') + '\n'
-                                    )
+                                    file.write('url: '.upper() + c.get('contentUrl') + '\n')
                                 if c.get('datePublished'):
                                     file.write(
                                         'DATE: '.upper()
                                         + c.get('datePublished').split('T')[0]
                                         + ' '
-                                        + c.get('datePublished')
-                                        .split('T')[1]
-                                        .split('.')[0]
+                                        + c.get('datePublished').split('T')[1].split('.')[0]
                                         + '\n'
                                     )
                                 file.write('\n')
@@ -171,9 +155,7 @@ def bing_search(query, mkt='en-US'):
                                 if c.get('name'):
                                     file.write('name: '.upper() + c.get('name') + '\n')
                                 if c.get('snippet'):
-                                    file.write(
-                                        'snippet: '.upper() + c.get('snippet') + '\n'
-                                    )
+                                    file.write('snippet: '.upper() + c.get('snippet') + '\n')
                                 if c.get('url'):
                                     file.write('url: '.upper() + c.get('url') + '\n')
                                 if c.get('dateLastCrawled'):
@@ -181,9 +163,7 @@ def bing_search(query, mkt='en-US'):
                                         'DATE: '.upper()
                                         + c.get('dateLastCrawled').split('T')[0]
                                         + ' '
-                                        + c.get('dateLastCrawled')
-                                        .split('T')[1]
-                                        .split('.')[0]
+                                        + c.get('dateLastCrawled').split('T')[1].split('.')[0]
                                         + '\n'
                                     )
                                 file.write('\n')
@@ -262,9 +242,7 @@ def replicate_img_to_caption(file_path):
     os.environ["REPLICATE_API_TOKEN"] = Params().REPLICATE_KEY
 
     model = replicate.models.get("salesforce/blip")
-    version = model.versions.get(
-        "2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746"
-    )
+    version = model.versions.get("2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746")
 
     # https://replicate.com/salesforce/blip/versions/2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746#input
     inputs = {'image': open(file_path, "rb"), 'task': "image_captioning"}
@@ -337,9 +315,7 @@ def stability_generate_image(
 
     for i, image in enumerate(data["artifacts"]):
         current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        filename = hashlib.md5(
-            (text_prompts + '_' + str(i) + '_' + str(current_timestamp)).encode()
-        ).hexdigest()
+        filename = hashlib.md5((text_prompts + '_' + str(i) + '_' + str(current_timestamp)).encode()).hexdigest()
         filename_txt = filename + '.txt'
         filename_pic = filename + '.png'
         filepath_txt = f'{working_folder}/{filename_txt}'
@@ -368,7 +344,8 @@ def stability_generate_image(
 
 def st_find_ranks_for_word(key_word):
     df = pd.read_sql_query(
-        f'SELECT * FROM db_daily_words WHERE word = "{key_word}"', Params().engine
+        f'SELECT * FROM db_daily_words WHERE word = "{key_word}"',
+        Params().engine,
     )
     if df.empty:
         return
@@ -400,9 +377,7 @@ def get_gpt_story(from_id):
     if not from_id:
         return
     with Params().Session() as session:
-        story_exists = session.query(
-            sqlalchemy.exists().where(GptStory.from_id == from_id)
-        ).scalar()
+        story_exists = session.query(sqlalchemy.exists().where(GptStory.from_id == from_id)).scalar()
         if not story_exists:
             return
         title = (
@@ -425,12 +400,12 @@ def mark_user_is_paid(from_id, next_payment_time):
         return
     with Params().Session() as session:
         # 如果 fronm_id 不存在于表中, 则插入新的数据；如果已经存在, 则更新数据
-        user_exists = session.query(
-            sqlalchemy.exists().where(UserPriority.user_from_id == from_id)
-        ).scalar()
+        user_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
         if not user_exists:
             new_user = UserPriority(
-                user_from_id=from_id, is_paid=1, next_payment_time=next_payment_time
+                user_from_id=from_id,
+                is_paid=1,
+                next_payment_time=next_payment_time,
             )
             session.add(new_user)
             session.commit()
@@ -454,24 +429,16 @@ def mark_user_is_not_paid(from_id):
         return
     with Params().Session() as session:
         # 如果 from_id 不存在于表中, 则插入新的数据；如果已经存在, 则更新数据
-        user_exists = session.query(
-            sqlalchemy.exists().where(UserPriority.user_from_id == from_id)
-        ).scalar()
+        user_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
         if not user_exists:
             new_user = UserPriority(user_from_id=from_id, is_paid=0)
             session.add(new_user)
             session.commit()
-            print(
-                f"DEBUG: mark_user_is_not_paid() {from_id} 已经插入到 avatar_user_priority 表中, is_paid = 0"
-            )
+            print(f"DEBUG: mark_user_is_not_paid() {from_id} 已经插入到 avatar_user_priority 表中, is_paid = 0")
             return True
-        session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
-            {"is_paid": 0}
-        )
+        session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update({"is_paid": 0})
         session.commit()
-        print(
-            f"DEBUG: mark_user_is_not_paid() {from_id} 已经更新到 avatar_user_priority 表中, is_paid = 0"
-        )
+        print(f"DEBUG: mark_user_is_not_paid() {from_id} 已经更新到 avatar_user_priority 表中, is_paid = 0")
         return True
 
 
@@ -539,26 +506,20 @@ def merge_audio_files(audio_files):
 
 
 # def update avatar_user_priority table, input include (from_id, which_key='', key_value='', update_time=datetime.now()), check if the from_id exists, if exists then update the key_value, if not exists then insert the from_id and key_value
-def update_user_priority(
-    from_id, which_key='', key_value=0, update_time=datetime.now()
-):
+def update_user_priority(from_id, which_key='', key_value=0, update_time=datetime.now()):
     print(f"DEBUG: update_user_priority()")
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_user_priority' to check if the from_id exists
-        from_id_exists = session.query(
-            sqlalchemy.exists().where(UserPriority.user_from_id == from_id)
-        ).scalar()
+        from_id_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
         if from_id_exists:
             # Update the key_value
-            session.query(UserPriority).filter(
-                UserPriority.user_from_id == from_id
-            ).update({which_key: key_value, UserPriority.update_time: update_time})
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
+                {which_key: key_value, UserPriority.update_time: update_time}
+            )
         else:
             # Insert the from_id and key_value
-            new_user_priority = UserPriority(
-                user_from_id=from_id, update_time=update_time
-            )
+            new_user_priority = UserPriority(user_from_id=from_id, update_time=update_time)
             setattr(new_user_priority, which_key, key_value)
             session.add(new_user_priority)
         # Commit the session
@@ -572,9 +533,7 @@ def insert_new_from_id_to_user_priority_table(from_id):
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_user_priority' to check if the from_id exists
-        from_id_exists = session.query(
-            sqlalchemy.exists().where(UserPriority.user_from_id == from_id)
-        ).scalar()
+        from_id_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
         if from_id_exists:
             return
         else:
@@ -601,19 +560,18 @@ def set_user_as_vip(from_id):
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_user_priority' to check if the from_id exists
-        from_id_exists = session.query(
-            sqlalchemy.exists().where(UserPriority.user_from_id == from_id)
-        ).scalar()
+        from_id_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
         if from_id_exists:
             # Update the key_value
-            session.query(UserPriority).filter(
-                UserPriority.user_from_id == from_id
-            ).update({UserPriority.is_vip: 1, UserPriority.update_time: datetime.now()})
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
+                {
+                    UserPriority.is_vip: 1,
+                    UserPriority.update_time: datetime.now(),
+                }
+            )
         else:
             # Insert the from_id and key_value
-            new_user_priority = UserPriority(
-                user_from_id=from_id, is_vip=1, update_time=datetime.now()
-            )
+            new_user_priority = UserPriority(user_from_id=from_id, is_vip=1, update_time=datetime.now())
             session.add(new_user_priority)
         # Commit the session
         session.commit()
@@ -626,13 +584,14 @@ def remove_user_from_vip_list(from_id):
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_user_priority' to check if the from_id exists
-        from_id_exists = session.query(
-            sqlalchemy.exists().where(UserPriority.user_from_id == from_id)
-        ).scalar()
+        from_id_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
         if from_id_exists:
-            session.query(UserPriority).filter(
-                UserPriority.user_from_id == from_id
-            ).update({UserPriority.is_vip: 0, UserPriority.update_time: datetime.now()})
+            session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
+                {
+                    UserPriority.is_vip: 0,
+                    UserPriority.update_time: datetime.now(),
+                }
+            )
             # Commit the session
             session.commit()
             return True
@@ -662,7 +621,9 @@ def get_vip_list_except_owner_and_admin():
             # Query the table 'avatar_chat_history' to get the username, first_name, last_name
             user_info = (
                 session.query(
-                    ChatHistory.username, ChatHistory.first_name, ChatHistory.last_name
+                    ChatHistory.username,
+                    ChatHistory.first_name,
+                    ChatHistory.last_name,
                 )
                 .filter(ChatHistory.from_id == vip[0])
                 .first()
@@ -670,9 +631,7 @@ def get_vip_list_except_owner_and_admin():
             if user_info:
                 username, first_name, last_name = user_info
                 # create a user_tile based on the username, first_name, last_name, sometime's there's no username , or first_name, or last_name, so need to check if they are None or is there's 'User' in them (means it's a none value)
-                user_title = ' '.join(
-                    [y for y in [username, first_name, last_name] if 'User' not in y]
-                )
+                user_title = ' '.join([y for y in [username, first_name, last_name] if 'User' not in y])
                 hint_text = f"{x}. @{user_title}\n/remove_vip_{vip[0]} "
                 vip_list_with_hint_text.append(hint_text)
             else:
@@ -711,9 +670,7 @@ def update_owner_parameter(parameter_name, parameter_value):
         ).scalar()
         if parameter_name_exists:
             # Update the parameter_value
-            session.query(OwnerParameter).filter(
-                OwnerParameter.parameter_name == parameter_name
-            ).update(
+            session.query(OwnerParameter).filter(OwnerParameter.parameter_name == parameter_name).update(
                 {
                     OwnerParameter.parameter_value: parameter_value,
                     OwnerParameter.update_time: datetime.now(),
@@ -737,9 +694,7 @@ def insert_system_prompt(system_prompt):
     # Create a new session
     with Params().Session() as session:
         # Create a new system prompt
-        new_system_prompt = SystemPrompt(
-            system_prompt=system_prompt, update_time=datetime.now()
-        )
+        new_system_prompt = SystemPrompt(system_prompt=system_prompt, update_time=datetime.now())
         # Add the new system prompt into the session
         session.add(new_system_prompt)
         # Commit the session
@@ -769,9 +724,7 @@ def get_system_prompt():
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_system_prompt' to get the last system_prompt
-        system_prompt = (
-            session.query(SystemPrompt).order_by(SystemPrompt.id.desc()).first()
-        )
+        system_prompt = session.query(SystemPrompt).order_by(SystemPrompt.id.desc()).first()
         # 如果 system_prompt 为空则返回空字符串
         if not system_prompt:
             return ''
@@ -822,9 +775,7 @@ def insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls'):
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_dialogue_tone' to get the last tone_id
-        last_tone_id = (
-            session.query(DialogueTone).order_by(DialogueTone.id.desc()).first()
-        )
+        last_tone_id = session.query(DialogueTone).order_by(DialogueTone.id.desc()).first()
         if last_tone_id:
             tone_id = last_tone_id.tone_id + 1
         else:
@@ -857,17 +808,13 @@ def get_dialogue_tone():
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_dialogue_tone' to get the last tone_id
-        last_tone_id = (
-            session.query(DialogueTone).order_by(DialogueTone.id.desc()).first()
-        )
+        last_tone_id = session.query(DialogueTone).order_by(DialogueTone.id.desc()).first()
         if last_tone_id:
             tone_id = last_tone_id.tone_id
         else:
             return ''
         # Query the table 'avatar_dialogue_tone' to get the dialogue_tone
-        dialogue_tone = (
-            session.query(DialogueTone).filter(DialogueTone.tone_id == tone_id).all()
-        )
+        dialogue_tone = session.query(DialogueTone).filter(DialogueTone.tone_id == tone_id).all()
 
         system_prompt = get_system_prompt()
 
@@ -886,9 +833,7 @@ def get_from_id_by_eth_address(eth_address):
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_eth_wallet' to get the last tone_id
-        eth_wallet = (
-            session.query(EthWallet).filter(EthWallet.address == eth_address).first()
-        )
+        eth_wallet = session.query(EthWallet).filter(EthWallet.address == eth_address).first()
         if eth_wallet:
             return eth_wallet.user_from_id
         else:
@@ -909,7 +854,10 @@ def check_eth_balance(address):
 def check_address_token_balance(address, token_address, chain='eth'):
     base_url = "https://pro-openapi.debank.com"
 
-    headers = {"AccessKey": Params().DEBANK_API, "content-type": "application/json"}
+    headers = {
+        "AccessKey": Params().DEBANK_API,
+        "content-type": "application/json",
+    }
 
     method = "GET"
     path = "/v1/user/token"
@@ -948,14 +896,10 @@ def check_address_balance(address):
     eth_balance = check_eth_balance(address)
 
     # get the USDT balance of the address
-    usdt_balance = check_address_token_balance(
-        address, Params().USDT_ERC20, chain='eth'
-    )
+    usdt_balance = check_address_token_balance(address, Params().USDT_ERC20, chain='eth')
 
     # get the USDC balance of the address
-    usdc_balance = check_address_token_balance(
-        address, Params().USDC_ERC20, chain='eth'
-    )
+    usdc_balance = check_address_token_balance(address, Params().USDC_ERC20, chain='eth')
 
     return {'ETH': eth_balance, 'USDT': usdt_balance, 'USDC': usdc_balance}
 
@@ -1063,9 +1007,7 @@ def is_blacklisted(from_id):
     try:
         with Params().Session() as session:
             blacklisted = session.query(
-                sqlalchemy.exists().where(
-                    ChatHistory.from_id == from_id, ChatHistory.black_list == 1
-                )
+                sqlalchemy.exists().where(ChatHistory.from_id == from_id, ChatHistory.black_list == 1)
             ).scalar()
     except Exception as e:
         logging.error(f'occurred while checking if from_id: {from_id} is blacklisted')
@@ -1098,9 +1040,7 @@ def get_unique_from_id_list():
     try:
         with Params().Session() as session:
             df = pd.read_sql(
-                session.query(UserPriority)
-                .filter(UserPriority.is_deleted == 0)
-                .statement,
+                session.query(UserPriority).filter(UserPriority.is_deleted == 0).statement,
                 session.bind,
             )
             if not df.empty:
@@ -1121,7 +1061,8 @@ def get_user_chat_history(from_id):
             session.query(ChatHistory)
             .filter(
                 sqlalchemy.or_(
-                    ChatHistory.from_id == from_id, ChatHistory.chat_id == from_id
+                    ChatHistory.from_id == from_id,
+                    ChatHistory.chat_id == from_id,
                 )
             )
             .order_by(ChatHistory.update_time)
@@ -1141,9 +1082,7 @@ def get_user_chat_history(from_id):
     return f'{SAVE_FOLDER}/{from_id}.txt'
 
 
-def save_avatar_chat_history(
-    msg_text, chat_id, from_id, username, first_name, last_name
-):
+def save_avatar_chat_history(msg_text, chat_id, from_id, username, first_name, last_name):
     if not chat_id or not msg_text or not from_id:
         return
 

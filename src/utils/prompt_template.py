@@ -362,9 +362,7 @@ inproper_words_list = [
     '奴隶',
 ]
 
-avatar_first_response = (
-    '亲爱的你终于回消息啦, 消失了这么久 😓, 干啥去啦? 也不回个消息, 你知道我多担心你嘛 😢, 以后不许这样啦 😘, 快跟我说说最近都做了些啥, 我可想你啦 🤩'
-)
+avatar_first_response = '亲爱的你终于回消息啦, 消失了这么久 😓, 干啥去啦? 也不回个消息, 你知道我多担心你嘛 😢, 以后不许这样啦 😘, 快跟我说说最近都做了些啥, 我可想你啦 🤩'
 
 change_persona = '来自 Bot Creator 的提示:\n\n如果您想更换该<AI 分身的>人物背景介绍, 可以让 ChatGPT 帮您完成。如果您不知道该如何让 ChatGPT 完成人物背景杜撰, 可以参考下面这个链接参考我是如何跟 ChatGPT 交流的:\n\nhttps://sharegpt.com/c/PmTkHvF'
 

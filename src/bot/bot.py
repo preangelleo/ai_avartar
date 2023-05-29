@@ -12,7 +12,9 @@ from src.bot.bot_branch.english_teacher_branch.english_teacher_branch import (
     EnglishTeacherBranch,
 )
 from src.bot.bot_branch.improper_branch.improper_branch import ImproperBranch
-from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import CheckBillBranch
+from src.bot.bot_branch.payment_branch.crpto.check_bill_branch import (
+    CheckBillBranch,
+)
 from src.bot.bot_branch.payment_branch.crpto.payment_branch import PaymentBranch
 from src.bot.bot_branch.photo_branch.photo_branch import PhotoBranch
 from src.bot.bot_branch.text_branch.text_branch import TextBranch
@@ -206,9 +208,7 @@ class Bot(ABC):
                 Params().engine,
             )
         except Exception as e:
-            return logging.error(
-                f"send_audio_to_all() read_sql_query() failed: \n\n{e}"
-            )
+            return logging.error(f"send_audio_to_all() read_sql_query() failed: \n\n{e}")
 
         logging.debug(f"totally {df.shape[0]} users to send audio")
 
@@ -243,11 +243,7 @@ class Bot(ABC):
         user_priority = get_user_priority(from_id)
         if user_priority:
             # 如果是 is_owner or is_admin or is_vip 则直接返回 True, 黑名单对三者没有意义
-            if (
-                user_priority.get('is_owner')
-                or user_priority.get('is_admin')
-                or user_priority.get('is_vip')
-            ):
+            if user_priority.get('is_owner') or user_priority.get('is_admin') or user_priority.get('is_vip'):
                 return True
 
             # 付费用户在到期前都是可以继续使用的, 到期后可以在每月免费聊天次数内继续使用, 超过免费聊天次数后则不再提供服务, 有效期内黑名单对付费用户无意义
@@ -281,9 +277,7 @@ class Bot(ABC):
                     f"SELECT COUNT(*) FROM avatar_chat_history WHERE from_id = '{from_id}' AND DATE_FORMAT(update_time, '%Y-%m') = '{current_month}'"
                 )
                 row_count = session.execute(count_query).scalar()
-                logging.debug(
-                    f"from_id {from_id} 本月({current_month}) 已与 @{self.bot_name} 交流: {row_count} 次..."
-                )
+                logging.debug(f"from_id {from_id} 本月({current_month}) 已与 @{self.bot_name} 交流: {row_count} 次...")
 
                 # Check if the row count exceeds the threshold
                 if (row_count - offset) > Params().free_user_free_talk_per_month:
@@ -295,9 +289,7 @@ class Bot(ABC):
                 else:
                     return True
         except Exception as e:
-            logging.error(
-                f"check_this_month_total_conversation() 2 read_sql_query() failed:\n\n{e}"
-            )
+            logging.error(f"check_this_month_total_conversation() 2 read_sql_query() failed:\n\n{e}")
         return
 
     def handle_single_msg(self, msg: SingleMessage):
@@ -386,11 +378,7 @@ class Bot(ABC):
         ):
             self.english_teacher_branch_handler.handle_single_msg(msg, self)
 
-        msg.msg_text = (
-            msg.msg_text.replace('/', '', 1)
-            if MSG_SPLIT[0].startswith('/')
-            else msg.msg_text
-        )
+        msg.msg_text = msg.msg_text.replace('/', '', 1) if MSG_SPLIT[0].startswith('/') else msg.msg_text
 
         # 如果用户发了一个简单的 2 个字节的词, 那就随机回复一个表示开心的 emoji
         if len(msg.msg_text) <= 2 or msg.msg_text in reply_emoji_list:
@@ -399,11 +387,7 @@ class Bot(ABC):
             return
 
         # 如果用户发来一个英语单词, 小于等于 4 个字符, 那就当做 token symble 处理, 查询 coinmarketcap
-        if (
-            len(msg.msg_text.split()) == 1
-            and len(msg.msg_text) <= 4
-            and is_english(msg.msg_text)
-        ):
+        if len(msg.msg_text.split()) == 1 and len(msg.msg_text) <= 4 and is_english(msg.msg_text):
             self.coinmarketcap_branch_handler.handle_single_msg(msg, self)
 
         # 如果是群聊但是没有 at 机器人, 则在此处返回

@@ -20,14 +20,10 @@ def initialize_user_priority_table():
     with Params().Session() as session:
         for from_id in bot.bot_admin_id_list:
             # Query the table 'avatar_user_priority' to check if the from_id exists
-            from_id_exists = session.query(
-                sqlalchemy.exists().where(UserPriority.user_from_id == from_id)
-            ).scalar()
+            from_id_exists = session.query(sqlalchemy.exists().where(UserPriority.user_from_id == from_id)).scalar()
             if from_id_exists:
                 # Update the key_value
-                session.query(UserPriority).filter(
-                    UserPriority.user_from_id == from_id
-                ).update(
+                session.query(UserPriority).filter(UserPriority.user_from_id == from_id).update(
                     {
                         UserPriority.is_admin: 1,
                         UserPriority.is_owner: 1,
@@ -101,9 +97,7 @@ if __name__ == '__main__':
     with Params().Session() as session:
         Base.metadata.create_all(bind=Params().engine)
 
-    print(
-        f"\nSTEP 2: 清空 ChatHistory, EthWallet, CryptoPayment, UserPriority, SystemPrompt, DialogueTone 表 ..."
-    )
+    print(f"\nSTEP 2: 清空 ChatHistory, EthWallet, CryptoPayment, UserPriority, SystemPrompt, DialogueTone 表 ...")
     if is_first_time_initiate:
         confirm = input(
             f"确认要清空 ChatHistory, EthWallet, CryptoPayment, UserPriority, SystemPrompt, DialogueTone 表吗？请输入 'yes' 确认: "

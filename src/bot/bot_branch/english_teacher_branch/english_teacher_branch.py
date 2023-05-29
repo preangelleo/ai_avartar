@@ -11,9 +11,7 @@ def chat_gpt_english_explanation(bot, chat_id, prompt, gpt_model=Params().OPENAI
     prompt = prompt.lower().strip()
     with Params().Session() as session:
         # 如果 fronm_id 不存在于表中, 则插入新的数据；如果已经存在, 则更新数据
-        explanation_exists = session.query(
-            sqlalchemy.exists().where(GptEnglishExplanation.word == prompt)
-        ).scalar()
+        explanation_exists = session.query(sqlalchemy.exists().where(GptEnglishExplanation.word == prompt)).scalar()
         if not explanation_exists:
             bot.send_msg(
                 f"收到, 我我去找 EnglishGPT 老师咨询一下 {prompt} 的意思, 然后再来告诉你 😗, 1 分钟以内答复你哈...",
@@ -30,9 +28,7 @@ def chat_gpt_english_explanation(bot, chat_id, prompt, gpt_model=Params().OPENAI
             session.commit()
         else:
             gpt_explanation = (
-                session.query(GptEnglishExplanation.explanation)
-                .filter(GptEnglishExplanation.word == prompt)
-                .first()[0]
+                session.query(GptEnglishExplanation.explanation).filter(GptEnglishExplanation.word == prompt).first()[0]
             )
     if gpt_explanation:
         bot.send_msg(gpt_explanation, chat_id)
@@ -77,6 +73,4 @@ class EnglishTeacherBranch(BotBranch):
 
         if not is_amy_command:
             return
-        return chat_gpt_english_explanation(
-            bot, msg.chat_id, msg_lower, gpt_model=Params().OPENAI_MODEL
-        )
+        return chat_gpt_english_explanation(bot, msg.chat_id, msg_lower, gpt_model=Params().OPENAI_MODEL)

@@ -61,9 +61,7 @@ class TelegramVoiceBranch(VoiceBranch):
                 os.mkdir(user_original_voice_folder)
 
             # Create local file name to store voice telegram message
-            local_file_folder_name = (
-                f"{user_original_voice_folder}/{file_unique_id}.ogg"
-            )
+            local_file_folder_name = f"{user_original_voice_folder}/{file_unique_id}.ogg"
             # Get the file path of the voice message using the Telegram Bot API
             file_path_url = f"https://api.telegram.org/bot{Params().TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}"
             file_path_response = requests.get(file_path_url).json()
@@ -82,9 +80,7 @@ class TelegramVoiceBranch(VoiceBranch):
             if os.path.exists(local_file_folder_name):
                 os.remove(local_file_folder_name)
 
-            if update_elevenlabs_user_original_voice_filepath(
-                original_voice_filepath, msg.from_id, msg.user_title
-            ):
+            if update_elevenlabs_user_original_voice_filepath(original_voice_filepath, msg.from_id, msg.user_title):
                 return bot.send_msg(
                     f"{msg.user_nick_name} 我收到了你发来的英文素材, 已经保存下来了, 如果你觉得没问题就点击或者发送:\n\n/confirm_my_voice \n\n然后我就可以用这段素材帮你克隆你的声音样本咯, 以后你随时可以调用 /speak_my_voice 指令来用你这个声音阅读任何英文内容 😁...、\n\n如果不满意就重新念一段, 我会耐心等着你读完的...",
                     msg.chat_id,

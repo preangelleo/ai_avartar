@@ -18,23 +18,11 @@ def get_send_audio_url():
 
 
 def get_send_img_url(chat_id, description):
-    return (
-        TELEGRAME_BASE_URL
-        + "sendPhoto?chat_id="
-        + str(chat_id)
-        + "&caption="
-        + description
-    )
+    return TELEGRAME_BASE_URL + "sendPhoto?chat_id=" + str(chat_id) + "&caption=" + description
 
 
 def get_send_file_url(chat_id, description):
-    return (
-        TELEGRAME_BASE_URL
-        + "sendDocument?chat_id="
-        + str(chat_id)
-        + "&caption="
-        + description
-    )
+    return TELEGRAME_BASE_URL + "sendDocument?chat_id=" + str(chat_id) + "&caption=" + description
 
 
 def get_get_file_url():
@@ -82,9 +70,7 @@ def deal_with_voice_to_text(file_id, file_unique_id):
 
     file_path = file_path_response["result"]["file_path"]
     # Download the voice message to your Ubuntu folder
-    voice_message_url = (
-        f"https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_TOKEN}/{file_path}"
-    )
+    voice_message_url = f"https://api.telegram.org/file/bot{Params().TELEGRAM_BOT_TOKEN}/{file_path}"
     try:
         with open(local_file_folder_name, "wb") as f:
             response = requests.get(voice_message_url)

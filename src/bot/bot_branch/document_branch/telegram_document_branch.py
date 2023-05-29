@@ -31,10 +31,7 @@ class TelegramDocumentBranch(DocumentBranch):
             file_name = tg_msg['message']['document'].get('file_name', '')
             if not file_name:
                 return
-            if (
-                file_name in ['dialogue_tone.xls', 'system_prompt.txt']
-                and msg.chat_id not in bot.bot_admin_id_list
-            ):
+            if file_name in ['dialogue_tone.xls', 'system_prompt.txt'] and msg.chat_id not in bot.bot_admin_id_list:
                 return
 
             file_id = tg_msg['message']['document']['file_id']
@@ -83,9 +80,7 @@ class TelegramDocumentBranch(DocumentBranch):
                 db = Chroma.from_documents(texts, Params().embeddings)
                 retriever = db.as_retriever()
 
-                qa = RetrievalQA.from_chain_type(
-                    llm=Params().llm, chain_type="stuff", retriever=retriever
-                )
+                qa = RetrievalQA.from_chain_type(llm=Params().llm, chain_type="stuff", retriever=retriever)
 
                 bot.send_msg(
                     f"{msg.user_nick_name}, 我收到你发来的 {file_name[-4:].upper()} 文档了, 如果想要了解本文档的相关内容, 可以使用 doc 命令前缀加上你的问题, 我会帮你通过矢量数据进行语义搜索, 找到答案。注意, doc 命令后面需要有空格哦 🙂. 现在我先帮你简单看一下这个文档是说什么的. 请稍等 1 分钟哈。🤩",

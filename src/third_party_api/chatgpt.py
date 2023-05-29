@@ -79,11 +79,7 @@ def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
         previous_role = 'assistant'
         for i in range(df.shape[0]):
             history_conversation = df.iloc[i]
-            user_or_assistant = (
-                'assistant'
-                if history_conversation['username'] in [bot.bot_name]
-                else 'user'
-            )
+            user_or_assistant = 'assistant' if history_conversation['username'] in [bot.bot_name] else 'user'
             if user_or_assistant == previous_role:
                 continue
             if i == df.shape[0] - 1 and user_or_assistant == 'user':
@@ -98,9 +94,7 @@ def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             previous_role = user_or_assistant
         msg_history.append({"role": "user", "content": msg_text})
 
-        response = openai.ChatCompletion.create(
-            model=Params().OPENAI_MODEL, messages=msg_history
-        )
+        response = openai.ChatCompletion.create(model=Params().OPENAI_MODEL, messages=msg_history)
         reply = response['choices'][0]['message']['content']
         reply = reply.strip('\n').strip()
 
@@ -129,9 +123,7 @@ def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             # Commit the session
             session.commit()
     except Exception as e:
-        return logging.error(
-            f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}"
-        )
+        return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
 
     return reply
 
@@ -162,18 +154,14 @@ def chat_gpt_english(prompt, gpt_model=Params().OPENAI_MODEL):
     return reply
 
 
-def chat_gpt_regular(
-    prompt, chatgpt_key=Params().OPENAI_API_KEY, use_model=Params().OPENAI_MODEL
-):
+def chat_gpt_regular(prompt, chatgpt_key=Params().OPENAI_API_KEY, use_model=Params().OPENAI_MODEL):
     if not prompt:
         return
 
     # Load your API key from an environment variable or secret management service
     openai.api_key = chatgpt_key
 
-    response = openai.ChatCompletion.create(
-        model=use_model, messages=[{"role": "user", "content": prompt}]
-    )
+    response = openai.ChatCompletion.create(model=use_model, messages=[{"role": "user", "content": prompt}])
 
     reply = response['choices'][0]['message']['content']
     reply = reply.strip('\n').strip()
@@ -181,9 +169,7 @@ def chat_gpt_regular(
     return reply
 
 
-def chat_gpt_write_story(
-    bot, chat_id, from_id, prompt, gpt_model=Params().OPENAI_MODEL
-):
+def chat_gpt_write_story(bot, chat_id, from_id, prompt, gpt_model=Params().OPENAI_MODEL):
     if not prompt:
         return
     try:
@@ -212,9 +198,7 @@ def chat_gpt_write_story(
 
 
 def create_midjourney_prompt(prompt):
-    system_prompt = (
-        midjourney_prompt_fomula if 'fomula' in prompt else midjourney_prompt_1
-    )
+    system_prompt = midjourney_prompt_fomula if 'fomula' in prompt else midjourney_prompt_1
     prompt = prompt.replace('fomula', '').strip()
 
     try:

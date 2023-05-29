@@ -24,7 +24,8 @@ def get_token_info_from_coinmarketcap(token_symbol):
 # percent_change_24h、market_cap、fully_diluted_market_cap、circulating_supply、total_supply、last_updated 等数据, 返回一个字典
 def get_token_info_from_coinmarketcap_output_chinese(token_symbol):
     token_info = get_token_info_from_coinmarketcap(token_symbol)
-    if not token_info: return {}
+    if not token_info:
+        return {}
     output_dict = {
         '名称': token_info['name'],
         '排名': token_info['cmc_rank'],
@@ -34,7 +35,7 @@ def get_token_info_from_coinmarketcap_output_chinese(token_symbol):
         '24小时波动': f"{token_info['quote']['USD']['percent_change_24h']:.2f}%",
         '全流通市值': f"{format_number(token_info['quote']['USD']['fully_diluted_market_cap'])} usd",
         '代币总发行': f"{format_number(token_info['total_supply'])} {token_symbol.lower()}",
-        '本次更新时间': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        '本次更新时间': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
     # 用 '\n' join k: v
     output_dict_str = '\n'.join([f"{k}: {v}" for k, v in output_dict.items()])
@@ -48,7 +49,9 @@ def check_token_symbol_in_db_cmc_total_supply(token_symbol):
     # Create a new session
     with Params().Session() as session:
         # Query the table 'db_cmc_total_supply' to check if the token_symbol exists
-        token_symbol_exists = session.query(sqlalchemy.exists().where(CmcTotalSupply.symbol == token_symbol)).scalar()
+        token_symbol_exists = session.query(
+            sqlalchemy.exists().where(CmcTotalSupply.symbol == token_symbol)
+        ).scalar()
         return token_symbol_exists
 
 
@@ -59,11 +62,13 @@ class CoinMarketCapBranch(BotBranch):
     def handle_single_msg(self, msg, bot):
         msg_text = msg.msg_text.replace('/', '').upper()
         r = check_token_symbol_in_db_cmc_total_supply(msg_text)
-        if not r: return
+        if not r:
+            return
         try:
             r = get_token_info_from_coinmarketcap_output_chinese(msg_text)
             bot.send_msg(r, msg.chat_id)
         except Exception as e:
             logging.error(
-                f"local_bot_msg_command() get_token_info_from_coinmarketcap_output_chinese() FAILED: \n\n{e}")
+                f"local_bot_msg_command() get_token_info_from_coinmarketcap_output_chinese() FAILED: \n\n{e}"
+            )
         return

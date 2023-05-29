@@ -42,8 +42,7 @@ def markdown_wallet_address(wallet_address):
 
 def etherscan_make_api_url(module, action, **kwargs):
     BASE_URL = "https://api.etherscan.io/api"
-    url = BASE_URL + \
-        f"?module={module}&action={action}&apikey={Params().ETHERSCAN_API}"
+    url = BASE_URL + f"?module={module}&action={action}&apikey={Params().ETHERSCAN_API}"
     for key, value in kwargs.items():
         url += f"&{key}={value}"
     return url
@@ -164,8 +163,7 @@ def get_transactions_info_by_hash_tx(bot, hash_tx, chat_id, user_title, chain='e
     from_address = Params().web3.to_checksum_address(from_address)
     from_addr_balance_wei = contract.functions.balanceOf(from_address).call()
     from_addr_balance = float(from_addr_balance_wei / 10**decimals)
-    func_obj, func_params = contract.decode_function_input(
-        trans_info.get('input'))
+    func_obj, func_params = contract.decode_function_input(trans_info.get('input'))
     '''return : {'to': '0x376FA5C248EECB0110023efADD8317691B07EDe1', 'value': 56195000000}'''
     try:
         func_params['value'] = (
@@ -193,8 +191,7 @@ def get_transactions_info_by_hash_tx(bot, hash_tx, chat_id, user_title, chain='e
         func_params['data'] = trans_info.get('input')
         # func_params['gas_cost'] = float(trans_info['receipt_cumulative_gas_used']) * eth_price * 1_000_000_000
         func_params['from_address'] = from_address
-        func_params['from_addr_balance'] = from_addr_balance + \
-            func_params['value']
+        func_params['from_addr_balance'] = from_addr_balance + func_params['value']
         func_params['token_address'] = token_address
         func_params['decimals'] = decimals
         func_params['coin'] = coin
@@ -237,8 +234,7 @@ def get_transactions_info_by_hash_tx(bot, hash_tx, chat_id, user_title, chain='e
                 )
                 return next_payment_time_dict
             except Exception as e:
-                print(
-                    f"ERROR: insert_into_avatar_crypto_payments() failed: \n{e}")
+                print(f"ERROR: insert_into_avatar_crypto_payments() failed: \n{e}")
 
     except Exception as e:
         logging.debug('get_transactions_info_by_hash_tx() error: ', e)
@@ -268,8 +264,7 @@ def update_user_next_payment_date(bot, user_from_id, user_title):
             if value:
                 # 计算下次下次缴费时间
                 x = value / Params().MONTHLY_FEE
-                next_payment_time = crypto_payments.update_time + \
-                    timedelta(days=x * 31)
+                next_payment_time = crypto_payments.update_time + timedelta(days=x * 31)
                 if next_payment_time > datetime.now():
                     next_payment_time_dict = {
                         'last_paid_usd_value': value,
@@ -341,8 +336,7 @@ def read_outgoing_transaction_in_24h_result(wallet_address):
             '发起地址': markdown_wallet_address(transfer_info['from']),
             '收币地址': markdown_wallet_address(transfer_info['to']),
             '转账数量': format_number(
-                int(transfer_info['value']) / \
-                (10 ** Params().USDT_ERC20_DECIMALS)
+                int(transfer_info['value']) / (10 ** Params().USDT_ERC20_DECIMALS)
             ),
             # Replace with your function to retrieve the token decimals
             '西岸时间': timestamp,
@@ -591,8 +585,7 @@ def insert_into_avatar_crypto_payments(
                         f"DEBUG: hash_tx {hash_tx} 已经存在于 avatar_crypto_payments 表中, 但是记录的 value 和新输入的 value 不相等: {value}, 表单已经更新!"
                     )
             else:
-                update_time = datetime.strptime(
-                    timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+                update_time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
                 # Insert the hash_tx into the table 'avatar_crypto_payments'
                 usdt_paid_in = value if coin == 'USDT' else 0
                 usdc_paid_in = value if coin == 'USDC' else 0
@@ -725,8 +718,7 @@ def check_incoming_transactions(
     # 从 CmcTotalSupply db_cmc_total_supply 读取 token_address 的信息
     coin_list_df = get_token_info_from_db_cmc_total_supply(token_address)
     if coin_list_df.empty:
-        bot.send_msg(
-            f"抱歉, {token_address} 不在我的数据库里, 不清楚这是个什么币子, 无法查询. 😰", chat_id)
+        bot.send_msg(f"抱歉, {token_address} 不在我的数据库里, 不清楚这是个什么币子, 无法查询. 😰", chat_id)
         return
 
     token_address = coin_list_df.iloc[0]['token_address']
@@ -741,8 +733,7 @@ def check_incoming_transactions(
     token_contract = Params().web3.eth.contract(address=token_address, abi=ABI)
 
     if start_date:
-        start_timestamp = int(datetime.strptime(
-            start_date, '%Y-%m-%d').timestamp())
+        start_timestamp = int(datetime.strptime(start_date, '%Y-%m-%d').timestamp())
     else:
         start_timestamp = int(datetime.now().timestamp())
 
@@ -752,8 +743,7 @@ def check_incoming_transactions(
     transactions = []
     # Iterate through each block from the latest to the earliest
     for block_number in range(latest_block_number):
-        print(
-            f'DEBUG: checking block_number: {block_number} / {latest_block_number}')
+        print(f'DEBUG: checking block_number: {block_number} / {latest_block_number}')
         block = Params().web3.eth.get_block(block_number, full_transactions=True)
         for transaction in block.transactions:
             if transaction['to'] == wallet_address and transaction['input'] != '0x':

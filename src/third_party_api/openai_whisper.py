@@ -25,7 +25,9 @@ def from_voice_to_text(audio_path):
         response = requests.post(url, headers=headers, data=data, files=files)
 
     if response.status_code != 200:
-        raise Exception(f"Request to OpenAI failed with status {response.status_code}, {response.text}")
+        raise Exception(
+            f"Request to OpenAI failed with status {response.status_code}, {response.text}"
+        )
     '''
     {
     "text": "Imagine the wildest idea that you've ever had, and you're curious about how it might scale to something that's a 100, a 1,000 times bigger. This is a place where you can get to do that."

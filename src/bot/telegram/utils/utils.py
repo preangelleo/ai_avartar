@@ -45,16 +45,14 @@ def tg_get_file_path(file_id):
 # Get updates from telegram server
 def local_bot_getUpdates(previous_update_id):
     method = "getUpdates?"
-    _params = {
-        "offset": previous_update_id,
-        "timeout": 123,
-        "limit": 10
-        }
+    _params = {"offset": previous_update_id, "timeout": 123, "limit": 10}
     params = urlencode(_params)
     URL = TELEGRAME_BASE_URL + method + params
     r = ''
-    try: r = requests.get(URL)
-    except Exception as e: logging.error(f"local_bot_getUpdates() failed: \n{e}")
+    try:
+        r = requests.get(URL)
+    except Exception as e:
+        logging.error(f"local_bot_getUpdates() failed: \n{e}")
     return r
 
 
@@ -78,7 +76,8 @@ def deal_with_voice_to_text(file_id, file_unique_id):
             response = requests.get(voice_message_url)
             f.write(response.content)
         text = from_voice_to_text(local_file_folder_name)
-        if text: return text
+        if text:
+            return text
     except Exception as e:
         print(f"ERROR: from_voice_to_text() 2 FAILED of: \n\n{e}")
     return
@@ -90,9 +89,13 @@ def clear_chat_history(bot, chat_id, message_id):
     for i in range(message_id, message_id - 20, -1):
         try:
             response = requests.get(
-                f'https://api.telegram.org/bot{Params().TELEGRAM_BOT_TOKEN}/deleteMessage?chat_id={chat_id}&message_id={str(i)}')
-            if response.status_code == 200: bot.send_msg(
-                f"成功删除用户 giiitte < chat_id: {chat_id} > 的聊天记录 message_id: {i}", bot.bot_owner_id)
+                f'https://api.telegram.org/bot{Params().TELEGRAM_BOT_TOKEN}/deleteMessage?chat_id={chat_id}&message_id={str(i)}'
+            )
+            if response.status_code == 200:
+                bot.send_msg(
+                    f"成功删除用户 giiitte < chat_id: {chat_id} > 的聊天记录 message_id: {i}",
+                    bot.bot_owner_id,
+                )
         except:
             logging.error(f'Failed to delete User chat_id: {chat_id} message_id: {i}')
     return

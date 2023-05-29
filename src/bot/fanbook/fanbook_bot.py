@@ -50,17 +50,11 @@ class FanbookBot(Bot):
             }
         )
         self.user_token = self.get_user_token()
-        self.super_str = base64.b64encode(
-            self.header_map.encode('utf8')
-        ).decode(  # noqa
-            'utf8'
-        )  # noqa
+        self.super_str = base64.b64encode(self.header_map.encode('utf8')).decode('utf8')  # noqa  # noqa
         self.addr = f'wss://gateway-bot.fanbook.mobi/websocket?id={self.user_token}&dId={DEVICE_ID}&v={FANBOOK_VERSION}&x-super-properties={self.super_str}'  # noqa
 
     def get_user_token(self):
-        response = requests.get(
-            FANBOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT
-        )
+        response = requests.get(FANBOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT)
         return response.json()['result']['user_token']
 
     def handle_push(self, obj):
@@ -79,9 +73,7 @@ class FanbookBot(Bot):
         headers = {'Content-type': 'application/json'}
         payload = {'chat_id': int(chat_id), 'text': msg, 'desc': msg}
 
-        response = requests.post(
-            FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers
-        )
+        response = requests.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)
         logging.debug(f'send_msg(): {response.json()}')
         return response.json()
 

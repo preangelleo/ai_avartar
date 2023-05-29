@@ -40,9 +40,7 @@ class Params:
             owner_parameters_dict = {}
             # Loop through the owner_parameters and add them into the dictionary
             for owner_parameter in owner_parameters:
-                owner_parameters_dict[
-                    owner_parameter.parameter_name
-                ] = owner_parameter.parameter_value
+                owner_parameters_dict[owner_parameter.parameter_name] = owner_parameter.parameter_value
         return owner_parameters_dict
 
     def __new__(cls):
@@ -76,11 +74,7 @@ class Params:
         # default to 0.0 if not configured
         self.MONTHLY_FEE = float(os.getenv('MONTHLY_FEE'))
 
-        self.INFURA = (
-            ("https://mainnet.infura.io/v3/" + self.INFURA_KEY)
-            if self.INFURA_KEY
-            else None
-        )
+        self.INFURA = ("https://mainnet.infura.io/v3/" + self.INFURA_KEY) if self.INFURA_KEY else None
         self.web3 = Web3(Web3.HTTPProvider(self.INFURA)) if self.INFURA else None
 
         self.ETH_REGEX = r'0x[a-fA-F0-9]{40}'
@@ -110,18 +104,14 @@ class Params:
 
         # Get the environment variables
         self.USER_AVATAR_NAME = owner_parameters_dict.get('USER_AVATAR_NAME')
-        self.UBUNTU_SERVER_IP_ADDRESS = owner_parameters_dict.get(
-            'UBUNTU_SERVER_IP_ADDRESS'
-        )
+        self.UBUNTU_SERVER_IP_ADDRESS = owner_parameters_dict.get('UBUNTU_SERVER_IP_ADDRESS')
         self.DOMAIN_NAME = owner_parameters_dict.get('DOMAIN_NAME')
         self.OPENAI_API_KEY = owner_parameters_dict.get('OPENAI_API_KEY')
         self.REPLICATE_KEY = owner_parameters_dict.get('REPLICATE_KEY')
         self.STABILITY_API_KEY = owner_parameters_dict.get('STABILITY_API_KEY')
         self.OPENAI_MODEL = owner_parameters_dict.get('OPENAI_MODEL')
         self.WOLFRAM_ALPHA_APPID = owner_parameters_dict.get('WOLFRAM_ALPHA_APPID')
-        self.MAX_CONVERSATION_PER_MONTH = owner_parameters_dict.get(
-            'MAX_CONVERSATION_PER_MONTH'
-        )
+        self.MAX_CONVERSATION_PER_MONTH = owner_parameters_dict.get('MAX_CONVERSATION_PER_MONTH')
         self.PINECONE_FREE = owner_parameters_dict.get('PINECONE_FREE')
         self.PINECONE_FREE_ENV = owner_parameters_dict.get('PINECONE_FREE_ENV')
         self.INFURA_KEY = owner_parameters_dict.get('INFURA_KEY')
@@ -139,14 +129,10 @@ class Params:
 
         # 查看当前目录并决定 TELEGRAM_BOT_RUNNING 的值
         self.TELEGRAM_BOTOWNER_CHAT_ID = owner_parameters_dict.get('BOTOWNER_CHAT_ID')
-        self.TELEGRAM_BOTCREATER_CHAT_ID = owner_parameters_dict.get(
-            'BOTCREATER_CHAT_ID'
-        )
+        self.TELEGRAM_BOTCREATER_CHAT_ID = owner_parameters_dict.get('BOTCREATER_CHAT_ID')
         self.TELEGRAM_BOT_TOKEN = owner_parameters_dict.get('BOT_TOKEN')
         self.TELEGRAM_BOT_NAME = owner_parameters_dict.get('BOT_USERNAME')
-        self.TELEGRAM_BOTOWNER_NAME = owner_parameters_dict.get(
-            'USER_TELEGRAM_LINK'
-        ).split('/')[-1]
+        self.TELEGRAM_BOTOWNER_NAME = owner_parameters_dict.get('USER_TELEGRAM_LINK').split('/')[-1]
 
         # Fanbook Param
 
@@ -180,7 +166,9 @@ class Params:
 
         self.embeddings = OpenAIEmbeddings(openai_api_key=self.OPENAI_API_KEY)
         self.llm = ChatOpenAI(
-            model_name="gpt-4", temperature=0, openai_api_key=self.OPENAI_API_KEY
+            model_name="gpt-4",
+            temperature=0,
+            openai_api_key=self.OPENAI_API_KEY,
         )
 
         self.avatar_png = 'files/images/512.png'
@@ -201,9 +189,7 @@ class Params:
         self.metadata = MetaData()
 
         self.free_user_free_talk_per_month = int(self.MAX_CONVERSATION_PER_MONTH)
-        self.refill_teaser = (
-            self.REFILL_TEASER if self.REFILL_TEASER else REFILL_TEASER_DEFAULT
-        )
+        self.refill_teaser = self.REFILL_TEASER if self.REFILL_TEASER else REFILL_TEASER_DEFAULT
 
     def update_free_user_free_talk_per_month(self, new_value):
         with self.free_user_free_talk_per_month_lock:

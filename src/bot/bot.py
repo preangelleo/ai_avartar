@@ -77,6 +77,10 @@ class Bot(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def send_msg_async(self, msg: str, chat_id, parse_mode=None):
+        raise NotImplementedError
+
+    @abstractmethod
     def send_audio(self, audio_path, chat_id):
         raise NotImplementedError
 
@@ -411,6 +415,31 @@ class Bot(ABC):
         if reply:
             try:
                 self.send_msg(reply, msg.chat_id)
+            except Exception as e:
+                logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
+        return
+
+    async def handle_single_msg_async(self, msg: SingleMessage):
+        """
+        Handle a single message of class SingleMessage.
+        """
+        try:
+            save_avatar_chat_history(
+                msg.msg_text,
+                msg.chat_id,
+                msg.from_id,
+                msg.username,
+                msg.first_name,
+                msg.last_name,
+            )
+        except Exception as e:
+            return logging.error(f"save_avatar_chat_history() failed: {e}")
+
+        reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
+
+        if reply:
+            try:
+                await self.send_msg_async(reply, msg.chat_id)
             except Exception as e:
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
         return

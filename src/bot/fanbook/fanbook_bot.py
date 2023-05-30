@@ -5,9 +5,9 @@ import requests
 from src.bot.bot import Bot
 import json
 import base64
-import threading
-from websocket._core import create_connection
-import time
+import websockets
+import asyncio
+import httpx
 from src.bot.fanbook.utils.constants import (
     FANBOOK_BOT_NAME,
     FANBOOK_BOT_OWNER_NAME,
@@ -57,7 +57,10 @@ class FanbookBot(Bot):
         response = requests.get(FANBOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT)
         return response.json()['result']['user_token']
 
-    def handle_push(self, obj):
+    async def handle_single_msg_async(self, msg):
+        await super().handle_single_msg_async(msg)
+
+    async def handle_push(self, obj):
         is_bot = obj.get('data').get('author').get('bot')
         if is_bot:
             return
@@ -67,7 +70,7 @@ class FanbookBot(Bot):
             return
 
         logging.info(f'handle_push(): {obj}')
-        self.handle_single_msg(build_from_fanbook_msg(obj))
+        asyncio.create_task(self.handle_single_msg_async(build_from_fanbook_msg(obj)))
 
     def send_msg(self, msg: str, chat_id, parse_mode=None):
         headers = {'Content-type': 'application/json'}
@@ -77,33 +80,50 @@ class FanbookBot(Bot):
         logging.debug(f'send_msg(): {response.json()}')
         return response.json()
 
-    def send_ping(self, ws):
+    async def send_msg_async(self, msg: str, chat_id, parse_mode=None):
+        headers = {'Content-type': 'application/json'}
+        payload = {'chat_id': int(chat_id), 'text': msg, 'desc': msg}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)
+
+        logging.debug(f'send_msg(): {response.json()}')
+        return response.json()
+
+    async def send_ping(self, ws):
         while True:
-            time.sleep(HEAT_BEAT_INTERVAL)
-            ws.send("{'type':'ping'}")
+            await asyncio.sleep(HEAT_BEAT_INTERVAL)
+            await ws.send("{'type':'ping'}")
 
-    def handle_heart_beat(self, ws):
-        ping_thread = threading.Thread(target=self.send_ping, args=(ws,))
-        ping_thread.daemon = True
-        ping_thread.start()
+    async def handle_heart_beat(self, ws):
+        asyncio.create_task(self.send_ping(ws))
 
-    def handle_websocket_connection(self):
-        ws = create_connection(self.addr)
-        self.handle_heart_beat(ws)
+    async def handle_websocket_connection(self):
         try:
-            while True:
-                s = ws.recv().decode('utf8')
-                obj = json.loads(s)
-                if obj.get('action') == 'push':
-                    self.handle_push(obj)
-        except ConnectionError:
-            logging.error('WebSocketClosed')
+            async with websockets.connect(self.addr) as ws:
+                await self.handle_heart_beat(ws)
+                while True:
+                    try:
+                        message = await ws.recv()
+                        logging.info("Received message: %s", message)
+                        obj = json.loads(message)
+                        if obj.get('action') == 'push':
+                            asyncio.create_task(self.handle_push(obj))
+                    except json.JSONDecodeError as e:
+                        logging.error("JSONDecodeError: Invalid JSON format in the received message. Error: %s", e)
+                    except ConnectionError as e:
+                        logging.error('WebSocket connection closed unexpectedly. Error: %s', e)
+                        break
         except Exception as e:
-            logging.error('WebSocketError: ', e)
+            logging.error('Unexpected error in WebSocket connection handling. Error: %s', e)
+        finally:
+            if not ws.closed:
+                await ws.close()
+                logging.info('WebSocket connection closed.')
 
     def run(self):
         logging.debug(f"@{self.bot_name} started...")
-        self.handle_websocket_connection()
+        asyncio.get_event_loop().run_until_complete(self.handle_websocket_connection())
 
 
 if __name__ == '__main__':

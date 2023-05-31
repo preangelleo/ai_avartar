@@ -2,6 +2,7 @@ from sqlalchemy import DateTime, Column, Integer, String, Text, Float
 from sqlalchemy.orm import declarative_base
 
 from datetime import datetime
+
 Base = declarative_base()
 
 
@@ -262,4 +263,3 @@ class ElevenLabsUser(Base):
     original_voice_filepath = Column(String(255))
     test_count = Column(Integer, default=0)
     ready_to_clone = Column(Integer, default=0)
-

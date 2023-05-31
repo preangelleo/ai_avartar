@@ -1,8 +1,63 @@
-E2C_DICT = {'id': '序号', 'word': '单词', 'rank': '排名', 'counts': '今查', 'total_counts': '已查', 'us-phonetic': '美音', 'origin': '词源', 'synonyms': '同义', 'antonyms': '反义', 'tag': '标签', 'chinese': '中译', 'chat_gpt_explanation': 'ChatGPT', 'note': '笔记', 'memo': '备注', 'toefl': 'TOEFL', 'gre': 'GRE', 'gmat': 'GMAT', 'sat': 'SAT', 'scenario': ' 场景', 'mastered': '掌握', 'level': '级别', 'sentence': '例句', 'last_check_time': '近查', 'youdao_synced': '有道', 'manually_updated': '手更', 'derivative': '衍生', 'relevant': '联想', 'phrase': '短语', 'sealed': '已封', 'category': '词库'}
+E2C_DICT = {
+    'id': '序号',
+    'word': '单词',
+    'rank': '排名',
+    'counts': '今查',
+    'total_counts': '已查',
+    'us-phonetic': '美音',
+    'origin': '词源',
+    'synonyms': '同义',
+    'antonyms': '反义',
+    'tag': '标签',
+    'chinese': '中译',
+    'chat_gpt_explanation': 'ChatGPT',
+    'note': '笔记',
+    'memo': '备注',
+    'toefl': 'TOEFL',
+    'gre': 'GRE',
+    'gmat': 'GMAT',
+    'sat': 'SAT',
+    'scenario': ' 场景',
+    'mastered': '掌握',
+    'level': '级别',
+    'sentence': '例句',
+    'last_check_time': '近查',
+    'youdao_synced': '有道',
+    'manually_updated': '手更',
+    'derivative': '衍生',
+    'relevant': '联想',
+    'phrase': '短语',
+    'sealed': '已封',
+    'category': '词库',
+}
 
 help_list = ['/help', '/start', 'start', 'help']
 
-reply_emoji_list = ['ding', 'hello', 'lol', 'hi', '你好', '你好啊', 'chatgpt', 'gpt', '机器人', 'openai', 'ai', 'nice', 'ok', 'great', 'cool', '你好呀', '你在干嘛', '嘛呢', '亲', '在吗', '睡了吗', '呵呵', '哈哈']
+reply_emoji_list = [
+    'ding',
+    'hello',
+    'lol',
+    'hi',
+    '你好',
+    '你好啊',
+    'chatgpt',
+    'gpt',
+    '机器人',
+    'openai',
+    'ai',
+    'nice',
+    'ok',
+    'great',
+    'cool',
+    '你好呀',
+    '你在干嘛',
+    '嘛呢',
+    '亲',
+    '在吗',
+    '睡了吗',
+    '呵呵',
+    '哈哈',
+]
 
 translation_prompt = '''You are a muti-language master, you always translate languages in a native speaker way. You don't like translate word by word or sentence by sentence, you always rewirte the whole text if needed, but you always make sure the transcript will convey the original meaning. But you need to keep any kind of English name as it is, not need to translate name from English to Chinese. You will translate the given text between English and Chinese. Reply to only the translated contents, nothing else.'''
 
@@ -223,11 +278,89 @@ translate_report_prompt = "你是精通中文和英文的计算机科学家, 也
 
 cnn_report_prompt = "你是 CNN 资深科技记者和最受欢迎的编辑, 请为以下内容写一个英文报道. 只需回复内容, 不需要任何前缀标识。\n\n"
 
-emoji_list_for_happy = ['🤨', '😆', '😙', '🤫', '😅', '😚', '😋', '😗', '😃', '😍', '🙂', '🤪', '😄', '🤩', '🤔', '😁', '😉', '😊', '😎', '🤭', '😘', '🤗', '😂', '🙈']
+emoji_list_for_happy = [
+    '🤨',
+    '😆',
+    '😙',
+    '🤫',
+    '😅',
+    '😚',
+    '😋',
+    '😗',
+    '😃',
+    '😍',
+    '🙂',
+    '🤪',
+    '😄',
+    '🤩',
+    '🤔',
+    '😁',
+    '😉',
+    '😊',
+    '😎',
+    '🤭',
+    '😘',
+    '🤗',
+    '😂',
+    '🙈',
+]
 
-emoji_list_for_unhappy = ['😳', '😢', '😕', '😨', '😦', '😧', '😤', '😥', '😰', '😟', '😬', '😣', '😩', '😱', '😓', '🤪', '😠', '😔', '😡', '😞', '🤬', '😵', '😖', '😒', '🤯']
+emoji_list_for_unhappy = [
+    '😳',
+    '😢',
+    '😕',
+    '😨',
+    '😦',
+    '😧',
+    '😤',
+    '😥',
+    '😰',
+    '😟',
+    '😬',
+    '😣',
+    '😩',
+    '😱',
+    '😓',
+    '🤪',
+    '😠',
+    '😔',
+    '😡',
+    '😞',
+    '🤬',
+    '😵',
+    '😖',
+    '😒',
+    '🤯',
+]
 
-inproper_words_list = ['傻屄', '傻b', '傻x', '傻吊', '傻逼', '傻屌', '傻比', '傻狍子', '脱衣服', '脱了', '妈逼', '妈比', '妈的', '狗日', '狗屁', '狗屎', '狗娘', '做爱', '嘿咻', '啪啪', '插入', '艹', '草泥', '日逼', '奴仆', '奴隶']
+inproper_words_list = [
+    '傻屄',
+    '傻b',
+    '傻x',
+    '傻吊',
+    '傻逼',
+    '傻屌',
+    '傻比',
+    '傻狍子',
+    '脱衣服',
+    '脱了',
+    '妈逼',
+    '妈比',
+    '妈的',
+    '狗日',
+    '狗屁',
+    '狗屎',
+    '狗娘',
+    '做爱',
+    '嘿咻',
+    '啪啪',
+    '插入',
+    '艹',
+    '草泥',
+    '日逼',
+    '奴仆',
+    '奴隶',
+]
 
 avatar_first_response = '亲爱的你终于回消息啦, 消失了这么久 😓, 干啥去啦? 也不回个消息, 你知道我多担心你嘛 😢, 以后不许这样啦 😘, 快跟我说说最近都做了些啥, 我可想你啦 🤩'
 
@@ -239,7 +372,7 @@ about_dialogue_tone_xls = '这里记录了一些用户和我之间的模拟聊�
 
 avatar_change_guide = '这是我的头像, 请保存下来, 再到 @BotFather 里面设置我的头像吧 🤩 \n\n步骤: /mybots > 选择我的 Bot 名称 > Edit Bot > Edit Botpic > 然后你会看到: \nOK. Send me the new profile photo for the bot. \n这个时候直接把我这张头像发给 @BotFather 就好啦, 然后你再回到我这里就能看到我的头像已更新咯. 😍 \n\n当然, 你也可以用任何你喜欢的头像来装饰我, 哈哈 🤗'
 
-REFILL_TEASER_DEFAULT="亲爱的, 该交公粮咯, 不交公粮就和其他白嫖的用户一样了, 总归还是有点限制的哈; 如果想要我继续为你贴身服务, 请点击 /pay 或发送 pay 获取独享的 USDT/USDC 充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
+REFILL_TEASER_DEFAULT = "亲爱的, 该交公粮咯, 不交公粮就和其他白嫖的用户一样了, 总归还是有点限制的哈; 如果想要我继续为你贴身服务, 请点击 /pay 或发送 pay 获取独享的 USDT/USDC 充值地址, 并根据提示交完公粮哈, 交了公粮我就又可以一心一意服侍你啦 😘, 放心, 活好不粘人哦... 🙈"
 
 paid_user_commands = '''
 # 以下功能仅限付费用户使用
@@ -296,7 +429,7 @@ bot_owner_commands = '''
 # 点击这个会把用户命令列表群发给所有人
 '''
 
-elevenlabs_language_list ='''
+elevenlabs_language_list = '''
 English
 '''
 # German
@@ -331,7 +464,7 @@ elevenlabs_not_valid_apikey = '''
 你发来的 Eleven Labs API Key 无效, 请重新检查你发给我的 API Key 是否正确。如果你确定你的 API Key 是正确的, 请联系 Eleven Labs 客服或者去官网查看你的订阅状态, 一定要选择 $5/月 或者以上级别的服务。
 '''
 
-elevenlabs_apikey_saved ='''
+elevenlabs_apikey_saved = '''
 你的 Eleven Labs API Key 已经保存, 接下来请点击 /clone_my_voice 跟着提示操作吧。\n\n如果你之前已经成功克隆好了自己的声音, 那么请马上点击:\n/confirm_my_voice\n听听效果吧。
 '''
 

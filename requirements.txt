@@ -32,3 +32,4 @@ pre-commit
 black
 flake8
 autopep8
+sentry-sdk

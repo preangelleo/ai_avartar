@@ -3,6 +3,7 @@ from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg
 
 import requests
 from src.bot.bot import Bot
+import sentry_sdk
 import json
 import base64
 import websockets
@@ -57,9 +58,6 @@ class FanbookBot(Bot):
         response = requests.get(FANBOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT)
         return response.json()['result']['user_token']
 
-    async def handle_single_msg_async(self, msg):
-        await super().handle_single_msg_async(msg)
-
     async def handle_push(self, obj):
         is_bot = obj.get('data').get('author').get('bot')
         if is_bot:
@@ -70,7 +68,8 @@ class FanbookBot(Bot):
             return
 
         logging.info(f'handle_push(): {obj}')
-        asyncio.create_task(self.handle_single_msg_async(build_from_fanbook_msg(obj)))
+        with sentry_sdk.start_transaction(op="handle_push", name="handle_single_msg"):
+            asyncio.create_task(self.handle_single_msg(build_from_fanbook_msg(obj)))
 
     def send_msg(self, msg: str, chat_id, parse_mode=None):
         headers = {'Content-type': 'application/json'}
@@ -127,6 +126,13 @@ class FanbookBot(Bot):
 
 
 if __name__ == '__main__':
+    sentry_sdk.init(
+        dsn="https://9201c284873c436dbae2c576b8319f7f@o4505276925214720.ingest.sentry.io/4505276928491520",
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=1.0,
+    )
     FanbookBot(
         bot_name=FANBOOK_BOT_NAME,
         # TODO(kezhang@): You should either implement these 4 branch for Fanbook or replace them with NoOpBranch

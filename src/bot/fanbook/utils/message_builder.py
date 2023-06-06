@@ -1,8 +1,13 @@
 import json
+import logging
+from typing import Optional
+
 from src.bot.single_message import SingleMessage
 from src.bot.fanbook.utils.constants import (
     PRIVATE_CHANNEL_TYPE,
 )
+import re
+from src.utils.param_singleton import Params
 
 
 def build_from_fanbook_msg(obj):
@@ -19,12 +24,27 @@ def build_from_fanbook_msg(obj):
         last_name=None,
         # 判断是私聊还是群聊
         is_private=channel_type == PRIVATE_CHANNEL_TYPE,
-        msg_text=data_dict.get('text'),
+        msg_text=sanitize_msg_text(data_dict.get('text')),
         msg_document=None,
         msg_photo=None,
         msg_voice=None,
         msg_audio=None,
         msg_sticker=None,
         caption=None,
+        is_mentioned=check_if_bot_is_mentioned(obj.get('data').get('mentions')),
         reply_to_message_text=None,
     )
+
+
+def check_if_bot_is_mentioned(mentions: Optional[list]) -> bool:
+    if not mentions:
+        return False
+    logging.info(f'msg mentions: {mentions}')
+    for mention in mentions:
+        if mention.get('user_id') == Params().FANBOOK_BOT_NAME:
+            return True
+    return False
+
+
+def sanitize_msg_text(msg_text: str) -> str:
+    return re.sub(r'\$\{@![\d]+\}', '', msg_text).strip()

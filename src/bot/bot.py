@@ -331,9 +331,6 @@ class Bot(ABC):
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
-        # 如果是群聊但是没有 at 机器人, 则先标记好, 后面打印完消息后直接返回
-        msg.should_be_ignored = not msg.is_private and self.bot_name not in msg.msg_text
-
         # 判断用户发来的消息是不是不合规的, 如果骂人就拉黑
         if msg_is_inproper(msg.msg_text):
             self.improper_branch_handler.handle_single_msg(msg, self)
@@ -396,6 +393,7 @@ class Bot(ABC):
 
         # 如果是群聊但是没有 at 机器人, 则在此处返回
         if msg.should_be_ignored:
+            logging.info("should ignore this msg", msg.raw_msg)
             return
 
         try:

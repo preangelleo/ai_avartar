@@ -245,6 +245,7 @@ class Bot(ABC):
         if not from_id:
             return
         user_priority = get_user_priority(from_id)
+        logging.info(f"user_is_legit() user_priority: {user_priority}")
         if user_priority:
             # 如果是 is_owner or is_admin or is_vip 则直接返回 True, 黑名单对三者没有意义
             if user_priority.get('is_owner') or user_priority.get('is_admin') or user_priority.get('is_vip'):
@@ -282,19 +283,20 @@ class Bot(ABC):
                 )
                 row_count = session.execute(count_query).scalar()
                 logging.debug(f"from_id {from_id} 本月({current_month}) 已与 @{self.bot_name} 交流: {row_count} 次...")
-
+                logging.debug("聊天次数: %s", (row_count - offset))
+                logging.debug("上限: %s", (Params().free_user_free_talk_per_month))
                 # Check if the row count exceeds the threshold
                 if (row_count - offset) > Params().free_user_free_talk_per_month:
                     self.send_msg(
                         f"{user_nick_name}, 你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {Params().free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。再这么聊下去, 老板要扣我工资了, 我现在要去开会了, 吼吼 😘。\n\n宝贝, 如果想超越白撸用户的限制, 请回复或点击 /pay , 我会给你生成一个独享的 ERC20 充值地址, 你把 {Params().MONTHLY_FEE} USDT/USDC 转到充值地址, 我就会把你加入 VIP 会员, 享受贴身服务, 你懂的 😉",
                         from_id,
                     )
-                    return
+                    return False
                 else:
                     return True
         except Exception as e:
             logging.error(f"check_this_month_total_conversation() 2 read_sql_query() failed:\n\n{e}")
-        return
+            return False
 
     async def handle_single_msg(self, msg: SingleMessage):
         """
@@ -330,9 +332,6 @@ class Bot(ABC):
 
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
-
-        # 如果是群聊但是没有 at 机器人, 则先标记好, 后面打印完消息后直接返回
-        msg.should_be_ignored = not msg.is_private and self.bot_name not in msg.msg_text
 
         # 判断用户发来的消息是不是不合规的, 如果骂人就拉黑
         if msg_is_inproper(msg.msg_text):
@@ -396,6 +395,7 @@ class Bot(ABC):
 
         # 如果是群聊但是没有 at 机器人, 则在此处返回
         if msg.should_be_ignored:
+            logging.debug("should ignore this msg", msg.raw_msg)
             return
 
         try:

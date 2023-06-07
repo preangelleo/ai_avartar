@@ -61,7 +61,7 @@ def chat_gpt_full(
 
 
 # Call chatgpt and restore reply and send to chat_id:
-def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
+async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
     openai.api_key = Params().OPENAI_API_KEY
     reply = ''
 
@@ -94,7 +94,7 @@ def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             previous_role = user_or_assistant
         msg_history.append({"role": "user", "content": msg_text})
 
-        response = openai.ChatCompletion.create(model=Params().OPENAI_MODEL, messages=msg_history)
+        response = await openai.ChatCompletion.acreate(model=Params().OPENAI_MODEL, messages=msg_history)
         reply = response['choices'][0]['message']['content']
         reply = reply.strip('\n').strip()
 

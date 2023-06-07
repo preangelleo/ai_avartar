@@ -30,6 +30,6 @@ websocket
 websocket-client
 pre-commit
 black
-flake8
-autopep8
+asyncio
+httpx
 sentry-sdk

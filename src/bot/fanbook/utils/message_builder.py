@@ -39,7 +39,7 @@ def build_from_fanbook_msg(obj):
 def check_if_bot_is_mentioned(mentions: Optional[list]) -> bool:
     if not mentions:
         return False
-    logging.info(f'msg mentions: {mentions}')
+    logging.debug(f'msg mentions: {mentions}')
     for mention in mentions:
         if mention.get('user_id') == Params().FANBOOK_BOT_NAME:
             return True

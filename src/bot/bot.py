@@ -283,8 +283,8 @@ class Bot(ABC):
                 )
                 row_count = session.execute(count_query).scalar()
                 logging.debug(f"from_id {from_id} 本月({current_month}) 已与 @{self.bot_name} 交流: {row_count} 次...")
-                logging.info("聊天次数: %s", (row_count - offset))
-                logging.info("上限: %s", (Params().free_user_free_talk_per_month))
+                logging.debug("聊天次数: %s", (row_count - offset))
+                logging.debug("上限: %s", (Params().free_user_free_talk_per_month))
                 # Check if the row count exceeds the threshold
                 if (row_count - offset) > Params().free_user_free_talk_per_month:
                     self.send_msg(
@@ -395,7 +395,7 @@ class Bot(ABC):
 
         # 如果是群聊但是没有 at 机器人, 则在此处返回
         if msg.should_be_ignored:
-            logging.info("should ignore this msg", msg.raw_msg)
+            logging.debug("should ignore this msg", msg.raw_msg)
             return
 
         try:

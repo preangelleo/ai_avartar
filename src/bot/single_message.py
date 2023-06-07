@@ -45,9 +45,9 @@ class SingleMessage:
     @property
     def should_be_ignored(self) -> bool:
         if self.is_private:
-            logging.info(f'bot is in private chat: {self.raw_msg}')
+            logging.debug(f'bot is in private chat: {self.raw_msg}')
             return False
         if self.is_mentioned:
-            logging.info(f'bot is mentioned in msg: {self.raw_msg}')
+            logging.debug(f'bot is mentioned in msg: {self.raw_msg}')
             return False
         return True

@@ -1,5 +1,5 @@
 from src.utils.logging_util import logging
-from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg
+from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg, check_if_bot_is_mentioned
 
 import requests
 from src.bot.bot import Bot
@@ -69,7 +69,8 @@ class FanbookBot(Bot):
 
         logging.info(f'handle_push(): {obj}')
         with sentry_sdk.start_transaction(op="handle_push", name="handle_single_msg"):
-            asyncio.create_task(self.handle_single_msg(build_from_fanbook_msg(obj)))
+            msg = build_from_fanbook_msg(obj)
+            asyncio.create_task(self.handle_single_msg(msg))
 
     def send_msg(self, msg: str, chat_id, parse_mode=None):
         headers = {'Content-type': 'application/json'}

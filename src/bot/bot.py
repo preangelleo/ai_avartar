@@ -288,7 +288,7 @@ class Bot(ABC):
                 # Check if the row count exceeds the threshold
                 if (row_count - offset) > Params().free_user_free_talk_per_month:
                     self.send_msg(
-                        f"{user_nick_name}, 你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {Params().free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。再这么聊下去, 老板要扣我工资了, 我现在要去开会了, 吼吼 😘。\n\n宝贝, 如果想超越白撸用户的限制, 请回复或点击 /pay , 我会给你生成一个独享的 ERC20 充值地址, 你把 {Params().MONTHLY_FEE} USDT/USDC 转到充值地址, 我就会把你加入 VIP 会员, 享受贴身服务, 你懂的 😉",
+                        f"{user_nick_name}, 你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {Params().free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。",
                         from_id,
                     )
                     return False
@@ -307,69 +307,8 @@ class Bot(ABC):
         if not self.user_is_legit(msg, msg.from_id):
             return
 
-        if Params().TELEGRAM_BOT_NAME in ['Leowang_test_bot', 'leowang_bot']:
-            print(json.dumps(msg.raw_msg, indent=2))
-
-        # Only process none text messages when text is None.
-        if msg.msg_text is None:
-            if msg.msg_document is not None:
-                self.document_branch_handler.handle_single_msg(msg, self)
-
-            if msg.msg_photo is not None:
-                self.photo_branch_handler.handle_single_msg(msg, self)
-
-            if msg.msg_voice is not None:
-                self.voice_branch_handler.handle_single_msg(msg, self)
-
-            if msg.msg_audio is not None:
-                self.audio_branch_handler.handle_single_msg(msg, self)
-
-            if msg.msg_sticker is not None:
-                msg.msg_text = msg.msg_sticker
-
-        # 如果消息是 reply_to_message, 则将 reply_to_message 的 text 加到 msg_text 里
-        msg.msg_text = ' '.join([msg.msg_text or '', msg.reply_to_message_text or ''])
-
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
-
-        # 判断用户发来的消息是不是不合规的, 如果骂人就拉黑
-        if msg_is_inproper(msg.msg_text):
-            self.improper_branch_handler.handle_single_msg(msg, self)
-
-        self.text_branch_handler.handle_single_msg(msg, self)
-
-        msg_lower = msg.msg_text.lower()
-        MSG_SPLIT = msg_lower.split()
-
-        if MSG_SPLIT[0] in [
-            'pay',
-            '/pay',
-            'payment',
-            '/payment',
-            'charge',
-            'refill',
-            'paybill',
-        ]:
-            self.payment_branch_handler.handle_single_msg(msg, self)
-
-        elif MSG_SPLIT[0] in [
-            '/check_bill',
-            'check_bill',
-            '/check_payment',
-            'check_payment',
-            'check_bill',
-            '/check_bill',
-            'check_payment_status',
-            '/check_payment_status',
-            '/check_bill_status',
-            'check_bill_status',
-        ]:
-            self.check_bill_branch_handler.handle_single_msg(msg, self)
-
-        # BOT OWNER COMMANDS
-        if msg.chat_id in self.bot_admin_id_list:
-            self.bot_owner_branch_handler.handle_single_msg(msg, self)
 
         # 英语查单词和 英语老师 Amy
         if (
@@ -381,21 +320,15 @@ class Bot(ABC):
         ):
             self.english_teacher_branch_handler.handle_single_msg(msg, self)
 
-        msg.msg_text = msg.msg_text.replace('/', '', 1) if MSG_SPLIT[0].startswith('/') else msg.msg_text
+        # 如果是群聊但是没有 at 机器人, 则在此处返回
+        if msg.should_be_ignored:
+            logging.debug("should ignore this msg", msg.raw_msg)
+            return
 
         # 如果用户发了一个简单的 2 个字节的词, 那就随机回复一个表示开心的 emoji
         if len(msg.msg_text) <= 2 or msg.msg_text in reply_emoji_list:
             reply = random.choice(emoji_list_for_happy)
             self.send_msg(reply, msg.chat_id)
-            return
-
-        # 如果用户发来一个英语单词, 小于等于 4 个字符, 那就当做 token symble 处理, 查询 coinmarketcap
-        if len(msg.msg_text.split()) == 1 and len(msg.msg_text) <= 4 and is_english(msg.msg_text):
-            self.coinmarketcap_branch_handler.handle_single_msg(msg, self)
-
-        # 如果是群聊但是没有 at 机器人, 则在此处返回
-        if msg.should_be_ignored:
-            logging.debug("should ignore this msg", msg.raw_msg)
             return
 
         try:

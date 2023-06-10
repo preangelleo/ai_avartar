@@ -59,11 +59,11 @@ class FanbookBot(Bot):
         return response.json()['result']['user_token']
 
     async def handle_push(self, obj):
-        is_bot = obj.get('data').get('author').get('bot')
+        is_bot = obj.get('data', {}).get('author', {}).get('bot')
         if is_bot:
             return
-        channel_id = obj.get('data').get('channel_id')
-        author = obj.get('data').get('author').get('nickname')
+        channel_id = obj.get('data', {}).get('channel_id')
+        author = obj.get('data', {}).get('author', {}).get('nickname')
         if not channel_id or not author:
             return
 
@@ -80,14 +80,19 @@ class FanbookBot(Bot):
         logging.debug(f'send_msg(): {response.json()}')
         return response.json()
 
-    async def send_msg_async(self, msg: str, chat_id, parse_mode=None):
+    async def send_msg_async(self, msg: str, chat_id, parse_mode=None, reply_to_message_id=None):
         headers = {'Content-type': 'application/json'}
-        payload = {'chat_id': int(chat_id), 'text': msg, 'desc': msg}
+        payload = {
+            'chat_id': int(chat_id),
+            'text': msg,
+            'desc': msg,
+            'reply_to_message_id': int(reply_to_message_id),
+        }
 
         async with httpx.AsyncClient() as client:
             response = await client.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)
 
-        logging.debug(f'send_msg(): {response.json()}')
+        logging.info(f'send_msg(): {response.json()}')
         return response.json()
 
     async def send_ping(self, ws):

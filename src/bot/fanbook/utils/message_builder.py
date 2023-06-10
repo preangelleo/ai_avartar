@@ -33,6 +33,7 @@ def build_from_fanbook_msg(obj):
         caption=None,
         is_mentioned=check_if_bot_is_mentioned(obj.get('data').get('mentions')),
         reply_to_message_text=None,
+        message_id=obj.get('data').get('message_id'),
     )
 
 

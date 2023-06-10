@@ -77,7 +77,7 @@ class Bot(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def send_msg_async(self, msg: str, chat_id, parse_mode=None):
+    async def send_msg_async(self, msg: str, chat_id, parse_mode=None, reply_to_message_id=None):
         raise NotImplementedError
 
     @abstractmethod
@@ -414,7 +414,9 @@ class Bot(ABC):
 
         if reply:
             try:
-                await self.send_msg_async(reply, msg.chat_id)
+                await self.send_msg_async(
+                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.message_id
+                )
             except Exception as e:
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
         return

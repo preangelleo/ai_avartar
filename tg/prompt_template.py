@@ -278,7 +278,26 @@ user_commands = f'''
 {paid_user_commands}
 '''
 
-bot_owner_commands = '''
+binance_commands = '''
+/binance_commands
+/binance_today_coin
+/binance_market_buy
+/binance_market_sell
+/binance_send_crypto
+/binance_api_function
+/binance_dust_convert
+/binance_asset_details
+/binance_funding_main
+/binance_main_funding
+/binance_wallet_balance
+/binance_funding_balance
+/binance_deposit_address
+/binance_latest_deposit
+/binance_latest_withdraw
+/binance_prosition_check
+'''
+
+bot_owner_commands = f'''
 # 以下列表仅限 Bot Onwer 使用
 
 /blacklist # 黑名单管理
@@ -295,6 +314,7 @@ bot_owner_commands = '''
 /group_send_message
 /avatar_first_response
 /group_send_commands_list
+{binance_commands}
 # 点击这个会把用户命令列表群发给所有人
 '''
 

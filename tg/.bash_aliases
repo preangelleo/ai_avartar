@@ -25,14 +25,15 @@ alias pyl='python3 local_bot.py'
 alias pyi='python3 bot_init.py'
 
 alias pmtg='pm2 start local_bot.py --name tg --interpreter python3'
+alias pmwc='pm2 start ding-dong-bot.py --name wc --interpreter python3'
 alias prtg='pm2 restart tg'
+alias prwc='pm2 restart wc'
 alias pdtg='pm2 delete tg'
+alias pdwc='pm2 delete wc'
 alias pstg='pm2 stop tg'
+alias pswc='pm2 stop wc'
 
-alias pmwb="pm2 start npm --name wb -- start"
-alias prwb="pm2 restart wb"
-alias pdwb='pm2 delete wb'
-alias pswb='pm2 stop wb'
+alias pwc='python3 ding-dong-bot.py'
 
 alias cmx='chmod +x'
 alias croot='sudo chown root:root /root && sudo chmod 700 /root'
@@ -49,3 +50,11 @@ alias cng='cd /root/tg && chmod +x auto_nginx.sh && ./auto_nginx.sh'
 alias wbd='cd /root/wb && pnpm build'
 alias wpi='cd /root/wb && pnpm i'
 alias wpd='cd /root/wb && pnpm dev'
+
+alias dwc='docker run --rm -ti -e WECHATY_LOG=verbose -e WECHATY_PUPPET=wechaty-puppet-padlocal -e WECHATY_PUPPET_PADLOCAL_TOKEN=puppet_padlocal_eb452aef230b4d5a91595f8b50529aab -e WECHATY_PUPPET_SERVER_PORT=8788 -e WECHATY_TOKEN="puppet_padlocal_eb452aef230b4d5a91595f8b50529aab" -e WECHATY_PUPPET_SERVICE_NO_TLS_INSECURE_SERVER=true -p 8788:8788 -d wechaty/wechaty'
+
+# https://blog.zmyos.com/tgproxy.html
+alias tgproxy='bash <(wget -qO- https://git.io/mtg.sh)'
+# https://github.com/mlldxe/X-UI
+alias xui='bash <(curl -Ls https://raw.githubusercontent.com/vaxilu/x-ui/master/install.sh)'
+

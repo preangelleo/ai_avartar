@@ -3,7 +3,7 @@
 debug = True
 place_holder = True
 if place_holder:
-    import os, re, json, base64, hashlib, math, string, time, uuid, time, urllib, imaplib, email, random, requests, chardet, subprocess, xlrd, pytz
+    import os, re, json, base64, hashlib, math, string, time, uuid, time, urllib, imaplib, email, random, requests, chardet, subprocess, xlrd, pytz, hmac
     import azure.cognitiveservices.speech as speechsdk
     from pydub import AudioSegment
     from sqlalchemy import DateTime, Table, create_engine, insert, update, Column, Integer, String, Text, Float, text, Boolean, exists, inspect
@@ -51,6 +51,8 @@ if place_holder:
     from logging_util import logging
     import chromadb
 
+    from urllib.parse import urljoin
+
     from dotenv import load_dotenv
     load_dotenv()
 
@@ -72,6 +74,8 @@ if place_holder:
     ELEVEN_API_KEY = os.getenv('ELEVEN_API_KEY')
     USER_AVATAR_NAME = os.getenv('USER_AVATAR_NAME')
     BOT_USERNAME = os.getenv('BOT_USERNAME')
+
+    WECHAT_SENDER_ID = os.getenv('WECHAT_ID')
 
     BOT_OWNER_LIST = [BOTOWNER_CHAT_ID, BOTCREATER_CHAT_ID]
 
@@ -112,6 +116,19 @@ if place_holder:
         chat_id = Column(String(255))
         update_time = Column(DateTime)
         msg_text = Column(Text)
+        black_list = Column(Integer, default=0)
+
+    # Define the table 'wechaty_chat_history', column: id, sender_name, sender_id, room_id, message_id, msg_text, update_time, black_list
+    class WechatyChatHistory(Base):
+        __tablename__ = 'wechaty_chat_history'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        sender_name = Column(String(255))
+        sender_id = Column(String(255))
+        room_id = Column(String(255))
+        message_id = Column(String(255))
+        msg_text = Column(Text)
+        update_time = Column(DateTime)
         black_list = Column(Integer, default=0)
 
     # Define the table 'avatar_owner_parameters'
@@ -976,6 +993,74 @@ def get_token_info_from_coinmarketcap(token_symbol):
         token_info = token_data[token_symbol]
         return token_info
     return
+'''
+{
+  "id": 7102,
+  "name": "Linear Finance",
+  "symbol": "LINA",
+  "slug": "linear",
+  "num_market_pairs": 103,
+  "date_added": "2020-09-18T00:00:00.000Z",
+  "tags": [
+    "decentralized-exchange-dex-token",
+    "defi",
+    "yield-farming",
+    "polkadot-ecosystem",
+    "binance-launchpad",
+    "cms-holdings-portfolio",
+    "kenetic-capital-portfolio",
+    "alameda-research-portfolio",
+    "bnb-chain"
+  ],
+  "max_supply": 10000000000,
+  "circulating_supply": 5538204229.005,
+  "total_supply": 10000000000,
+  "platform": {
+    "id": 1027,
+    "name": "Ethereum",
+    "symbol": "ETH",
+    "slug": "ethereum",
+    "token_address": "0x3e9bc21c9b189c09df3ef1b824798658d5011937"
+  },
+  "is_active": 1,
+  "infinite_supply": false,
+  "cmc_rank": 267,
+  "is_fiat": 0,
+  "self_reported_circulating_supply": 5538204229.005,
+  "self_reported_market_cap": 94201677.27902532,
+  "tvl_ratio": null,
+  "last_updated": "2023-06-04T01:28:00.000Z",
+  "quote": {
+    "USD": {
+      "price": 0.017009426410399764,
+      "volume_24h": 180357830.65465266,
+      "volume_change_24h": -36.307,
+      "percent_change_1h": -1.18172722,
+      "percent_change_24h": -17.01112447,
+      "percent_change_7d": 33.89716364,
+      "percent_change_30d": 41.78241954,
+      "percent_change_60d": 5.28298937,
+      "percent_change_90d": 104.84224258,
+      "market_cap": 94201677.27902532,
+      "market_cap_dominance": 0.0082,
+      "fully_diluted_market_cap": 170094264.1,
+      "tvl": null,
+      "last_updated": "2023-06-04T01:28:00.000Z"
+    }
+  }
+}
+'''
+
+# 从 get_token_info_from_coinmarketcap(token_symbol) 读出 token_symbol 的 market_cap 以及 fully_diluted_market_cap
+def get_token_market_cap_and_ratio(token_symbol):
+    if debug: print(f"DEBUG: get_token_market_cap_and_ratio(): {token_symbol}")
+    try:
+        token_info = get_token_info_from_coinmarketcap(token_symbol)
+        if token_info:
+            market_cap = token_info['quote']['USD']['market_cap']
+            fully_diluted_market_cap = token_info['quote']['USD']['fully_diluted_market_cap']
+            if fully_diluted_market_cap < 5_000_000_000 and market_cap / fully_diluted_market_cap > 0.5: return {'market_cap': market_cap, 'fully_diluted_market_cap': fully_diluted_market_cap, 'ratio': market_cap / fully_diluted_market_cap}
+    except: return 
 
 # Check if a given symbol is in CmcTotalSupply : db_cmc_total_supply's symbol column, if yes, return True, else return False
 def check_token_symbol_in_db_cmc_total_supply(token_symbol):
@@ -1009,6 +1094,36 @@ def get_token_abi(address):
     data = response.json()
     return data["result"]
 
+'''
+    class WechatyChatHistory(Base):
+        __tablename__ = 'wechaty_chat_history'
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        sender_name = Column(String(255))
+        sender_id = Column(String(255))
+        room_id = Column(String(255))
+        message_id = Column(String(255))
+        msg_text = Column(Text)
+        update_time = Column(DateTime)
+        black_list = Column(Integer, default=0)
+        '''
+
+# 给 WechatyChatHistory 添加一条记录
+def insert_wechaty_chat_history(sender_name, sender_id, room_id, message_id, msg_text, black_list=0):
+    # 判断 WechatyChatHistory 是否存在, 如果不存在, 则创建
+    Base.metadata.create_all(bind=engine)
+
+    if debug: print(f"DEBUG: insert_wechaty_chat_history()")
+    # Create a new session
+    with Session() as session:
+        # Create a new chat history
+        new_chat_history = WechatyChatHistory(sender_name=sender_name, sender_id=sender_id, room_id=room_id, message_id=message_id, msg_text=msg_text, update_time=datetime.now(), black_list=black_list)
+        # Add the new chat history into the session
+        session.add(new_chat_history)
+        # Commit the session
+        session.commit()
+    return True
+
 
 if __name__ == '__main__':
     print(f"TELEGRAM_BOT initialing for @{TELEGRAM_USERNAME}...")
@@ -1025,6 +1140,7 @@ if __name__ == '__main__':
         if confirm == 'yes':
             with Session() as session:
                 session.query(ChatHistory).delete()
+                session.query(WechatyChatHistory).delete()
                 session.query(EthWallet).delete()
                 session.query(CryptoPayments).delete()
                 session.query(UserPriority).delete()

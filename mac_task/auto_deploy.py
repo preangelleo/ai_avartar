@@ -42,6 +42,7 @@ if __name__ == '__main__':
             elif line.startswith('BOT_TOKEN'): BOT_TOKEN = line.split('=')[1].strip().strip('"').strip("'")
             elif line.startswith('BOTOWNER_CHAT_ID'): BOTOWNER_CHAT_ID = line.split('=')[1].strip().strip('"').strip("'")
             elif line.startswith('USER_TELEGRAM_LINK'): USER_TELEGRAM_LINK = line.split('=')[1].strip().strip('"').strip("'")
+            elif line.startswith('WECHATY_NAME'): WECHATY_NAME = line.split('=')[1].strip().strip('"').strip("'")
             elif line.startswith('Transaction_hash'): Transaction_hash = line.split('=')[1].strip().strip('"').strip("'")
 
     is_paied_bot_owner = 0
@@ -97,6 +98,7 @@ if __name__ == '__main__':
         "BOT_TOKEN": BOT_TOKEN,
         "BOTOWNER_CHAT_ID": BOTOWNER_CHAT_ID,
         "USER_TELEGRAM_LINK": USER_TELEGRAM_LINK,
+        "WECHATY_NAME": WECHATY_NAME,
         "OPENAI_MODEL": OPENAI_MODEL,
         "REPLICATE_KEY": REPLICATE_KEY,
         "STABILITY_API_KEY": STABILITY_API_KEY,
@@ -158,46 +160,47 @@ if __name__ == '__main__':
 
     print(f"SETP 8: 打开 {user_tg_bot_folder}/.env, 为其中的变量赋值...")
     avatar_tg_bot_env_file = f'{user_tg_bot_folder}/.env'
-    with open(avatar_tg_bot_env_file) as f:
+    with open(avatar_tg_bot_env_file, 'r') as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             line = line.strip()
             if not line: continue
             elif line.startswith('#'): continue
-            elif line.startswith('USER_AVATAR_NAME'): lines[i] = f'USER_AVATAR_NAME={USER_AVATAR_NAME}\n'
-            elif line.startswith('UBUNTU_SERVER_IP_ADDRESS'): lines[i] = f'UBUNTU_SERVER_IP_ADDRESS={UBUNTU_SERVER_IP_ADDRESS}\n'
-            elif line.startswith('DOMAIN_NAME'): lines[i] = f'DOMAIN_NAME={DOMAIN_NAME}\n'
-            elif line.startswith('DB_PASSWORD'): lines[i] = f'DB_PASSWORD={DB_PASSWORD}\n'
-            elif line.startswith('OPENAI_API_KEY'): lines[i] = f'OPENAI_API_KEY={OPENAI_API_KEY}\n'
-            elif line.startswith('BOT_TOKEN'): lines[i] = f'BOT_TOKEN={BOT_TOKEN}\n'
-            elif line.startswith('BOTOWNER_CHAT_ID'): lines[i] = f'BOTOWNER_CHAT_ID={BOTOWNER_CHAT_ID}\n'
-            elif line.startswith('OPENAI_MODEL'): lines[i] = f'OPENAI_MODEL={OPENAI_MODEL}\n'
-            elif line.startswith('BOT_USERNAME'): lines[i] = f'BOT_USERNAME={BOT_USERNAME}\n'
-            elif line.startswith('REPLICATE_KEY'): lines[i] = f'REPLICATE_KEY={REPLICATE_KEY}\n'
-            elif line.startswith('STABILITY_API_KEY'): lines[i] = f'STABILITY_API_KEY={STABILITY_API_KEY}\n'
-            elif line.startswith('WOLFRAM_ALPHA_APPID'): lines[i] = f'WOLFRAM_ALPHA_APPID={WOLFRAM_ALPHA_APPID}\n'
-            elif line.startswith('USER_TELEGRAM_LINK'): lines[i] = f'USER_TELEGRAM_LINK={USER_TELEGRAM_LINK}\n'
-            elif line.startswith('PINECONE_FREE'): lines[i] = f'PINECONE_FREE={PINECONE_FREE}\n'
-            elif line.startswith('PINECONE_FREE_ENV'): lines[i] = f'PINECONE_FREE_ENV={PINECONE_FREE_ENV}\n'
-            elif line.startswith('MAX_CONVERSATION_PER_MONTH'): lines[i] = f'MAX_CONVERSATION_PER_MONTH={MAX_CONVERSATION_PER_MONTH}\n'
-            elif line.startswith('INFURA_KEY'): lines[i] = f'INFURA_KEY={INFURA_KEY}\n'
-            elif line.startswith('CMC_PA_API'): lines[i] = f'CMC_PA_API={CMC_PA_API}\n'
-            elif line.startswith('FINNHUB_API'): lines[i] = f'FINNHUB_API={FINNHUB_API}\n'
-            elif line.startswith('ETHERSCAN_API'): lines[i] = f'ETHERSCAN_API={ETHERSCAN_API}\n'
-            elif line.startswith('MORALIS_API'): lines[i] = f'MORALIS_API={MORALIS_API}\n'
-            elif line.startswith('MORALIS_ID'): lines[i] = f'MORALIS_ID={MORALIS_ID}\n'
-            elif line.startswith('MORALIS_APP_ID'): lines[i] = f'MORALIS_APP_ID={MORALIS_APP_ID}\n'
-            elif line.startswith('DEBANK_API'): lines[i] = f'DEBANK_API={DEBANK_API}\n'
-            elif line.startswith('MONTHLY_FEE'): lines[i] = f'MONTHLY_FEE={MONTHLY_FEE}\n'
-            elif line.startswith('BING_SEARCH_API'): lines[i] = f'BING_SEARCH_API={BING_SEARCH_API}\n'
-            elif line.startswith('SPEECH_KEY'): lines[i] = f'SPEECH_KEY={SPEECH_KEY}\n'
-            elif line.startswith('SPEECH_REGION'): lines[i] = f'SPEECH_REGION={SPEECH_REGION}\n'
-            elif line.startswith('DB_HOST'): lines[i] = f'DB_HOST={DB_HOST}\n'
-            elif line.startswith('DB_PORT'): lines[i] = f'DB_PORT={DB_PORT}\n'
-            elif line.startswith('DB_USER'): lines[i] = f'DB_USER={DB_USER}\n'
-            elif line.startswith('DB_NAME'): lines[i] = f'DB_NAME={DB_NAME}\n'
-            elif line.startswith('BOTCREATER_CHAT_ID'): lines[i] = f'BOTCREATER_CHAT_ID={BOTCREATER_CHAT_ID}\n'
-            elif line.startswith('Transaction_hash'): lines[i] = f'Transaction_hash={Transaction_hash}\n'
+            elif line.startswith('USER_AVATAR_NAME='): lines[i] = f'USER_AVATAR_NAME={USER_AVATAR_NAME}\n'
+            elif line.startswith('UBUNTU_SERVER_IP_ADDRESS='): lines[i] = f'UBUNTU_SERVER_IP_ADDRESS={UBUNTU_SERVER_IP_ADDRESS}\n'
+            elif line.startswith('DOMAIN_NAME='): lines[i] = f'DOMAIN_NAME={DOMAIN_NAME}\n'
+            elif line.startswith('DB_PASSWORD='): lines[i] = f'DB_PASSWORD={DB_PASSWORD}\n'
+            elif line.startswith('OPENAI_API_KEY='): lines[i] = f'OPENAI_API_KEY={OPENAI_API_KEY}\n'
+            elif line.startswith('BOT_TOKEN='): lines[i] = f'BOT_TOKEN={BOT_TOKEN}\n'
+            elif line.startswith('BOTOWNER_CHAT_ID='): lines[i] = f'BOTOWNER_CHAT_ID={BOTOWNER_CHAT_ID}\n'
+            elif line.startswith('OPENAI_MODEL='): lines[i] = f'OPENAI_MODEL={OPENAI_MODEL}\n'
+            elif line.startswith('BOT_USERNAME='): lines[i] = f'BOT_USERNAME={BOT_USERNAME}\n'
+            elif line.startswith('REPLICATE_KEY='): lines[i] = f'REPLICATE_KEY={REPLICATE_KEY}\n'
+            elif line.startswith('STABILITY_API_KEY='): lines[i] = f'STABILITY_API_KEY={STABILITY_API_KEY}\n'
+            elif line.startswith('WOLFRAM_ALPHA_APPID='): lines[i] = f'WOLFRAM_ALPHA_APPID={WOLFRAM_ALPHA_APPID}\n'
+            elif line.startswith('USER_TELEGRAM_LINK='): lines[i] = f'USER_TELEGRAM_LINK={USER_TELEGRAM_LINK}\n'
+            elif line.startswith('WECHATY_NAME='): lines[i] = f'WECHATY_NAME={WECHATY_NAME}\n'
+            elif line.startswith('PINECONE_FREE='): lines[i] = f'PINECONE_FREE={PINECONE_FREE}\n'
+            elif line.startswith('PINECONE_FREE_ENV='): lines[i] = f'PINECONE_FREE_ENV={PINECONE_FREE_ENV}\n'
+            elif line.startswith('MAX_CONVERSATION_PER_MONTH='): lines[i] = f'MAX_CONVERSATION_PER_MONTH={MAX_CONVERSATION_PER_MONTH}\n'
+            elif line.startswith('INFURA_KEY='): lines[i] = f'INFURA_KEY={INFURA_KEY}\n'
+            elif line.startswith('CMC_PA_API='): lines[i] = f'CMC_PA_API={CMC_PA_API}\n'
+            elif line.startswith('FINNHUB_API='): lines[i] = f'FINNHUB_API={FINNHUB_API}\n'
+            elif line.startswith('ETHERSCAN_API='): lines[i] = f'ETHERSCAN_API={ETHERSCAN_API}\n'
+            elif line.startswith('MORALIS_API='): lines[i] = f'MORALIS_API={MORALIS_API}\n'
+            elif line.startswith('MORALIS_ID='): lines[i] = f'MORALIS_ID={MORALIS_ID}\n'
+            elif line.startswith('MORALIS_APP_ID='): lines[i] = f'MORALIS_APP_ID={MORALIS_APP_ID}\n'
+            elif line.startswith('DEBANK_API='): lines[i] = f'DEBANK_API={DEBANK_API}\n'
+            elif line.startswith('MONTHLY_FEE='): lines[i] = f'MONTHLY_FEE={MONTHLY_FEE}\n'
+            elif line.startswith('BING_SEARCH_API='): lines[i] = f'BING_SEARCH_API={BING_SEARCH_API}\n'
+            elif line.startswith('SPEECH_KEY='): lines[i] = f'SPEECH_KEY={SPEECH_KEY}\n'
+            elif line.startswith('SPEECH_REGION='): lines[i] = f'SPEECH_REGION={SPEECH_REGION}\n'
+            elif line.startswith('DB_HOST='): lines[i] = f'DB_HOST={DB_HOST}\n'
+            elif line.startswith('DB_PORT='): lines[i] = f'DB_PORT={DB_PORT}\n'
+            elif line.startswith('DB_USER='): lines[i] = f'DB_USER={DB_USER}\n'
+            elif line.startswith('DB_NAME='): lines[i] = f'DB_NAME={DB_NAME}\n'
+            elif line.startswith('BOTCREATER_CHAT_ID='): lines[i] = f'BOTCREATER_CHAT_ID={BOTCREATER_CHAT_ID}\n'
+            elif line.startswith('Transaction_hash='): lines[i] = f'Transaction_hash={Transaction_hash}\n'
 
         with open(avatar_tg_bot_env_file, 'w') as f: f.writelines(lines)
 

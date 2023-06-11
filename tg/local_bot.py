@@ -1,5 +1,6 @@
 from ama_loader import *
 from tvariables import *
+from tg_binance import *
 import threading
 
 if place_holder:
@@ -156,6 +157,19 @@ def user_is_legit(from_id):
 
     return check_this_month_total_conversation(from_id)
 
+# 判断 input_text 中是否包含 'Token symbol:', 如果包含, 则将其后面的 token symbol 提取出来, 并将 input_text 中的 'Token symbol: xxx' 部分删除, 返回 token symbol 和 input_text
+def get_token_symbol(input_text):
+    token_symbol = ''
+    if 'Token symbol:' in input_text:
+        split_list = input_text.split('Token symbol:')
+        input_text = split_list[0].strip()
+        token_symbol = split_list[1].strip()
+    elif 'token symbol:' in input_text:
+        split_list = input_text.split('token symbol:')
+        input_text = split_list[0].strip()
+        token_symbol = split_list[1].strip()
+    return input_text, token_symbol
+
 # Call chatgpt and restore reply and send to chat_id:
 def local_chatgpt_to_reply(msg_text, from_id, chat_id, message_id=None):
     openai.api_key = OPENAI_API_KEY
@@ -208,9 +222,13 @@ def local_chatgpt_to_reply(msg_text, from_id, chat_id, message_id=None):
             # Commit the session
             session.commit()
     except Exception as e: return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
-    
-    try: send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url, reply_to_message_id=message_id)
-    except Exception as e: logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
+
+    reply, token_symbol = get_token_symbol(reply)
+    send_msg(reply, chat_id, parse_mode='', base_url=telegram_base_url, reply_to_message_id=message_id)
+
+    if token_symbol: 
+        r = get_token_info_from_coinmarketcap_output_chinese(token_symbol.upper())
+        send_msg(r, chat_id, parse_mode='', base_url=telegram_base_url)
 
     return reply
 
@@ -312,7 +330,11 @@ def local_bot_msg_command(tg_msg):
     global last_word_checked
     global dear_user
 
-    if not tg_msg.get('message'): return
+    if BOT_USERNAME in BOTCREATER_TEST_BOT: print(json.dumps(tg_msg, indent=2))
+
+    if not tg_msg.get('message'):
+        if 'edited_message' in tg_msg: tg_msg['message'] = tg_msg['edited_message']
+        else: return
     
     # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
     from_id = str(tg_msg['message']['from']['id'])
@@ -332,8 +354,6 @@ def local_bot_msg_command(tg_msg):
     # 如果是群聊就要在回复的前缀 亲爱的后面加上 user_title
     user_nick_name = dear_user if is_private else f"{dear_user} @{user_title} "
     message_id = tg_msg['message']['message_id'] if not is_private else None
-
-    if BOT_USERNAME in ['Leowang_test_bot', 'leowang_bot']: print(json.dumps(tg_msg, indent=2))
 
     # if debug: print(json.dumps(tg_msg, indent=2))
     if 'text' not in tg_msg['message']: 
@@ -414,10 +434,12 @@ def local_bot_msg_command(tg_msg):
 
             # 读出 Photo 的caption, 如果有的话
             caption = tg_msg['message'].get('caption', '')
-            if caption and caption.split()[0].lower() in ['group_send_image', 'gsi', 'group send image'] and chat_id in BOT_OWNER_LIST: 
+            is_change_avatar = False
+            if caption and caption.split()[0].lower() in ['group_send_image', '/gsi', '/group_send_image', 'gsi'] and chat_id in BOT_OWNER_LIST: 
                 description = ' '.join(caption.split()[1:])
                 send_msg(f'{user_nick_name}我收到了你发来的图片, 请稍等 1 分钟, 我马上把这张图片发给所有人 😁...', chat_id, parse_mode='', base_url=telegram_base_url)
                 return send_img_to_all(file_id, description, chat_id, base_url=telegram_base_url)
+            elif caption and caption.lower() in ['change_avatar', '/ca', '/change_avatar'] and chat_id in BOT_OWNER_LIST: is_change_avatar = True
             else: send_msg(f'{user_nick_name}我收到了你发来的图片, 请稍等 1 分钟, 我找副眼镜来仔细看看这张图的内容是什么 😺...', chat_id, parse_mode='', base_url=telegram_base_url)
 
             try:
@@ -442,6 +464,11 @@ def local_bot_msg_command(tg_msg):
             except Exception as e: 
                 logging.error(f"photo get file_content failed: \n\n{e}")
                 return
+
+            if is_change_avatar:
+                r = update_avatar(save_path)
+                if r: send_msg(f"{user_nick_name}, 新的 Avatar 头像换好了, 请点击其他任意好友后再点击我的头像进来就可以看到更新了 😁", chat_id)
+                return 
 
             img_caption = replicate_img_to_caption(save_path)
             if 'a computer screen' in img_caption: return
@@ -940,10 +967,10 @@ def local_bot_msg_command(tg_msg):
         return 
     
     # chatpdf function
-    elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier-investor', 'outlierinvestor', 'ol', '/outlier', '/oi', '/outlier-investor', '/outlierinvestor', '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and TELEGRAM_BOT_NAME.lower() in BOTCREATER_TEST_BOT:
-        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想让了解我写的《投资异类》里的内容, 请在命令后面的空格后加上你想了解的内容, 比如: \n\n投资异类 天使投资人最喜欢什么样的创业者\n\n这样我就会去《投资异类》里查找相关内容并提炼总结给你。\n\nP.S. /投资异类 也可以换做 /outlier 或者 /oi 或者 /outlier-investor 或者 /outlierinvestor 或者 /ol", chat_id)
+    elif (MSG_SPLIT[0] in ['outlier', 'oi', 'outlier_investor', 'outlierinvestor', 'ol', '/outlier', '/oi', '/outlier_investor', '/outlierinvestor', '/ol'] or '投资异类' in msg_text or '/投资异类' in msg_text) and TELEGRAM_BOT_NAME in BOTCREATER_TEST_BOT:
+        if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你如果想了解 @laogege6 写的《投资异类》里的内容, 请在命令后面的空格后加上你想了解的内容, 比如: \n\n投资异类 天使投资人最喜欢什么样的创业者\n\n这样我就会去《投资异类》里查找相关内容并提炼总结给你。\n\nP.S. /投资异类 也可以换做 /outlier 或者 /oi 或者 /outlier-investor 或者 /outlierinvestor 或者 /ol", chat_id)
         query = ' '.join(MSG_SPLIT[1:])
-        send_msg("WoW, 你想了解我写的《投资异类》啊, 真是感动. 稍等 1 分钟, 你问的问题我认真写给你, 哈哈哈 😁", chat_id)
+        send_msg("WoW, 你想了解我的 Creator @laogege6 的《投资异类》啊, 真是感动. 稍等 1 分钟, 你问的问题我认真写给你, 哈哈哈 😁", chat_id)
         try: 
             index_name = 'outlier-investor'
             # docsearch = Pinecone.from_texts([t.page_content for t in texts], embeddings, index_name=index_name)
@@ -998,7 +1025,7 @@ def local_bot_msg_command(tg_msg):
         send_msg(user_commands, chat_id, parse_mode='', base_url=telegram_base_url)
         if chat_id in BOT_OWNER_LIST: send_msg(bot_owner_commands, chat_id, parse_mode='', base_url=telegram_base_url)
         return
-
+    
     # 查询以太坊地址余额
     elif (msg_lower.startswith('0x') and len(msg_text) == 42) or (msg_lower.startswith('/0x') and len(msg_text) == 43):
         msg_text = msg_text.replace('/', '')
@@ -1028,9 +1055,172 @@ def local_bot_msg_command(tg_msg):
         if (MSG_SPLIT[0] in ['mybots'] or msg_text in ['/mybots']):
             send_msg(f"{user_nick_name}, 你好可爱啊 🤨, /mybots 这个指令是 @BotFather 的, 发给我没用哈, 请点击 @BotFather 过去设置我的参数吧! 😘", chat_id)
             return 
+
+        elif MSG_SPLIT[0] in ['binance_commands', '/binance_commands', 'bommand', '/bommand', 'bmd', '/bmd']:
+            '''
+            /binance_commands
+            /binance_today_coin
+            /binance_market_buy
+            /binance_market_sell
+            /binance_send_crypto
+            /binance_api_function
+            /binance_deposit_address
+            /binance_latest_deposit
+            /binance_latest_withdraw
+            /binance_prosition_check
+            /binance_wallet_balance
+            /binance_funding_balance
+            '''
+            return send_msg(binance_commands, chat_id, parse_mode='', base_url=telegram_base_url)
         
+        # /binance_send_crypto
+        elif MSG_SPLIT[0] in ['binance_send_crypto', '/binance_send_crypto', 'binance_send_coin', '/binance_send_coin', 'binance_send_token', '/binance_send_token', 'bsc', '/bsc', 'bst', '/bst']:
+            if MSG_LEN < 5: return send_msg(f"{user_nick_name}, 你要从币安提币给别的地址, 请在命令 /binance_send_crypto 后面的空格后再加上一个你要提币的数量, 网络, 币种和地址, 比如: \n\n/binance_send_crypto 10 erc20 usdt 0xb411B974c0ac75C88E5039ea0bf63a84aa7B5377\n\n这样就是把 10 USDT 从币安提币到 0xb411B974c0ac75C88E5039ea0bf63a84aa7B5377 这个地址了。\n\nP.S. /binance_send_crypto 也可以简写为 /bsc 或者 bsc。\n\nCoin 的大小写无所谓, 但是提币费用会从余额里自动扣除, 这里的 amount 数量是到账实际数量哈.", chat_id)
+            amount = msg_text.split()[1]
+            try: amount = float(amount)
+            except: return send_msg(f"{user_nick_name},命令 /binance_send_crypto 空格后面的第一个参数应该是一个数字, 代表你的提币数量, 你发来的 '{amount}' 并不是一个数字哦。", chat_id)
+
+            network = msg_text.split()[2].upper()
+            coin = msg_text.split()[3].upper()
+            address = msg_text.split()[4]
+
+            r = binance_withdraw_prep_and_call(amount, network, coin, address)
+
+            if type(r) is dict: return send_msg(f"{user_nick_name}, 你的提币请求已经提交, 请稍等几分钟后再查询一下提币状态, 提币 ID 是: {r['id']}", chat_id)
+            else: return send_msg(f"{user_nick_name}, 你的提币请求提交失败, 错误信息: \n\n{r}", chat_id)
+
+        # /binance_wallet_balance
+        elif MSG_SPLIT[0] in ['binance_wallet_balance', '/binance_wallet_balance', 'bwb', '/bwb']:
+            coin = msg_text.split()[1].upper() if MSG_LEN >= 2 else 'ALL'
+            if coin == 'ALL':
+                return_dict = get_coin_wallet_balance_all()
+                dict_to_str = '\n'.join([f"{k}: {format_number(v)}" for k, v in return_dict.items()])
+                return send_msg(f"{user_nick_name}, 你的币安现货钱包余额: \n\n{dict_to_str}", chat_id)
+            r = get_coin_wallet_balance(coin)
+            return send_msg(f"{user_nick_name}, 你的币安现货钱包里有: \n\n{format_number(r)} {coin.lower()}", chat_id)
+        
+        # /binance_funding_balance
+        elif MSG_SPLIT[0] in ['binance_funding_balance', '/binance_funding_balance', 'bfb', '/bfb']:
+            coin = msg_text.split()[1].upper() if MSG_LEN >= 2 else 'ALL'
+            if coin == 'ALL':
+                return_dict = get_coin_funding_balance_all()
+                dict_to_str = '\n'.join([f"{k}: {format_number(v)}" for k, v in return_dict.items()])
+                return send_msg(f"{user_nick_name}, 你的币安资金账户余额: \n\n{dict_to_str}", chat_id)
+            r = get_coin_funding_balance(coin)
+            return send_msg(f"{user_nick_name}, 你的币安资金账户里有: \n\n{format_number(r)} {coin.lower()}", chat_id)
+
+        # /binance_latest_deposit
+        elif MSG_SPLIT[0] in ['binance_latest_deposit', '/binance_latest_deposit', 'bld', '/bld']:
+            if MSG_LEN < 2: return get_deposit_history_by_hours(chat_id, hours=1)
+            try: hours = float(msg_text.split()[1])
+            except: return send_msg(f"{user_nick_name}, 你发来的 '{msg_text.split()[1]}' 并不是一个数字哦, 0.5 代表 半小时, 0.25代表一刻钟; 24代表一天; 720 代表一个月; 2160 代表 3 个月...", chat_id)
+
+            hours = 2159 if hours > 2159 else hours
+            if not get_deposit_history_by_hours(chat_id, hours): send_msg(f"{user_nick_name}, 你的币安账户最近 {hours} 小时内没有充值记录哦.", chat_id)
+            return 
+        
+        # /binance_latest_withdraw
+        elif MSG_SPLIT[0] in ['binance_latest_withdraw', '/binance_latest_withdraw', 'blw', '/blw']:
+            if MSG_LEN < 2: return get_withdraw_history_by_hours(chat_id, hours=1)
+            try: hours = float(msg_text.split()[1])
+            except: return send_msg(f"{user_nick_name}, 你发来的 '{msg_text.split()[1]}' 并不是一个数字哦, 0.5 代表 半小时, 0.25代表一刻钟; 24代表一天; 720 代表一个月; 2160 代表 3 个月...", chat_id)
+
+            hours = 2159 if hours > 2159 else hours
+            if not get_withdraw_history_by_hours(chat_id, hours): send_msg(f"{user_nick_name}, 你的币安账户最近 {hours} 小时内没有提币记录哦.", chat_id)
+            return
+
+        # /binance_today_coin
+        elif MSG_SPLIT[0] in ['binance_today_coin', '/binance_today_coin', 'btd', '/btd']:
+            return binance_today_hot_coins_check(chat_id, user_nick_name, crontab=False, trading_volume_limit=50_000_000, check_size = 1000)
+
+        # /binance_market_buy
+        elif MSG_SPLIT[0] in ['binance_market_buy', '/binance_market_buy', 'bmb', '/bmb']:
+            if MSG_LEN < 2: return send_msg(f"{user_nick_name}, 你要用现金买币, 请在命令 /binance_market_buy 后面的空格后再加上一个你要买的币种, 数量和价格, 比如: \n\n/binance_market_buy CAKE 1000\n\n这样就是以现价买入 1000 美元价值的 CAKE 了。如果不输入金额价值, 则默认金额为 1w 美金。\n\nP.S. /binance_market_buy 也可以简写为 /bmb 或者 bmb", chat_id)
+            coin = msg_text.split()[1].upper()
+            value = msg_text.split()[2] if MSG_LEN > 2 else 1000
+            try: value = float(value)
+            except: return send_msg(f"{user_nick_name},命令 /binance_market_buy 空格后面的第二个参数应该是一个数字, 代表你要买入的金额, 你发来的 '{value}' 并不是一个数字哦。", chat_id)
+            r = do_market_buy(coin, value)
+            return send_msg(r, chat_id)
+        
+        # /binance_market_sell
+        elif MSG_SPLIT[0] in ['binance_market_sell', '/binance_market_sell', 'bms', '/bms']:
+            if MSG_LEN < 2: return send_msg(f"{user_nick_name}, 你要用卖币, 请在命令 /binance_market_sell 后面的空格后再加上一个你要卖的币种, 比如: \n\n/binance_market_sell CAKE\n\n这样就是以现价卖出你仓位中价格建仓价格最低的那个仓位所持有的所有 CAKE\n\nP.S. /binance_market_sell 也可以简写为 /bms 或者 bms", chat_id)
+            coin = msg_text.split()[1].upper()
+            r = do_market_sell(coin)
+            return send_msg(r, chat_id)
+
+        # /binance_limit_sell
+        # elif MSG_SPLIT[0] in ['binance_limit_sell', '/binance_limit_sell', 'bls', '/bls']:
+        #     if MSG_LEN < 2: return send_msg(f"{user_nick_name}, 你要用卖币, 请在命令 /binance_limit_sell 后面的空格后再加上一个你要卖的币种, 比如: \n\n/binance_limit_sell CAKE\n\n这样就是以现价卖出你仓位中价格建仓价格最低的那个仓位所持有的所有 CAKE\n\nP.S. /binance_limit_sell 也可以简写为 /bls 或者 bls", chat_id)
+        #     coin = msg_text.split()[1].upper()
+        #     r = do_limit_sell(coin)
+        #     return send_msg(r, chat_id)
+
+        # /prosition_profit_check
+        elif MSG_SPLIT[0] in ['binance_prosition_check', '/binance_prosition_check', 'bpc', '/bpc']:
+            # if MSG_LEN < 2: return send_msg(f"{user_nick_name}, 你要查询仓位盈亏, 请在命令 /prosition_profit_check 后面的空格后再加上一个你要查询的币种, 比如: \n\n/prosition_profit_check CAKE\n\n这样就是查询你仓位中 CAKE 的盈亏情况\n\nP.S. /prosition_profit_check 也可以简写为 /ppc 或者 ppc", chat_id)
+            coin = msg_text.split()[1].upper() if MSG_LEN > 1 else None
+            return binance_position_buy_check_all(chat_id, coin, target_profit=0.05, crontab=False)
+            
+        # /get_eth_deposit
+        elif MSG_SPLIT[0] in ['binance_deposit_address', '/binance_deposit_address', 'bda', '/bda']:
+            if MSG_LEN < 2: return send_msg(f"币安 ETH/ERC20/EVM兼容链 充值地址: \n\n{BINANCE_DEPOSIT_ADDRESS_FOR_ERC20}", chat_id)
+            coin = msg_text.split()[1].upper()
+            network = msg_text.split()[2].upper() if MSG_LEN > 2 else 'ETH'
+            data = get_coin_deposit_address(coin, network)
+            '''data : {'coin': 'USDT', 'address': 'TTiayzuQ6hA8spUtWTsmfFD7nMDxcw33hV', 'tag': '', 'url': 'https://tronscan.org/#/address/TTiayzuQ6hA8spUtWTsmfFD7nMDxcw33hV'}'''
+            if data: send_msg('\n'.join([f"{k}: {v}" for k, v in data.items()]), chat_id)
+            else: send_msg(f"{user_nick_name}, 你要查询的币种 {coin} 没有 {network} 网络(链)的充值地址, 请检查币种或者网络(链)是否正确, 或者币安是否支持该币种。", chat_id)
+            return 
+
+        # /binance_funding_main
+        elif MSG_SPLIT[0] in ['binance_funding_main', '/binance_funding_main', 'bfm', '/bfm']:
+            if MSG_LEN < 3: return send_msg(f"{user_nick_name}, 你要将资金账户内的资产转移到现货账户, 请在命令 /binance_funding_main 后面的空格后再加上数量和币种, 比如: \n\n/binance_funding_main 100 USDT\n\n这样就是把 100 USDT 从资金账户转移到现货账户了。\n\nP.S. /binance_funding_main 也可以简写为 /bfm 或者 bfm", chat_id)
+
+            amount = msg_text.split()[1]
+            coin = msg_text.split()[2].upper()
+            funding_main_transfer_with_check_and_send(coin, amount, chat_id)
+            return 
+        
+        # /binance_main_funding
+        elif MSG_SPLIT[0] in ['binance_main_funding', '/binance_main_funding', 'bmf', '/bmf']:
+            if MSG_LEN < 3: return send_msg(f"{user_nick_name}, 你要将现货账户内的资产转移到资金账户, 请在命令 /binance_main_funding 后面的空格后再加上数量和币种, 比如: \n\n/binance_main_funding 100 USDT\n\n这样就是把 100 USDT 从现货账户转移到资金账户了。\n\nP.S. /binance_main_funding 也可以简写为 /bmf 或者 bmf", chat_id)
+
+            amount = msg_text.split()[1]
+            coin = msg_text.split()[2].upper()
+            main_funding_transfer_with_check_and_send(coin, amount, chat_id)
+            return
+        
+        # /binance_dust_convert
+        elif MSG_SPLIT[0] in ['binance_dust_convert', '/binance_dust_convert', 'bdc', '/bdc']:
+            if MSG_LEN < 2: send_msg(f"{user_nick_name}, 你要将小额资产转换成 BNB, 请在命令 /binance_dust_convert 后面的空格后再加上一个你要转换的币种, 比如: \n\n/binance_dust_convert USDT\n\n这样就是把你币安账户里的小额 USDT 转换成 BNB 了。\n\nP.S. /binance_dust_convert 也可以简写为 /bdc 或者 bdc", chat_id)
+            coin = MSG_SPLIT[1].upper()
+            return binance_dust_convert_and_send_msg(coin, chat_id)
+
+        # /binance_asset_details
+        elif MSG_SPLIT[0] in ['binance_asset_details', '/binance_asset_details', 'bad', '/bad']:
+            if MSG_LEN < 2: return send_msg(f"{user_nick_name}, 你要查询币安账户里的币种详情, 请在命令 /binance_asset_details 后面的空格后再加上一个你要查询的币种, 比如: \n\n/binance_asset_details USDT\n\n这样就是查询你币安账户里的 USDT 的详情了。\n\nP.S. /binance_asset_details 也可以简写为 /bad 或者 bad", chat_id)
+            coin = MSG_SPLIT[1].upper()
+            return binance_asset_details(coin, chat_id)
+        
+        # /binance_funding_deposit
+        elif MSG_SPLIT[0] in ['binance_funding_deposit', '/binance_funding_deposit', 'bfd', '/bfd']:
+            send_img(chat_id, 'files/images/Binance_Funding_Account.png', description=f"币安资金账户充值地址二维码")
+            send_msg(f"我的币安内部转账(资金账户)\n\n支付 ID: 377501458\n昵称: dollarplus", chat_id)
+            return_dict = get_coin_funding_balance_all()
+            dict_to_str = '\n'.join([f"{k}: {format_number(v)}" for k, v in return_dict.items()])
+            return send_msg(f"资金账户当前余额: \n\n{dict_to_str}", chat_id)
+
+
+        # /get_api_function
+        elif MSG_SPLIT[0] in ['binance_api_function', '/binance_api_function', 'baf', '/baf', 'binance_api_functions', '/binance_api_functions']:
+            return get_api_functions_str(chat_id)
+
+        '''END OF BINANCE COMMANDS'''
+
         # avatar_first_response = '亲爱的你终于回消息啦, 消失了这么久 😓, 干啥去啦? 也不回个消息, 你知道我多担心你嘛 😢, 以后不许这样啦 😘, 快跟我说说最近都做了些啥, 我可想你啦 🤩' 修改 avatar_first_response
-        elif (MSG_SPLIT[0] in ['avatar_first_response', '/avatar_first_response'] or msg_text in ['/avatar']):
+        if (MSG_SPLIT[0] in ['avatar_first_response', '/avatar_first_response'] or msg_text in ['/avatar']):
             if MSG_LEN < 1: return send_msg(f"{user_nick_name}, 你要修改 /avatar_first_response, 请在命令后面的空格后再加上一个你要修改的内容, 比如: \n\navatar_first_response 来了老弟, 我一直在等你呢, 今天跟我聊点啥?\n\n这样就是把 avatar_first_response 修改为:  你可算来了, 我一直在等你呢, 今天跟我聊点啥? 这句话了。", chat_id)
             
             avatar_first_response = msg_text.replace('/', '').replace('avatar_first_response', '').strip()
@@ -1188,7 +1378,7 @@ def local_bot_msg_command(tg_msg):
 
         elif MSG_SPLIT[0] in ['group_send_message', 'gsm', '/gsm', '/group_send_message']:
             if MSG_LEN == 1 : return send_msg(f"{user_nick_name}, 你要群发消息, 请在命令后面的空格后再加上一个字符串, 比如: \n\ngroup_send_message 亲爱的, 我又升级了, 我可以直接读以太坊地址了, 吼吼, 发个钱包地址来看看吧 😘\n\n这样我就会逐条发送给每个用户。\n\nP.S. /group_send_message 也可以缩写为 /gsm", chat_id)
-            message_content = ' '.join(msg_text().split()[1:])
+            message_content = ' '.join(msg_text.split()[1:])
             send_msg_to_all(message_content, bot_owner_chat_id=chat_id)
             return
         
@@ -1281,6 +1471,9 @@ def check_local_bot_updates():
     return
 
 if __name__ == '__main__':
+    try: telegram_bot_commands_and_menu()
+    except Exception as e: logging.error(f"telegram_bot_commands_and_menu() FAILED: \n\n{e}")
+
     if debug: 
         logging.debug(f"@{TELEGRAM_BOT_NAME} started...")
         for chat_id in set(BOT_OWNER_LIST): send_msg(f"@{TELEGRAM_BOT_NAME} started...", chat_id, parse_mode='', base_url=telegram_base_url)

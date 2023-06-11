@@ -1,0 +1,17 @@
+credentials:
+  usernames:
+    preangel:
+      email: preangelleo@gmail.com
+      name: Lijie Wang
+      password: '$2b$12$9QG7RBgruQVimlHfNHyB6.0vz5ttMeeBJJk4mTypHldjynAxnitPq' # To be replaced with hashed password
+    laogege:
+      email: dollarpluseth@gmail.com
+      name: Laogege Coding
+      password: '$2b$12$IlPI0OQf3nE8DZ108CbGh.xYYJt8BtY4HGsqlx2nEVvOP7zHbpHXS' # To be replaced with hashed password
+cookie:
+  expiry_days: 30
+  key: 3b465be6761e2516a95bc98663890bc0
+  name: dashboard
+preauthorized:
+  emails:
+  - preangelleo@gmail.com

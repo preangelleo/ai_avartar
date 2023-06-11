@@ -1,0 +1,528 @@
+AWS or ALI Cloud 更新新的VPS服务器之后，要把之前常用的静态IP地址与之绑定，然后按照以下步骤操作：
+
+1) 通过VPS官方提供的Web SSH登录，打开 Root 及密码登录
+
+    sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+    sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    systemctl restart sshd
+
+2) sudo -i 并重新设置root密码：passwd
+
+3) Mac Terminal 和 其他 VPS 的Terminal删除过往RSA私钥，并重新添加私钥
+
+    ssh-keygen -R 8.209.210.222
+    ssh-copy-id -i ~/.ssh/id_rsa root@192.168.13.100
+    
+    （这个过程中需要输入刚刚设定的root密码确认）
+    如果还是无法通过公钥登陆，请用密码登录服务器后：
+    chown root:root /root && chmod 700 /root
+
+4) 修改 .bashrc并上传 .bash_aliases
+    nano ~/.bashrc
+    找到alias并在之前插入这段script：
+
+    if [ -f ~/.bash_aliases ]; then
+        . ~/.bash_aliases
+    fi
+
+    source ~/.bashrc
+
+    Mac Terminal 输入：
+    scp -r /Users/lgg/miniconda3/envs/master/shells/.bash_aliases root@8.209.210.222:/root
+    scp -r /Users/lgg/miniconda3/envs/master/shells/.bash_aliases root@35.77.93.188:/root
+
+    New VPS 终端输入（Finalshell）
+    source ~/.bash_aliases
+
+5) 修改VPS hostname
+    # https://cloud.tencent.com/developer/article/1649332 
+    hostnamectl
+    hostnamectl set-hostname laogege.org && hostnamectl set-hostname lgg_aws --static && hostnamectl set-hostname laogege.org --transient
+    hostnamectl set-hostname ali_176 && hostnamectl set-hostname ali_176 --static && hostnamectl set-hostname ali_176 --transient
+    hostnamectl set-hostname aliyun_cn && hostnamectl set-hostname aliyun_cn --static && hostnamectl set-hostname aliyun_cn --transient
+    hostnamectl set-hostname oracle_us && hostnamectl set-hostname sanjose --static 
+    hostnamectl set-hostname lgg_hk && hostnamectl set-hostname laogege_hk --static 
+    hostnamectl set-hostname laogege_japan && hostnamectl set-hostname laogege_jp --static 
+    hostnamectl set-hostname laogegecoding.com 
+    hostnamectl set-hostname "tg" --pretty
+    hostnamectl set-hostname tg_bot
+
+    result:
+
+    Static hostname: lgg_aws
+    Pretty hostname: lgg
+    Transient hostname: laogege.org
+            Icon name: computer-vm
+            Chassis: vm
+            Machine ID: dc0e5e04ded44497996ba682e11819e4
+            Boot ID: 13e286d9bba349f0b30d4221ca45c091
+        Virtualization: xen
+    Operating System: Ubuntu 18.04.1 LTS
+                Kernel: Linux 4.15.0-1021-aws
+        Architecture: x86-64
+
+    reboot
+
+6) 创建目录 master/json_datas, master/my_config, master/static/files, master/static/img
+    将老服务器 master 的目录结构复制到新的服务器
+    rsync -a --prune-empty-dirs --include '*/' --exclude '*' /root/master root@47.91.25.101:/root/major
+
+7) 安装Docker
+    # https://docs.docker.com/engine/install/ubuntu/ 
+    创建Docker目录
+    cd ~ && mkdir docker && mkdir docker/data && cd docker && mkdir nginx_pm && mkdir nginx_pm/data && mkdir portainer && mkdir portainer/data
+    Docker根据网站提示安装完之后：
+    apt install docker-compose
+    # 设置Docker开启自动启动
+    systemctl enable docker
+
+8) 安装Portainer
+    # https://docs.portainer.io/v/ce-2.9/start/install/server/docker/linux 
+    docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v /root/docker/portainer/data:/data portainer/portainer-ce:latest
+    VPS 后台打开 9443 和 8000 端口
+    https://13.231.64.102:9443/#!/2/docker/containers 
+
+9) 安装 Nginx proxy manager
+    # https://nginxproxymanager.com/
+    用以下内容生成一个新文件 docker-compose.yml，拖入 VPS 的 /root/master/docker/nginx_pm 目录
+
+    version: '3'
+    services:
+        app:
+            image: 'jc21/nginx-proxy-manager:latest'
+            restart: unless-stopped
+            ports:
+            - '80:80'
+            - '81:81'
+            - '443:443'
+            volumes:
+            - ./data:/data
+            - ./letsencrypt:/etc/letsencrypt
+
+    然后执行：
+    docker-compose up -d
+    VPS 后台打开 81 端口
+
+10) 设置子域名和SSL 
+    sudo ip addr show docker0
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+    Maker nginx_pm and portainer subdomain and sign ssl with Nginx proxy manager
+    设置端口内部访问：172.17.0.1 + port (then 可以在VPS关掉该端口)
+    https://nginxpm.laogege.org/
+    https://portainer.laogege.org/
+
+11) 安装Bitwarden
+    mkdir bitwarden && mkdir bitwarden/data 
+    https://hub.docker.com/r/bitwarden/server
+    docker pull vaultwarden/server:latest
+    docker run -d --name vaultwarden -v /root/docker/bitwarden/data:/data/ -p 8866:86 vaultwarden/server:latest
+    Failed login
+    Goto portainer,  Duplicate/Edit >> Advanced container settings >> ENV port from 80 >> 86
+    Then deploy again, replace previous one.
+    登录家庭OpenWrt Router 创建Docker Bridge网络
+    docker network create dp_network 
+    18979e5ce796ee5e5293cac7fe59b7fe8222fc132d98a5ca21796fac907a484f
+    docker pull vaultwarden/server:latest
+    docker run -d --name vaultwarden -v /root/docker/bitwarden/data:/data/ -p 86:86 vaultwarden/server:latest
+    增加环境变量 ROCKET_PORT=80
+
+13) 安装Docker版的X-UI
+    # https://github.com/vaxilu/x-ui 
+    mkdir x-ui && cd x-ui
+    docker run -itd --network=host \
+        -v $PWD/db/:/etc/x-ui/ \
+        -v $PWD/cert/:/root/cert/ \
+        --name x-ui --restart=unless-stopped \
+        enwaiax/x-ui:latest
+    安装后，需要在Portainer里面增加Port 54321:54321, 12345:12345，重新部署，覆盖原来的
+
+14) 安装Docker版的Wordpress
+    # https://github.com/vaxilu/x-ui 
+    # https://hub.docker.com/_/wordpress
+    version: '3.1'
+    services:
+    wordpress:
+        image: wordpress
+        restart: always
+        ports:
+        - 82:80
+        - 7443:443
+        environment:
+        WORDPRESS_DB_HOST: 172.17.0.1:3306
+        WORDPRESS_DB_USER: dollarplus
+        WORDPRESS_DB_PASSWORD: o7JRanhDd7dGcy5EwA8e63hvWrxQn7C9
+        WORDPRESS_DB_NAME: wordpress_dp_db
+        volumes:
+        - /root/docker/wordpress/ssl:/ssl
+        - /root/docker/wordpress/data:/var/www/html
+    db:
+        image: mysql:5.7
+        restart: always
+        ports:
+        - 3306:3306
+        environment:
+        MYSQL_DATABASE: wordpress_dp_db
+        MYSQL_USER: dollarplus
+        MYSQL_PASSWORD: o7JRanhDd7dGcy5EwA8e63hvWrxQn7C9
+        MYSQL_RANDOM_ROOT_PASSWORD: 'o7JRanhDd7dGcy5EwA8e63hvWrxQn7C9'
+        volumes:
+        - /root/docker/wordpress/database:/var/lib/mysql
+    volumes:
+    wordpress: {}
+    db: {}
+    docker-compose -f stack.yml up -d
+    GENERATED ROOT PASSWORD: o7JRanhDd7dGcy5EwA8e63hvWrxQn7C9
+    Failed , 数据库连接Error，改不好。
+
+15) 安装 Anaconda (包含 Python3)
+    # https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh
+    # 64-Bit (x86) Installer (659 MB)
+    # https://docs.anaconda.com/anaconda/install/linux/
+    curl -o anaconda.sh https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh
+    
+    bash anaconda.sh
+    output: Anaconda3 will now be installed into this location: /root/anaconda3
+    export PATH=$PATH:/root/anaconda3/bin
+    source ~/.bashrc | sb (alias)
+    conda create -n env-master python=3.9
+    conda create -n hz_preangel python=3.9
+    conda config --set auto_activate_base false
+    conda init bash
+    source ~/.bashrc | sb (alias)
+    pip install -r requirements.txt
+
+    pip install "SQLAlchemy<2.0"
+    pip install pymysql
+    pip install pandas
+    pip install cryptography
+
+    pip install requests
+    pip install web3
+    pip install yfinance
+    pip install numpy
+    pip install plotly
+    pip install ccxt
+    
+    pip install tweepy
+    pip install qrcode
+    pip install bitly-api-py3
+    pip install finnhub-python
+    pip install uniswap-python
+    pip install mplfinance
+    pip install python-dotenv
+    pip install pytesseract
+    pip install ecdsa
+    pip install mysql-connector-python
+    pip install matplotlib
+    pip install cryptography
+    pip install pyotp
+    pip install pytz
+    pip install mnemonic
+    pip install streamlit
+    pip install streamlit-authenticator
+    pip install wget
+    pip install Pillow
+    pip install snscrape
+    pip install python-binance
+    pip install pyyaml
+    pip install googletrans
+    pip install selenium
+    pip install openai
+    pip install boto3
+
+    pip install -U scikit-learn
+    pip install st-annotated-text
+    pip install streamlit-aggrid
+    pip install binance-futures-connector
+    pip install ta
+    pip install pandas_ta
+
+    pip install MechanicalSoup
+
+    pip install configparser
+    pip3 install pickle5
+    pip install beautifulsoup4
+    python -m pip install instagrapi
+    pip install googlesearch-python
+
+    pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+16) 安装 MySQL server
+
+    backup from 8.209.210.222:
+    terminal>>
+    # mysqldump -u master -p binance_ltd_main db_daily_words > /root/backup/db_daily_words.sql
+    mysqldump -u root binance_ltd_main > backup_binance_ltd_main.sql
+    rsync -avz /root/master/backup_binance_ltd_main.sql root@47.91.25.101:/root/backup/
+    mysql>>
+    CREATE DATABASE `binance`;
+    terminal>>
+    mysql -u master -p binance < /root/backup/backup_binance_ltd_main.sql
+
+    OTHER STEPS FYI:
+    rsync -avz /var/lib/mysql/binance_ltd_main root@47.91.25.101:/root/backup/
+    rsync -avz /etc/mysql/my.cnf root@47.91.25.101:/root/backup/
+    https://www.percona.com/blog/recovering-table-structure-from-frm-files-using-dbsake/ 
+    Using dbsake to recover table structure from .frm files and process mysqldump output
+    https://www.stellarinfo.com/article/restore-data-from-frm-ibd-files.php
+    How to Restore Data from .FRM and .IBD Files
+
+    卸载 MySQL (From ChatGPT)
+    systemctl stop mysql.service
+    sudo apt-get remove --purge mysql-server mysql-client mysql-common -y
+    sudo rm -rf /etc/mysql /var/lib/mysql
+    sudo apt-get autoremove --purge -y
+    DONE SUCCESSFULLY
+
+    安装 MySQL:
+    # https://dev.mysql.com/downloads/mysql/
+    # https://www.youtube.com/watch?v=TG6WAnyeDRw 
+    sudo apt update
+    sudo apt upgrade
+    sudo apt install mysql-server
+    sudo systemctl status mysql
+    # netstat -tap | grep mysql
+
+    mysql -u root -p # 输入密码时直接按回车建
+    show databases;
+    create DATABASE binance_ltd_main;
+
+    CREATE USER 'master'@'localhost' IDENTIFIED BY 'your_password';
+    GRANT ALL PRIVILEGES ON *.* TO 'master'@'localhost';
+    FLUSH PRIVILEGES;
+
+    mysql -u master -p
+    use binance_ltd_main;
+
+    RESTORE DATABASE FROM BACKUP:
+    terminal>>
+    mysql -u master -p binance_ltd_main < /root/master/backup_binance_ltd_main.sql
+
+    设置允许外网访问：
+    mysql (root 登录)
+    use mysql;
+    select user, host from user;
+
+    GRANT ALL ON binance_ltd_main.* TO 'master'@'%';
+    FLUSH PRIVILEGES;
+
+    OTHER STEPS FYI:
+    cp /root/backup/binance_ltd_main/db_daily_words.frm /var/lib/mysql/binance_ltd_main/
+    sudo chown mysql:mysql /var/lib/mysql/binance_ltd_main/db_daily_words.frm
+    create table use above schema: 
+    cd /var/lib/mysql/ # check for new created .ibd file
+    ALTER TABLE `db_daily_words` DISCARD TABLESPACE;
+    cp /root/backup/binance_ltd_main/db_daily_words.ibd /var/lib/mysql/binance_ltd_main/
+    sudo chown mysql:mysql /var/lib/mysql/binance_ltd_main/db_daily_words.ibd
+    ALTER TABLE `db_daily_words` IMPORT TABLESPACE;
+    /var/lib/mysql/binance_ltd_main
+    SHOW VARIABLES LIKE 'datadir';
+    output: datadir       | /var/lib/mysql/
+    cd /var/lib/mysql/
+    output: -rw-r----- 1 mysql mysql 114688 Feb 24 07:40 db_daily_words.ibd
+    sudo service mysql stop
+
+    sudo service mysql start
+    service mysql status
+    systemctl status mysql
+    mysql -u master -p
+    use english_master;
+    SELECT * FROM db_daily_words;
+    SELECT * FROM db_daily_words LIMIT 1;
+
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'adfcbfab762eb5a65e53c88e82f18ebc';
+
+    GRANT ALL PRIVILEGES ON LAOGEGE_MAC_15_LOCAL.* TO 'laogege'@'localhost' WITH GRANT OPTION;
+    exit;
+    sudo service mysql stop
+    sudo service mysql start
+    use binance_ltd_main 
+    source /root/hz_preangel/tools/preangelfund.sql
+    source /Users/coding/Downloads/laogege_15
+    exit
+
+        # https://www.cnblogs.com/yuwensong/p/3955834.html 
+        mysql导入&导出sql文件
+
+        1.导出整个数据库
+        mysqldump -u 用户名 -p 数据库名 > 导出的文件名
+        mysqldump -u dbuser -p dbname > dbname.sql
+
+        2.导出一个表
+        mysqldump -u 用户名 -p 数据库名 表名> 导出的文件名
+        mysqldump -u dbuser -p dbname users> dbname_users.sql
+
+        3.导出一个数据库结构
+        mysqldump -u dbuser -p -d --add-drop-table dbname >d:/dbname_db.sql
+        -d 没有数据 --add-drop-table 在每个create语句之前增加一个drop table
+
+        4.导入数据库
+        常用source 命令
+        进入mysql数据库控制台，如
+        mysql -u root -p
+        mysql>use 数据库
+        然后使用source命令，后面参数为脚本文件(如这里用到的.sql)
+        mysql>source d:/dbname.sql
+
+17) 安装 Nodejs, npm, pm2
+    https://github.com/nodesource/distributions
+    curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+    sudo apt install nodejs
+    npm install pm2 -g
+    alias pmtg='pm2 start bot_main.py --name tg --interpreter python3'
+    alias pmst='pm2 start pm_run_streamlit.py --name st --interpreter python3'
+    alias pmucs='pm2 start pm_run_ssserver.py --name ss --interpreter python3'
+    alias pmqt='pm2 start quant_run.py --name qt --interpreter python3'
+    pm2 save
+    pm2 startup
+    [PM2] Remove init script via:
+    $ pm2 unstartup systemd
+
+18) for open whisper:
+    sudo apt-get install git
+    pip install git+https://github.com/openai/whisper.git
+    sudo apt-get install ffmpeg
+
+
+18) Run SSL for preangelfund.cn
+    https://freessl.cn/acme-deploy?domains=preangelfund.cn%2Cwww.preangelfund.cn
+    fc = "/root/.acme.sh/preangelfund.cn/fullchain.cer"
+    pk = "/root/.acme.sh/preangelfund.cn/preangelfund.cn.key"
+    (host='0.0.0.0', port=443, ssl_context=(fc, pk))
+
+
+19）AWS_jp 安装 typecho blog docker0
+    # https://blog.yangwn.top/archives/docs-002
+    # https://hub.docker.com/r/joyqi/typecho
+
+    version: '3.5'
+    services:
+      typecho:
+        image: joyqi/typecho:nightly-php7.4-apache
+        container_name: typecho_blog
+        restart: always
+        ports:
+          - 8080:80
+        environment:
+          TIMEZONE: Asia/Shanghai
+          MEMORY_LIMIT: 128M
+          MAX_POST_BODY: 100M
+        volumes:
+          - /root/docker/typecho/data:/app
+
+      db:
+        image: mysql:8.0
+        container_name: typecho_db
+        restart: always 
+        ports:
+          - 3306:3306
+        environment:
+          MYSQL_DATABASE: typecho_database
+          MYSQL_USER: typecho_admin
+          MYSQL_PASSWORD: typecho_464de63e9d0897e216dd6a37bdec6021
+          MYSQL_RANDOM_ROOT_PASSWORD: 'root_pwd_72b0a7a7026b02cf1918c9a843930536'
+        volumes:
+          - /root/docker/typecho/db:/var/lib/mysql
+        command:
+         - mysqld
+         - --character-set-server=utf8mb4
+         - --collation-server=utf8mb4_bin
+         - --skip-character-set-client-handshake
+         - --default-authentication-plugin=mysql_native_password
+         - --max_connections=100        
+         - --mysqlx_max_connections=100M        
+
+    docker-compose up -d
+
+
+20) Mtproto proxy docker //// Failed
+    # docker run -d -p 6443:6443 --name=mtproto --restart=always -v /root/docker/mtproto/data:/data alexdoesh/mtproxy:latest
+    sudo nano /etc/mtg-config.toml
+    secret = "9e845f1990d10304e51fdda7e5f0310310304e51fdd"
+    bind-to = "0.0.0.0:6443"
+    8.209.210.222
+    https://t.me/proxy?server=8.209.210.222&port=6443&secret=9e845f1990d10304e51fdda7e5f0310310304e51fdd
+    https://t.me/proxy?server=mt.laogegecoding.com&secret=9e845f1990d10304e51fdda7e5f0310310304e51fdd
+    最后启动失败...放弃
+
+
+21) 非 DOCKER 环境一键安装 Mtproto
+    wget -N --no-check-certificate https://raw.githubusercontent.com/ToyoDAdoubiBackup/doubi/master/mtproxy.sh && chmod +x mtproxy.sh && bash mtproxy.sh
+    如果启动失败, 就只能手动安装, 教程:
+    https://www.jianshu.com/p/e2c7bc1c780e 
+    2021手动编译安装Mtproxy踩坑记录
+
+
+22) SSL签名转换 crt 到 pem
+    openssl x509 -in certificate.crt -out fullchain.pem
+    openssl rsa -in private.key -text > privkey.pem
+
+
+23) ALI-HK-ECS
+    # 上传私钥(私钥登录设置)
+    ssh-copy-id -i ~/.ssh/id_rsa root@47.57.234.199
+    # 设置 alias 本地快捷登录
+    alias s199='ssh root@47.57.234.199'
+    # 上传 bash_aliases 文件
+    alias salieip = 'scp -r /Users/lgg/miniconda3/envs/master/shells/.bash_aliases root@47.57.234.199:/root
+
+
+24) ucloud_sh 国内vps 装 ssserver 翻墙回国
+    https://www.youtube.com/watch?v=GLmU-9zLyk4&t=369s
+    https://github.com/duyuanch/blog/blob/master/docs/%E5%9B%9E%E5%9B%BD%E8%8A%82%E7%82%B9%E6%90%AD%E5%BB%BA.md
+
+    apt install python3 # 安装python3解释器
+    pip3 install https://github.com/shadowsocks/shadowsocks/archive/master.zip -U # 安装官方python版本ss
+    ssserver -m aes-256-cfb -p 12345 -k LeoWangIsMYdaDy_haliluyA
+    sed -i 's/cleanup/reset/' /usr/local/lib/python3.6/site-packages/shadowsocks/crypto/openssl.py # 如果报错执行
+    nohup ssserver -m aes-256-cfb -p 15251 -k abc@123 & # 后台运行
+
+
+25）ubuntu desktop 系统
+    - 开启 ssh:
+        sudo apt-get update
+        sudo apt-get install openssh-server
+        sudo ps -e |grep ssh
+        sudo service ssh start
+    - 安装 python
+        // https://zh-cn.linuxcapable.com/%E5%A6%82%E4%BD%95%E5%9C%A8-ubuntu-22-04-lts-%E4%B8%8A%E5%AE%89%E8%A3%85-python-pip/
+        sudo apt update && sudo apt upgrade -y
+        sudo add-apt-repository ppa:deadsnakes/ppa -y
+        sudo apt-get update
+        sudo apt install python3.9 -y
+        sudo apt install python3-pip
+
+
+26) 手动安装 Ubuntu 22 Server 在 GK50 上（8G 内存）      
+    通配符查找文件教程：https://www.cnblogs.com/lixuwu/p/7816335.html
+
+27) Mac M1 / Ubuntu Server / Ubuntu Desktop MySQL 安装:
+    Mysql 操作 https://www.huaweicloud.com/zhishi/edits-15756135.html
+    // https://blog.csdn.net/weixin_43108793/article/details/113390879 
+    // https://blog.csdn.net/weixin_58089927/article/details/122061041
+    sudo mysql
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'xxxxxxxx';
+    sudo mysql_secure_installation // 提示是否修改 root 密码的时候选择 n
+    mysql -u root -p 'xxxxxxxxxx'/// 以后只能这样登录（回车后，根据提示输入密码）
+    CREATE DATABASE LAOGEGE_UBUNTU_LOCAL; // 名字必须大写
+    CREATE USER 'master'@'%' IDENTIFIED BY 'xxxxxxxx';
+    GRANT ALL ON *.* TO 'master'@'%';
+    FLUSH PRIVILEGES;
+    用 nano /etc/mysql/mysql.conf.d/mysqld.cnf 编辑文件
+    bind-address = 0.0.0.0  # 表示允许任何主机登陆 MySQL
+    ALTER USER 'master'@'%' IDENTIFIED WITH mysql_native_password BY 'xxxxxxx';
+
+28) Change server timezone:
+    cd /usr/share/zoneinfo
+    cp -p /etc/localtime /etc/localtime-back
+    mv /etc/localtime /etc/localtime-back
+    ln -s /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
+    date -R
+
+29）手动备份Mysql数据库：
+password: 
+mysqldump -u master -p binance_ltd_main db_daily_words > /root/backup/db_daily_words.sql
+rsync -avz /root/backup/db_daily_words.sql root@47.91.25.101:/root/backup/
+
+mysqldump -u root binance_ltd_main > /root/backup/binance_ltd_main.sql
+rsync -avz /root/backup/binance_ltd_main.sql root@47.91.25.101:/root/backup/

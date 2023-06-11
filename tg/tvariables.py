@@ -12,6 +12,7 @@ if place_holder:
     OPENAI_API_KEY = owner_parameters_dict.get('OPENAI_API_KEY')
     BOT_TOKEN = owner_parameters_dict.get('BOT_TOKEN')
     BOT_USERNAME = owner_parameters_dict.get('BOT_USERNAME')
+    WECHATY_NAME = owner_parameters_dict.get('WECHATY_NAME')
     USER_TELEGRAM_LINK = owner_parameters_dict.get('USER_TELEGRAM_LINK')
     BOTOWNER_CHAT_ID = owner_parameters_dict.get('BOTOWNER_CHAT_ID')
     BOTCREATER_CHAT_ID = owner_parameters_dict.get('BOTCREATER_CHAT_ID')
@@ -38,6 +39,7 @@ if place_holder:
     # 查看当前目录并决定 TELEGRAM_BOT_RUNNING 的值
     TELEGRAM_BOT_RUNNING = BOT_TOKEN
     TELEGRAM_BOT_NAME = BOT_USERNAME
+    WECHATY_BOT_NAME = WECHATY_NAME
     BOT_OWNER_LIST = [BOTOWNER_CHAT_ID, BOTCREATER_CHAT_ID]
 
     openai.api_key = OPENAI_API_KEY
@@ -53,7 +55,7 @@ if place_holder:
 
     BOTCREATER_TELEGRAM_HANDLE = '@laogege6'
 
-    BOTCREATER_TEST_BOT = ['leowang_bot', 'leowang_test_bot']
+    BOTCREATER_TEST_BOT = ['leowang_bot', 'Leowang_test_bot']
 
     # Telegram base URL
     telegram_base_url = "https://api.telegram.org/bot" + TELEGRAM_BOT_RUNNING + "/"    
@@ -648,20 +650,18 @@ def chat_gpt_english(prompt, gpt_model=OPENAI_MODEL):
 
 # 定义一个 chat_gpt_english() 的前置函数, 先检查用户的 prompt 是否在历史数据库中出现过, 如果出现过就直接调用相应的 explanation_gpt, 如果没有记录就调用 chat_gpt_english() 生成新的 explanation 发给用户 from_id 并记录到数据库中
 def chat_gpt_english_explanation(chat_id, prompt, gpt_model=OPENAI_MODEL):
-    if not chat_id or not prompt: return
-    prompt = prompt.lower().strip()
+    if not prompt: return
     with Session() as session:
         # 如果 fronm_id 不存在于表中, 则插入新的数据；如果已经存在, 则更新数据
         explanation_exists = session.query(exists().where(GptEnglishExplanation.word == prompt)).scalar()
         if not explanation_exists:
-            send_msg(f"收到, 我我去找 EnglishGPT 老师咨询一下 {prompt} 的意思, 然后再来告诉你 😗, 1 分钟以内答复你哈...", chat_id, parse_mode='', base_url=telegram_base_url)
             gpt_explanation=chat_gpt_english(prompt, gpt_model)
             new_explanation = GptEnglishExplanation(word=prompt, explanation=gpt_explanation, update_time=datetime.now(), gpt_model=gpt_model)
             session.add(new_explanation)
             session.commit()
         else: gpt_explanation = session.query(GptEnglishExplanation.explanation).filter(GptEnglishExplanation.word == prompt).first()[0]
-    if gpt_explanation: send_msg(gpt_explanation, chat_id)
-    return
+    if chat_id and gpt_explanation: send_msg(gpt_explanation, chat_id)
+    return gpt_explanation
 
 '''    class GptStory(Base):
         __tablename__ = 'gpt_story'
@@ -1331,6 +1331,23 @@ def create_news_podcast(filepath = '', prompt = '', openai_model=OPENAI_MODEL):
 
     return filepath_news_mp3
 
+
+def create_crypto_news(filepath = '', prompt = '', openai_model=OPENAI_MODEL):
+    if not filepath and not prompt: return 
+
+    if filepath and not prompt: 
+        with open(filepath, 'r') as f: prompt = f.read()
+
+    if not prompt: return
+
+    message = chat_gpt_full(prompt, news_reporter_system_prompt, news_reporter_user_prompt, news_reporter_assistant_prompt, openai_model, OPENAI_API_KEY)
+
+    filepath_news = filepath.replace('_snippet.txt', '_news.txt')
+    with open(filepath_news, 'w') as f: f.write(message)
+
+    return filepath_news
+
+
 # 通过 ffmpeg 合并英文语音文件和中文语音文件
 def merge_audio_files(audio_files):
     if len(audio_files) == 1: return audio_files[0]
@@ -1382,6 +1399,43 @@ def create_news_and_audio_from_bing_search(query, chat_id, parse_mode='', base_u
     send_msg(tweet_content, chat_id, parse_mode=parse_mode, base_url=base_url)
 
     return
+
+
+# 搜索热门币种的新闻并撰写中文报道
+def create_crypto_news_from_bing_search(query, chat_id, parse_mode='', base_url=telegram_base_url):
+    filepath = bing_search(query, mkt='en-US')
+
+    snippet_total = [f"Today's top news about {query}\n\n"]
+    with open(filepath, 'r') as file:
+        i = 1
+        for line in file:
+            if 'SNIPPET: ' in line: 
+                snippet_total.append(line.replace('-','').replace('SNIPPET: ', f'{str(i)}. '))
+                i += 1
+
+    snippet_text_filepath = filepath.replace('.txt', '_snippet.txt')
+    with open(snippet_text_filepath, 'w') as file:
+        for line in snippet_total:
+            file.write(line + '\n')
+
+    filepath_news_txt = create_crypto_news(snippet_text_filepath, prompt = '')
+    with open(filepath_news_txt, 'r') as f: text_contents = f.read()
+
+    send_msg(text_contents, chat_id, parse_mode, base_url)
+
+    # filepath_news_txt_cn = filepath_news_txt.replace('.txt', '_cn.txt')
+    text_cn = chat_gpt_regular(f"{translate_report_prompt}{text_contents}", OPENAI_API_KEY, OPENAI_MODEL)
+
+    # 将中文文本添加至英文文本的末尾
+    with open(filepath_news_txt, 'a') as file: file.write(text_cn)
+
+    # with open(filepath_news_txt_cn, 'w') as file: file.write(text_cn)
+    send_msg(text_cn, chat_id, parse_mode=parse_mode, base_url=base_url)
+    description = f"Today's news about: {query.split()[-1]}"
+    send_file(chat_id, filepath_news_txt, description=description, base_url=base_url)
+
+    return
+
 
 # 定义一个TTS 函数, 判断输入的内容是中文还是英文, 然后调用不同的 TTS API 创建并返回filepath, 如果提供了 chat_id, 则将 filepath send_audio 给用户
 def create_audio_from_text(text, chat_id=''):
@@ -1861,9 +1915,101 @@ def generate_clone_voice_audio_with_eleven_labs(content, from_id, chat_id, user_
         send_msg(f"{eleven_labs_tts_failed_alert}\n如果你的账号正常, 请转发本消息给 @laogege6 帮忙诊断一下把。", chat_id, parse_mode='', base_url=telegram_base_url)
         return False
 
+'''
+/help # 帮助
+/whoami # 获取 chat_id
+/pay # 获取充值地址
+/check_bill # 查询充值
+/avatar # 获取我的头像
+/image # 生成图片
+/pdf # 针对PDF询问
+/revise # 修改文案
+/translate # 翻译文案
+/emoji # 文字换成表情
+/wolfram # 计算数学公式
+/wikipedia # 维基百科查询
+/twitter # 撰写推文
+/summarize # 文案总结
+/bing # 搜索并写新闻
+/make_voice # 生成语音
+/password # 生成密码
+/feedback # 反馈建议
+/commands # 命令列表
+/sch # 保存聊天记录
+/write_story # 创作故事
+/clear_memory # 清除记录
+/mid # Midjourney提示词
+/ask_me_anything # 业务咨询
+/more_information
+/clone_my_voice # 克隆我的声音
+/speak_my_voice # 用我的声音朗读
+/close_clone_voice # 关闭克隆流程
+/confirm_my_voice # 确认克隆
+'''
+
+
+def telegram_bot_commands_and_menu():
+
+    # Define the list of commands
+    COMMANDS = [
+        {'command': 'whoami', 'description': '获取 chat_id'},
+        {'command': 'pay', 'description': '获取我的充值地址'},
+        {'command': 'check_bill', 'description': '查询充值到账'},
+        {'command': 'image', 'description': '文字生成图片'},
+        {'command': 'pdf', 'description': '针对PDF询问'},
+        {'command': 'revise', 'description': '修改给定的文案'},
+        {'command': 'translate', 'description': '翻译给定的文案'},
+        {'command': 'emoji', 'description': '将文字换成表情'},
+        {'command': 'wolfram', 'description': '计算科学公式'},
+        {'command': 'wikipedia', 'description': '维基百科查询关键词'},
+        {'command': 'twitter', 'description': '为给定文案撰写推文'},
+        {'command': 'summarize', 'description': '总结给定的文案'},
+        {'command': 'bing', 'description': '搜索并将结果写成新闻'},
+        {'command': 'make_voice', 'description': '文字生成语音'},
+        {'command': 'feedback', 'description': '给老板反馈建议'},
+        {'command': 'save_chat_history', 'description': '下载聊天记录'},
+        {'command': 'write_story', 'description': '基于给定的关键词创作童话故事'},
+        {'command': 'clear_memory', 'description': '清除聊天记录数据库'},
+        {'command': 'midjourney', 'description': '基于关键词写出Mid提示词'},
+        {'command': 'ask_me_anything', 'description': 'AMA业务咨询'},
+        {'command': 'more_information', 'description': '我也要一个这样的 Bot'},
+        {'command': 'clone_my_voice', 'description': '克隆我的声音'},
+        {'command': 'speak_my_voice', 'description': '用我克隆的声音朗读'},
+        {'command': 'close_clone_voice', 'description': '关闭声音克隆流程'},
+        {'command': 'confirm_my_voice', 'description': '确认克隆声音源文件'},
+    ]
+
+    # Function to set the bot commands
+    def set_commands():
+        url = telegram_base_url + 'setMyCommands'
+        response = requests.post(url, json={'commands': COMMANDS})
+        if response.status_code == 200: print('Bot commands updated!')
+        else: print('Failed to update bot commands.')
+
+    # Call the function to set the commands
+    set_commands()
+    return 
+
+# Function to update the bot's avatar image
+def update_avatar(image_path):
+    url = telegram_base_url + 'setMyProfilePhoto'
+    
+    # Read the image file
+    with open(image_path, 'rb') as image_file:
+        files = {
+            'photo': image_file
+        }
+        
+        response = requests.post(url, files=files)
+        print(response.status_code)
+        print(response.content)
+        if response.status_code == 200: print('Bot avatar image updated!')
+        else: print('Failed to update bot avatar image.')
+
 
 if __name__ == '__main__':
     print(f"tvariables.py is running...")
+    # telegram_bot_commands_and_menu()
 
     # if BOTOWNER_CHAT_ID == BOTCREATER_CHAT_ID:
         # try: 

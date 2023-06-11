@@ -34,3 +34,5 @@ pre-commit
 black
 flake8
 autopep8
+pypdf
+wechaty~=0.10

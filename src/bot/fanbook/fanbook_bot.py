@@ -86,8 +86,9 @@ class FanbookBot(Bot):
             'chat_id': int(chat_id),
             'text': msg,
             'desc': msg,
-            'reply_to_message_id': int(reply_to_message_id),
         }
+        if reply_to_message_id:
+            payload['reply_to_message_id'] = int(reply_to_message_id)
 
         async with httpx.AsyncClient() as client:
             response = await client.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)

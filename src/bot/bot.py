@@ -412,10 +412,17 @@ class Bot(ABC):
 
         reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
 
+        if msg.is_private:
+            # if it is private chat, then reply to the message without inline msg
+            reply_to_message_id = None
+        else:
+            # if it is group chat, then reply to the message with inline msg
+            reply_to_message_id = msg.message_id
+
         if reply:
             try:
                 await self.send_msg_async(
-                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.message_id
+                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=reply_to_message_id
                 )
             except Exception as e:
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")

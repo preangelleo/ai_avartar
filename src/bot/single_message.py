@@ -21,6 +21,7 @@ class SingleMessage:
         caption,
         is_mentioned,
         reply_to_message_text,
+        message_id,
     ):
         self.raw_msg = raw_msg
         self.from_id = str(from_id)
@@ -41,6 +42,7 @@ class SingleMessage:
         self.caption = caption
         self.reply_to_message_text = reply_to_message_text
         self.is_mentioned = is_mentioned
+        self.message_id = message_id
 
     @property
     def should_be_ignored(self) -> bool:

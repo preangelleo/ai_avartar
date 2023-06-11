@@ -310,6 +310,9 @@ class Bot(ABC):
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
+        if msg.chat_id in self.bot_admin_id_list:
+            self.bot_owner_branch_handler.handle_single_msg(msg, self)
+
         # 英语查单词和 英语老师 Amy
         if (
             len(msg.msg_text.split()) == 1
@@ -322,13 +325,13 @@ class Bot(ABC):
 
         # 如果是群聊但是没有 at 机器人, 则在此处返回
         if msg.should_be_ignored:
-            logging.debug("should ignore this msg", msg.raw_msg)
+            logging.info("should ignore this msg", msg.raw_msg)
             return
 
         # 如果用户发了一个简单的 2 个字节的词, 那就随机回复一个表示开心的 emoji
         if len(msg.msg_text) <= 2 or msg.msg_text in reply_emoji_list:
             reply = random.choice(emoji_list_for_happy)
-            self.send_msg(reply, msg.chat_id)
+            await self.send_msg_async(msg=reply, chat_id=msg.chat_id)
             return
 
         try:

@@ -136,6 +136,9 @@ if __name__ == '__main__':
     )
     FanbookBot(
         bot_name=FANBOOK_BOT_NAME,
+        bot_owner_id=FANBOOK_BOT_OWNER_ID,
+        bot_creator_id=FANBOOK_BOT_CREATOR_ID,
+        bot_owner_name=FANBOOK_BOT_OWNER_NAME,
         # TODO(kezhang@): You should either implement these 4 branch for Fanbook or replace them with NoOpBranch
         document_branch_handler=None,
         photo_branch_handler=None,
@@ -148,7 +151,4 @@ if __name__ == '__main__':
         bot_owner_branch_handler=NoOpBranch(),
         english_teacher_branch_handler=NoOpBranch(),
         coinmarketcap_branch_handler=NoOpBranch(),
-        bot_owner_id=FANBOOK_BOT_OWNER_ID,
-        bot_creator_id=FANBOOK_BOT_CREATOR_ID,
-        bot_owner_name=FANBOOK_BOT_OWNER_NAME,
     ).run()

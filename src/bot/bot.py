@@ -303,6 +303,11 @@ class Bot(ABC):
         Handle a single message of class SingleMessage.
         """
 
+        # 如果是群聊但是没有 at 机器人, 则在此处返回
+        if msg.should_be_ignored:
+            logging.info("should ignore this msg", msg.raw_msg)
+            return
+
         # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
         if not self.user_is_legit(msg, msg.from_id):
             return
@@ -322,11 +327,6 @@ class Bot(ABC):
             and is_english(msg.msg_text)
         ):
             self.english_teacher_branch_handler.handle_single_msg(msg, self)
-
-        # 如果是群聊但是没有 at 机器人, 则在此处返回
-        if msg.should_be_ignored:
-            logging.info("should ignore this msg", msg.raw_msg)
-            return
 
         # 如果用户发了一个简单的 2 个字节的词, 那就随机回复一个表示开心的 emoji
         if len(msg.msg_text) <= 2 or msg.msg_text in reply_emoji_list:

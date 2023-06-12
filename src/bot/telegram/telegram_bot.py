@@ -1,5 +1,9 @@
+import json
 import threading
 import time
+
+import asyncio
+import httpx
 
 from src.bot.bot_branch.audio_branch.telegram_audio_branch import (
     TelegramAudioBranch,
@@ -44,7 +48,9 @@ class MessageThread(threading.Thread):
         self.tg_msg = tg_msg
 
     def run(self):
-        self.bot.handle_single_msg(build_from_telegram_msg(tg_msg=self.tg_msg))
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        asyncio.get_event_loop().run_until_complete(self.bot.handle_single_msg(build_from_telegram_msg(tg_msg=self.tg_msg)))
 
 
 class TelegramBot(Bot):
@@ -78,6 +84,36 @@ class TelegramBot(Bot):
             return print(f"ERROR: send_msg() failed for:\n{e}\n\nOriginal message:\n{msg}")
         logging.debug(f"send_msg(): {msg}")
         return True
+
+    async def send_msg_async(self, msg: str, chat_id, parse_mode=None, reply_to_message_id=None):
+        if not msg:
+            logging.error(f"Empty msg: msg_object={msg}, chat_id={chat_id}, parse_mode={parse_mode}")
+            return
+
+        if not chat_id:
+            logging.error(f"Missing chat_id: msg_object={msg}, chat_id={chat_id}, parse_mode={parse_mode}")
+            return
+
+        url = get_send_msg_url()
+        payload = {
+            "text": msg,
+            "parse_mode": parse_mode or '',
+            "disable_web_page_preview": True,
+            "disable_notification": True,
+            "reply_to_message_id": reply_to_message_id,
+            "chat_id": chat_id,
+        }
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, data=json.dumps(payload), headers=headers)
+
+        logging.info(f'send_msg(): {response.json()}')
+
+        return response.json()
 
     def send_audio(self, audio_path, chat_id):
         if not audio_path or not chat_id:

@@ -328,12 +328,6 @@ class Bot(ABC):
         ):
             self.english_teacher_branch_handler.handle_single_msg(msg, self)
 
-        # 如果用户发了一个简单的 2 个字节的词, 那就随机回复一个表示开心的 emoji
-        if len(msg.msg_text) <= 2 or msg.msg_text in reply_emoji_list:
-            reply = random.choice(emoji_list_for_happy)
-            await self.send_msg_async(msg=reply, chat_id=msg.chat_id)
-            return
-
         try:
             save_avatar_chat_history(
                 msg.msg_text,

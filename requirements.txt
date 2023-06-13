@@ -22,7 +22,7 @@ wechaty
 pymysql
 pydub
 mnemonic
-sqlalchemy
+sqlalchemy==1.4.46
 replicate
 chardet
 python-dotenv

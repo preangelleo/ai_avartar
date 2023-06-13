@@ -20,5 +20,7 @@ def build_from_telegram_msg(tg_msg):
         msg_audio=tg_msg['message'].get('audio'),
         msg_sticker=tg_msg['message'].get('sticker', {}).get('emoji'),
         caption=tg_msg['message'].get('caption', ''),
+        is_mentioned=False,
         reply_to_message_text=tg_msg['message'].get('reply_to_message', {}).get('text'),
+        message_id=None,
     )

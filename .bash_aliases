@@ -28,6 +28,13 @@ alias pmtg='pm2 start local_bot.py --name tg --interpreter python3'
 alias prtg='pm2 restart tg'
 alias pdtg='pm2 delete tg'
 alias pstg='pm2 stop tg'
+alias pmlgtg='pm2 logs tg'
+
+alias pmfb='pm2 start ai_avartar/src/bot/fanbook/fanbook_bot.py --name fb --interpreter python3'
+alias prfb='pm2 restart fb'
+alias pdfb='pm2 delete fb'
+alias psfb='pm2 stop fb'
+alias pmlgtg='pm2 logs fb'
 
 alias pmwb="pm2 start npm --name wb -- start"
 alias prwb="pm2 restart wb"

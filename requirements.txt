@@ -32,4 +32,4 @@ pre-commit
 black
 asyncio
 httpx
-sentry-sdk
+sentry-sdk==1.25.1

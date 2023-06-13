@@ -22,6 +22,8 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 
+from sentry_sdk import set_measurement
+
 import random
 import os
 import json
@@ -340,6 +342,7 @@ class Bot(ABC):
         except Exception as e:
             return logging.error(f"save_avatar_chat_history() failed: {e}")
 
+        set_measurement('msg_length', len(msg.msg_text))
         reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
 
         if msg.is_private:

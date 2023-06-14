@@ -24,6 +24,7 @@ from src.bot.fanbook.utils.constants import (
     TEST_BOT_ID,
 )
 from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
+from prometheus_client import start_http_server
 
 
 class FanbookBot(Bot):
@@ -136,6 +137,9 @@ class FanbookBot(Bot):
 
 
 if __name__ == '__main__':
+    # Start the prometheus_client server at port 8000
+    start_http_server(8000)
+    # Start sentry monitor
     sentry_sdk.init(
         dsn="https://9201c284873c436dbae2c576b8319f7f@o4505276925214720.ingest.sentry.io/4505276928491520",
         # Set traces_sample_rate to 1.0 to capture 100%

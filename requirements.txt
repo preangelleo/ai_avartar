@@ -33,3 +33,4 @@ black
 asyncio
 httpx
 sentry-sdk==1.25.1
+prometheus-client

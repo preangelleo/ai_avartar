@@ -22,7 +22,7 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 
-from sentry_sdk import set_measurement
+from prometheus_client import Summary
 
 import random
 import os
@@ -32,6 +32,8 @@ import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
 from src.utils.prompt_template import reply_emoji_list, emoji_list_for_happy
+
+MSG_TEXT_LEN_METRICS = Summary('msg_text_len', 'Length of current message')
 
 
 class Bot(ABC):
@@ -342,7 +344,7 @@ class Bot(ABC):
         except Exception as e:
             return logging.error(f"save_avatar_chat_history() failed: {e}")
 
-        set_measurement('msg_length', len(msg.msg_text))
+        MSG_TEXT_LEN_METRICS.observe(len(msg.msg_text))
         reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
 
         if msg.is_private:

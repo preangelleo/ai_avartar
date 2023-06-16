@@ -1,3 +1,5 @@
+import time
+
 from src.utils.logging_util import logging
 from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg, check_if_bot_is_mentioned
 
@@ -25,6 +27,8 @@ from src.bot.fanbook.utils.constants import (
 )
 from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
 from prometheus_client import start_http_server
+
+from src.utils.metrics import SEND_MSG_LATENCY_METRICS
 
 
 class FanbookBot(Bot):
@@ -80,7 +84,10 @@ class FanbookBot(Bot):
         headers = {'Content-type': 'application/json'}
         payload = {'chat_id': int(chat_id), 'text': msg, 'desc': msg}
 
+        send_msg_start = time.perf_counter()
         response = requests.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)
+        SEND_MSG_LATENCY_METRICS.labels(len(msg) // 10 * 10).observe(
+            time.perf_counter() - send_msg_start)
         logging.debug(f'send_msg(): {response.json()}')
         return response.json()
 
@@ -95,7 +102,10 @@ class FanbookBot(Bot):
             payload['reply_to_message_id'] = int(reply_to_message_id)
 
         async with httpx.AsyncClient() as client:
+            send_msg_start = time.perf_counter()
             response = await client.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)
+            SEND_MSG_LATENCY_METRICS.labels(len(msg) // 10 * 10).observe(
+                time.perf_counter() - send_msg_start)
 
         logging.info(f'send_msg(): {response.json()}')
         return response.json()
@@ -115,10 +125,15 @@ class FanbookBot(Bot):
                 while True:
                     try:
                         message = await ws.recv()
-                        logging.info("Received message: %s", message)
                         obj = json.loads(message)
-                        if obj.get('action') == 'push':
+                        if obj.get('action') == 'error':
+                            if len(obj.get('data', [])) != 0:
+                                logging.error("Received error: %s", message)
+                        elif obj.get('action') == 'push':
+                            logging.info("Received push: %s", message)
                             asyncio.create_task(self.handle_push(obj))
+                        else:
+                            logging.info("Received message: %s", message)
                     except json.JSONDecodeError as e:
                         logging.error("JSONDecodeError: Invalid JSON format in the received message. Error: %s", e)
                     except ConnectionError as e:

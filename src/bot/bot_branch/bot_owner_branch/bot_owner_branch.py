@@ -18,7 +18,7 @@ class BotOwnerBranch(BotBranch):
                 f"{msg.user_nick_name}, 你好可爱啊 🤨, /mybots 这个指令是 @BotFather 的, 发给我没用哈, 请点击 @BotFather 过去设置我的参数吧! 😘",
                 msg.chat_id,
             )
-            return
+            return True
 
         elif MSG_SPLIT[0][1:].isdigit():
             try:

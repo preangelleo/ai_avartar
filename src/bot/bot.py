@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from datetime import date
 
@@ -22,7 +23,6 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 
-from prometheus_client import Summary
 
 import random
 import os
@@ -32,8 +32,7 @@ import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
 from src.utils.prompt_template import reply_emoji_list, emoji_list_for_happy
-
-MSG_TEXT_LEN_METRICS = Summary('msg_text_len', 'Length of current message')
+from src.utils.metrics import *
 
 
 class Bot(ABC):
@@ -247,7 +246,8 @@ class Bot(ABC):
 
     def user_is_legit(self, msg: SingleMessage, from_id):
         if not from_id:
-            return
+            NON_LEGIT_USER_COUNTER.labels(from_id, 'empty_from_id').inc()
+            return False
         user_priority = get_user_priority(from_id)
         logging.info(f"user_is_legit() user_priority: {user_priority}")
         if user_priority:
@@ -271,6 +271,7 @@ class Bot(ABC):
 
             # 非 owner, admin, vip, 有效期内的 paid 用户, 如果是黑名单用户则直接返回 False
             if user_priority.get('is_blacklist'):
+                NON_LEGIT_USER_COUNTER.labels(from_id, 'blacklist').inc()
                 return False
 
         return self.check_this_month_total_conversation(msg.user_nick_name, from_id)
@@ -295,6 +296,7 @@ class Bot(ABC):
                         f"{user_nick_name}, 你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {Params().free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。",
                         from_id,
                     )
+                    NON_LEGIT_USER_COUNTER.labels(from_id, 'exceed_free_talk_num').inc()
                     return False
                 else:
                     return True
@@ -309,6 +311,7 @@ class Bot(ABC):
 
         # 如果是群聊但是没有 at 机器人, 则在此处返回
         if msg.should_be_ignored:
+            IGNORED_MSG_COUNTER.inc()
             logging.info("should ignore this msg", msg.raw_msg)
             return
 
@@ -319,8 +322,14 @@ class Bot(ABC):
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
+        handle_single_msg_start = time.perf_counter()
         if msg.chat_id in self.bot_admin_id_list:
-            self.bot_owner_branch_handler.handle_single_msg(msg, self)
+            HANDLE_SINGLE_MSG_COUNTER.labels(msg.from_id, 'owner').inc()
+            MSG_TEXT_LEN_METRICS.labels(msg.from_id, 'owner').observe(len(msg.msg_text))
+            if self.bot_owner_branch_handler.handle_single_msg(msg, self):
+                SUCCESS_REPLY_COUNTER.labels('owner').inc()
+                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'owner').observe(time.perf_counter() - handle_single_msg_start)
+            return
 
         # 英语查单词和 英语老师 Amy
         if (
@@ -330,7 +339,11 @@ class Bot(ABC):
             and len(msg.msg_text) < 46
             and is_english(msg.msg_text)
         ):
-            self.english_teacher_branch_handler.handle_single_msg(msg, self)
+            HANDLE_SINGLE_MSG_COUNTER.labels(msg.from_id, 'english_teacher').inc()
+            MSG_TEXT_LEN_METRICS.labels(msg.from_id, 'english_teacher').observe(len(msg.msg_text))
+            if self.english_teacher_branch_handler.handle_single_msg(msg, self):
+                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'english_teacher').observe(time.perf_counter() - handle_single_msg_start)
+            return
 
         try:
             save_avatar_chat_history(
@@ -344,7 +357,8 @@ class Bot(ABC):
         except Exception as e:
             return logging.error(f"save_avatar_chat_history() failed: {e}")
 
-        MSG_TEXT_LEN_METRICS.observe(len(msg.msg_text))
+        HANDLE_SINGLE_MSG_COUNTER.labels(msg.from_id, 'chatgpt').inc()
+        MSG_TEXT_LEN_METRICS.labels(msg.from_id, 'chatgpt').observe(len(msg.msg_text))
         reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
 
         if msg.is_private:
@@ -356,11 +370,17 @@ class Bot(ABC):
 
         if reply:
             try:
+                REPLY_TEXT_LEN_METRICS.labels(msg.from_id, 'chatgpt').observe(len(reply))
                 await self.send_msg_async(
                     msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=reply_to_message_id
                 )
+                SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
+                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(time.perf_counter() - handle_single_msg_start)
             except Exception as e:
+                ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
+        else:
+            ERROR_COUNTER.labels('empty_chatgpt_reply', 'chatgpt').inc()
         return
 
     @abstractmethod

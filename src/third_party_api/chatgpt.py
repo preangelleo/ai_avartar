@@ -1,3 +1,5 @@
+import time
+
 import openai
 import pandas as pd
 
@@ -22,9 +24,28 @@ from src.utils.prompt_template import (
     midjourney_user_prompt_fomula,
     midjourney_assistant_prompt_fomula,
 )
+from src.utils.metrics import ERROR_COUNTER, OPENAI_LATENCY_METRICS
 
 
-def chat_gpt_full(
+def get_total_content_lenght_from_messages(msg_history):
+    res = 0
+    for msg in msg_history:
+        res += len(msg.get('content', ''))
+    return res
+
+
+async def get_response_from_chatgpt(model, messages, branch):
+    openai_start = time.perf_counter()
+    response = await openai.ChatCompletion.acreate(
+        model=model,
+        messages=messages
+    )
+    OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
+        time.perf_counter() - openai_start)
+    return response
+
+
+async def chat_gpt_full(
     prompt,
     system_prompt='',
     user_prompt='',
@@ -44,7 +65,7 @@ def chat_gpt_full(
     # Load your API key from an environment variable or secret management service
     openai.api_key = chatgpt_key
     print(f"DEBUG: {dynamic_model} 正在创作...")
-    response = openai.ChatCompletion.create(
+    response = await get_response_from_chatgpt(
         model=dynamic_model,
         messages=[
             {"role": "system", "content": system_prompt},
@@ -52,7 +73,7 @@ def chat_gpt_full(
             {"role": "assistant", "content": assistant_prompt},
             {"role": "user", "content": prompt},
         ],
-    )
+        branch='full')
 
     reply = response['choices'][0]['message']['content']
     reply = reply.strip('\n').strip()
@@ -71,6 +92,7 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             Params().engine,
         )
     except Exception as e:
+        ERROR_COUNTER.labels('error_query_avatar_chat_history', 'chatgpt').inc()
         logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
         return
 
@@ -94,11 +116,12 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             previous_role = user_or_assistant
         msg_history.append({"role": "user", "content": msg_text})
 
-        response = await openai.ChatCompletion.acreate(model=Params().OPENAI_MODEL, messages=msg_history)
+        response = await get_response_from_chatgpt(model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply')
         reply = response['choices'][0]['message']['content']
         reply = reply.strip('\n').strip()
 
     except Exception as e:
+        ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
         logging.error(f"local_chatgpt_to_reply chat_gpt() failed: \n\n{e}")
 
     if not reply:
@@ -128,40 +151,49 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
     return reply
 
 
-def chat_gpt_english(prompt, gpt_model=Params().OPENAI_MODEL):
+async def chat_gpt_english(prompt, gpt_model=Params().OPENAI_MODEL):
     if not prompt:
         return
     logging.info(f"chat_gpt_english() user prompt: {prompt}")
-    response = openai.ChatCompletion.create(
-        model=gpt_model,
-        messages=[
-            {"role": "system", "content": english_system_prompt},
-            {"role": "user", "content": english_user_prompt},
-            {"role": "assistant", "content": english_assistant_prompt},
-            # {"role": "user", "content": 'Vector database technology has continued to improve, offering better performance and more personalized user experiences for customers.'},
-            # {"role": "assistant", "content": '/英译中:\n矢量数据库技术一直在不断改进, 为客户提供更佳的性能和更个性化的用户体验。'},
-            # {"role": "user", "content": '''To address the challenges of digital intelligance in digital economy, artificial intelligence generate content (AIGC) has emerge. AIGC use artificial intalligence to assist or replace manual content generation by generating content based on userinputted keywords or requirements. '''},
-            # {"role": "assistant", "content": english_assistant_prompt_2},
-            # {"role": "user", "content": '''vector database'''},
-            # {"role": "assistant", "content": english_assistant_prompt_3},
-            # {"role": "user", "content": '''LLaMA'''},
-            # {"role": "assistant", "content": english_assistant_prompt_4},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    reply = response['choices'][0]['message']['content']
-    reply = reply.strip('\n').strip()
+
+    try:
+        response = await get_response_from_chatgpt(
+            model=gpt_model,
+            messages=[
+                {"role": "system", "content": english_system_prompt},
+                {"role": "user", "content": english_user_prompt},
+                {"role": "assistant", "content": english_assistant_prompt},
+                # {"role": "user", "content": 'Vector database technology has continued to improve, offering better performance and more personalized user experiences for customers.'},
+                # {"role": "assistant", "content": '/英译中:\n矢量数据库技术一直在不断改进, 为客户提供更佳的性能和更个性化的用户体验。'},
+                # {"role": "user", "content": '''To address the challenges of digital intelligance in digital economy, artificial intelligence generate content (AIGC) has emerge. AIGC use artificial intalligence to assist or replace manual content generation by generating content based on userinputted keywords or requirements. '''},
+                # {"role": "assistant", "content": english_assistant_prompt_2},
+                # {"role": "user", "content": '''vector database'''},
+                # {"role": "assistant", "content": english_assistant_prompt_3},
+                # {"role": "user", "content": '''LLaMA'''},
+                # {"role": "assistant", "content": english_assistant_prompt_4},
+                {"role": "user", "content": prompt},
+            ],
+            branch='english'
+        )
+        reply = response['choices'][0]['message']['content']
+        reply = reply.strip('\n').strip()
+
+    except Exception as e:
+        ERROR_COUNTER.labels('error_call_open_ai', 'english_teacher').inc()
+        logging.error(f"chat_gpt_english() failed: \n\n{e}")
+        return
+
     return reply
 
 
-def chat_gpt_regular(prompt, chatgpt_key=Params().OPENAI_API_KEY, use_model=Params().OPENAI_MODEL):
+async def chat_gpt_regular(prompt, chatgpt_key=Params().OPENAI_API_KEY, use_model=Params().OPENAI_MODEL):
     if not prompt:
         return
 
     # Load your API key from an environment variable or secret management service
     openai.api_key = chatgpt_key
 
-    response = openai.ChatCompletion.create(model=use_model, messages=[{"role": "user", "content": prompt}])
+    response = await get_response_from_chatgpt(model=use_model, messages=[{"role": "user", "content": prompt}], branch='regular')
 
     reply = response['choices'][0]['message']['content']
     reply = reply.strip('\n').strip()
@@ -169,12 +201,12 @@ def chat_gpt_regular(prompt, chatgpt_key=Params().OPENAI_API_KEY, use_model=Para
     return reply
 
 
-def chat_gpt_write_story(bot, chat_id, from_id, prompt, gpt_model=Params().OPENAI_MODEL):
+async def chat_gpt_write_story(bot, chat_id, from_id, prompt, gpt_model=Params().OPENAI_MODEL):
     if not prompt:
         return
     try:
         logging.info(f"chat_gpt_write_story() user prompt: {prompt}")
-        response = openai.ChatCompletion.create(
+        response = await get_response_from_chatgpt(
             model=gpt_model,
             messages=[
                 {"role": "system", "content": kids_story_system_prompt},
@@ -182,6 +214,7 @@ def chat_gpt_write_story(bot, chat_id, from_id, prompt, gpt_model=Params().OPENA
                 {"role": "assistant", "content": kids_story_assistant_prompt},
                 {"role": "user", "content": prompt},
             ],
+            branch='story'
         )
         story = response['choices'][0]['message']['content']
         story = story.strip('\n').strip()
@@ -197,12 +230,12 @@ def chat_gpt_write_story(bot, chat_id, from_id, prompt, gpt_model=Params().OPENA
     return
 
 
-def create_midjourney_prompt(prompt):
+async def create_midjourney_prompt(prompt):
     system_prompt = midjourney_prompt_fomula if 'fomula' in prompt else midjourney_prompt_1
     prompt = prompt.replace('fomula', '').strip()
 
     try:
-        beautiful_midjourney_prompt = chat_gpt_full(
+        beautiful_midjourney_prompt = await chat_gpt_full(
             prompt,
             system_prompt,
             midjourney_user_prompt_fomula,

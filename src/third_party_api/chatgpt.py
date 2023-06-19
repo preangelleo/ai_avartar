@@ -146,6 +146,7 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             # Commit the session
             session.commit()
     except Exception as e:
+        ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
         return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
 
     return reply

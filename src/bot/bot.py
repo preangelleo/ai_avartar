@@ -379,8 +379,7 @@ class Bot(ABC):
             except Exception as e:
                 ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
-        else:
-            ERROR_COUNTER.labels('empty_chatgpt_reply', 'chatgpt').inc()
+
         return
 
     @abstractmethod

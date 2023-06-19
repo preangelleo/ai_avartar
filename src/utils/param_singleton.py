@@ -138,6 +138,7 @@ class Params:
 
         self.FANBOOK_BOT_TOKEN = owner_parameters_dict.get('FANBOOK_BOT_TOKEN')
         self.FANBOOK_BOT_NAME = owner_parameters_dict.get('FANBOOK_BOT_USERNAME')
+        self.FANBOOK_BOT_ID = owner_parameters_dict.get('FANBOOK_BOT_ID')
         self.FANBOOK_BOT_OWNER_NAME = owner_parameters_dict.get('FANBOOK_BOT_OWNER_NAME')
         self.FANBOOK_BOT_OWNER_ID = owner_parameters_dict.get('FANBOOK_BOT_OWNER_ID')
         self.FANBOOK_BOT_CREATOR_ID = owner_parameters_dict.get('FANBOOK_BOT_CREATOR_ID')

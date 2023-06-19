@@ -21,7 +21,7 @@ from src.bot.fanbook.utils.constants import (
     DEVICE_ID,
     FANBOOK_VERSION,
     GET_USER_TOKEN_TIMEOUT_COUNT,
-    TEST_BOT_ID,
+    TEST_BOT_NICK_NAME,
 )
 from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
 
@@ -61,7 +61,9 @@ class FanbookBot(Bot):
 
     async def handle_push(self, obj):
         is_bot = obj.get('data', {}).get('author', {}).get('bot')
-        is_test_bot = obj.get('data', {}).get('user_id') == TEST_BOT_ID
+        user_nick_name = obj.get('data', {}).get('author', {}).get('bot', {}).get('nickname')
+        is_test_bot = user_nick_name == TEST_BOT_NICK_NAME
+        logging.info(f'handle_push(): is_bot: {is_bot}, is_test_bot: {is_test_bot}')
 
         if is_bot and not is_test_bot:
             return

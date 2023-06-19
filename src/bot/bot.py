@@ -21,6 +21,7 @@ from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
+from src.bot.fanbook.utils.helper import user_id_exists, user_over_limit
 
 import random
 import os
@@ -315,6 +316,12 @@ class Bot(ABC):
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
+        if not user_id_exists(user_id=msg.from_id) and user_over_limit():
+            await self.send_msg_async(
+                msg="使用人数超过限制", chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.reply_to_message_id
+            )
+            return
+
         if msg.chat_id in self.bot_admin_id_list:
             self.bot_owner_branch_handler.handle_single_msg(msg, self)
 
@@ -342,17 +349,10 @@ class Bot(ABC):
 
         reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
 
-        if msg.is_private:
-            # if it is private chat, then reply to the message without inline msg
-            reply_to_message_id = None
-        else:
-            # if it is group chat, then reply to the message with inline msg
-            reply_to_message_id = msg.message_id
-
         if reply:
             try:
                 await self.send_msg_async(
-                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=reply_to_message_id
+                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.reply_to_message_id
                 )
             except Exception as e:
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")

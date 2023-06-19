@@ -323,13 +323,12 @@ class Bot(ABC):
             return
 
         handle_single_msg_start = time.perf_counter()
-        if msg.chat_id in self.bot_admin_id_list:
+        if msg.from_id in self.bot_admin_id_list:
             HANDLE_SINGLE_MSG_COUNTER.labels(msg.from_id, 'owner').inc()
             MSG_TEXT_LEN_METRICS.labels(msg.from_id, 'owner').observe(len(msg.msg_text))
             if self.bot_owner_branch_handler.handle_single_msg(msg, self):
                 SUCCESS_REPLY_COUNTER.labels('owner').inc()
                 HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'owner').observe(time.perf_counter() - handle_single_msg_start)
-            return
 
         # 英语查单词和 英语老师 Amy
         if (

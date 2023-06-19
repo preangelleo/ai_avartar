@@ -1,0 +1,9 @@
+[Unit]
+Description=Set up Prometheus service upon boot
+
+[Service]
+User=root
+ExecStart=/root/ai_avartar/src/instance_scripts/start_prometheus.sh
+
+[Install]
+WantedBy=multi-user.target

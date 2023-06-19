@@ -14,7 +14,7 @@ from src.utils.prompt_template import (
     kids_story_user_prompt,
     kids_story_assistant_prompt,
 )
-from src.utils.utils import get_dialogue_tone, insert_gpt_story
+from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story
 from datetime import datetime
 
 from src.utils.param_singleton import Params
@@ -97,7 +97,7 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
         return
 
     try:
-        msg_history = get_dialogue_tone()
+        msg_history = get_system_prompt_and_dialogue_tone()
         previous_role = 'assistant'
         for i in range(df.shape[0]):
             history_conversation = df.iloc[i]

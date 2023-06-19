@@ -804,7 +804,7 @@ def insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls'):
 
 
 # 读取 dialogue_tone 中最大的 tone_id 并将对应的 role 和 content 返回为一个 string 形式的对话列表, 用 \n 换行, 类似 Samples of files/dialogue_tone.xls:
-def get_dialogue_tone():
+def get_system_prompt_and_dialogue_tone():
     # Create a new session
     with Params().Session() as session:
         # Query the table 'avatar_dialogue_tone' to get the last tone_id

@@ -70,7 +70,7 @@ class EnglishTeacherBranch(BotBranch):
                 append_info = f"\n\n让 Amy 老师来帮你解读: \n/{word}"
                 try:
                     bot.send_msg(results + append_info, msg.chat_id)
-                    REPLY_TEXT_LEN_METRICS.labels(msg.from_id, 'english_teacher').observe(len(results + append_info))
+                    REPLY_TEXT_LEN_METRICS.labels('english_teacher').observe(len(results + append_info))
                     SUCCESS_REPLY_COUNTER.labels('english_teacher').inc()
                 except Exception as e:
                     logging.error(f"Amy bot.send_msg()failed: \n\n{e}")

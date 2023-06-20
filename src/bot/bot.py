@@ -21,16 +21,13 @@ from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
-from src.bot.fanbook.utils.helper import user_id_exists, user_over_limit
+from utils.helper import user_id_exists, user_over_limit
 
-import random
 import os
-import json
 
 import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
-from src.utils.prompt_template import reply_emoji_list, emoji_list_for_happy
 
 
 class Bot(ABC):

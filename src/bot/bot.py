@@ -315,6 +315,9 @@ class Bot(ABC):
             logging.info("should ignore this msg", msg.raw_msg)
             return
 
+        if msg.is_private:
+            PRIVATE_MSG_COUNTER.inc()
+
         # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
         if not self.user_is_legit(msg, msg.from_id):
             return

@@ -133,7 +133,7 @@ class FanbookBot(Bot):
                             logging.info("Received push: %s", message)
                             asyncio.create_task(self.handle_push(obj))
                         else:
-                            logging.info("Received message: %s", message)
+                            logging.error("Received message: %s", message)
                     except json.JSONDecodeError as e:
                         logging.error("JSONDecodeError: Invalid JSON format in the received message. Error: %s", e)
                     except ConnectionError as e:

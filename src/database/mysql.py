@@ -73,8 +73,7 @@ class CryptoPayments(Base):
 class UserPriority(Base):
     __tablename__ = 'avatar_user_priority'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_from_id = Column(String(255), unique=True)
+    user_from_id = Column(String(255), primary_key=True)
     priority = Column(Integer, default=0)
     is_blacklist = Column(Integer, default=0)
     free_until = Column(DateTime, default=datetime.now())

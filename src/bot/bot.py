@@ -23,15 +23,14 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 from src.utils.utils import user_id_exists, user_over_limit
+from src.utils.prompt_template import user_limit_msg
 
 
-import random
 import os
 
 import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
-from src.utils.prompt_template import reply_emoji_list, emoji_list_for_happy
 from src.utils.metrics import *
 
 
@@ -327,7 +326,7 @@ class Bot(ABC):
 
         if not user_id_exists(user_id=msg.from_id) and user_over_limit():
             await self.send_msg_async(
-                msg="对不起，和我聊天的人太多了所以我暂时处理不过来，等过段时间再试试吧！",
+                msg=user_limit_msg,
                 chat_id=msg.chat_id,
                 parse_mode=None,
                 reply_to_message_id=msg.reply_to_message_id,

@@ -19,7 +19,7 @@ from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.utils.prompt_template import inproper_words_list
 from src.database.mysql import *
-from utils.metrics import TOTAL_USERS_GAUGE
+from src.utils.metrics import TOTAL_USERS_GAUGE
 
 
 def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):

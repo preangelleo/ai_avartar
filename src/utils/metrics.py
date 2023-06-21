@@ -38,3 +38,4 @@ SUCCESS_REPLY_COUNTER = Counter('success_reply_total', 'Total Number of Successf
 ERROR_COUNTER = Counter('error_total', 'Total Number of Error', ['reason', 'branch'])
 NEW_USER_COUNTER = Counter('new_user_total', 'Number of New User')
 TOTAL_USERS_GAUGE = Gauge('total_unique_users', 'Total unique users')
+OPENAI_TOKEN_USED_COUNTER = Counter('openai_tokens_used', 'Number of tokens used by the OpenAI API')

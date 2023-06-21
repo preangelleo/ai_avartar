@@ -1,0 +1,7 @@
+# AWS Tips
+
+
+### Bring up daemon job upon reboot
+Following https://askubuntu.com/questions/1151080/how-do-i-run-a-script-as-sudo-at-boot-time-on-ubuntu-18-04-server
+
+Remember to put `export PATH="your current $PATH"` and `export PYTHONPATH="your current $PYTHONPATH"` to the beginning of your script b/c the systemd will use new PATH and PYTHONPATH before run your script.

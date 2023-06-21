@@ -343,22 +343,6 @@ class Bot(ABC):
                     time.perf_counter() - handle_single_msg_start
                 )
 
-        # 英语查单词和 英语老师 Amy
-        if (
-            len(msg.msg_text.split()) == 1
-            and not msg.msg_text.lower().startswith('0x')
-            and len(msg.msg_text.replace('/', '')) > 4
-            and len(msg.msg_text) < 46
-            and is_english(msg.msg_text)
-        ):
-            HANDLE_SINGLE_MSG_COUNTER.labels('english_teacher').inc()
-            MSG_TEXT_LEN_METRICS.labels('english_teacher').observe(len(msg.msg_text))
-            if self.english_teacher_branch_handler.handle_single_msg(msg, self):
-                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'english_teacher').observe(
-                    time.perf_counter() - handle_single_msg_start
-                )
-            return
-
         try:
             save_avatar_chat_history(
                 msg.msg_text,

@@ -21,7 +21,7 @@ from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
-from utils.helper import user_id_exists, user_over_limit
+from src.utils.utils import user_id_exists, user_over_limit
 
 import os
 
@@ -315,7 +315,10 @@ class Bot(ABC):
 
         if not user_id_exists(user_id=msg.from_id) and user_over_limit():
             await self.send_msg_async(
-                msg="使用人数超过限制", chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.reply_to_message_id
+                msg="对不起，和我聊天的人太多了所以我暂时处理不过来，等过段时间再试试吧！",
+                chat_id=msg.chat_id,
+                parse_mode=None,
+                reply_to_message_id=msg.reply_to_message_id,
             )
             return
 

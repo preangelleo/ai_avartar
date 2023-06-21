@@ -22,16 +22,15 @@ from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
+from src.utils.utils import user_id_exists, user_over_limit
+from src.utils.prompt_template import user_limit_msg
 
 
-import random
 import os
-import json
 
 import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
-from src.utils.prompt_template import reply_emoji_list, emoji_list_for_happy
 from src.utils.metrics import *
 
 
@@ -325,13 +324,24 @@ class Bot(ABC):
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
+        if not user_id_exists(user_id=msg.from_id) and user_over_limit():
+            await self.send_msg_async(
+                msg=user_limit_msg,
+                chat_id=msg.chat_id,
+                parse_mode=None,
+                reply_to_message_id=msg.reply_to_message_id,
+            )
+            return
+
         handle_single_msg_start = time.perf_counter()
         if msg.from_id in self.bot_admin_id_list:
             HANDLE_SINGLE_MSG_COUNTER.labels('owner').inc()
             MSG_TEXT_LEN_METRICS.labels('owner').observe(len(msg.msg_text))
             if self.bot_owner_branch_handler.handle_single_msg(msg, self):
                 SUCCESS_REPLY_COUNTER.labels('owner').inc()
-                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'owner').observe(time.perf_counter() - handle_single_msg_start)
+                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'owner').observe(
+                    time.perf_counter() - handle_single_msg_start
+                )
 
         # 英语查单词和 英语老师 Amy
         if (
@@ -344,7 +354,9 @@ class Bot(ABC):
             HANDLE_SINGLE_MSG_COUNTER.labels('english_teacher').inc()
             MSG_TEXT_LEN_METRICS.labels('english_teacher').observe(len(msg.msg_text))
             if self.english_teacher_branch_handler.handle_single_msg(msg, self):
-                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'english_teacher').observe(time.perf_counter() - handle_single_msg_start)
+                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'english_teacher').observe(
+                    time.perf_counter() - handle_single_msg_start
+                )
             return
 
         try:
@@ -363,21 +375,16 @@ class Bot(ABC):
         MSG_TEXT_LEN_METRICS.labels('chatgpt').observe(len(msg.msg_text))
         reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
 
-        if msg.is_private:
-            # if it is private chat, then reply to the message without inline msg
-            reply_to_message_id = None
-        else:
-            # if it is group chat, then reply to the message with inline msg
-            reply_to_message_id = msg.message_id
-
         if reply:
             try:
                 REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(reply))
                 await self.send_msg_async(
-                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=reply_to_message_id
+                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.reply_to_message_id
                 )
                 SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
-                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(time.perf_counter() - handle_single_msg_start)
+                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
+                    time.perf_counter() - handle_single_msg_start
+                )
             except Exception as e:
                 ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")

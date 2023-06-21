@@ -495,3 +495,6 @@ smv Lights were shining from every window, and there was a savory smell of roast
 eleven_labs_tts_failed_alert = '''
 对不起, 你的克隆声音语音生成失败了, 请等会儿重新再试试, 或者联系 Eleven Labs 客服, 询问你的订阅状态。
 '''
+
+
+user_limit_msg = '对不起，和我聊天的人太多了所以我暂时处理不过来，等过段时间再试试吧！'

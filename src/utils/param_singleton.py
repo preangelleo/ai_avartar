@@ -143,6 +143,7 @@ class Params:
         self.FANBOOK_BOT_OWNER_ID = owner_parameters_dict.get('FANBOOK_BOT_OWNER_ID')
         self.FANBOOK_BOT_CREATOR_ID = owner_parameters_dict.get('FANBOOK_BOT_CREATOR_ID')
         self.FANBOOK_CLIENT_ID = owner_parameters_dict.get('FANBOOK_CLIENT_ID')
+        self.FANBOOK_MAX_NUM_USER = owner_parameters_dict.get('FANBOOK_MAX_NUM_USER')
 
         logging.info(f'FANBOOK_BOT_NAME: {self.FANBOOK_BOT_NAME}')
 

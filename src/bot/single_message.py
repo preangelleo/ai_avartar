@@ -53,3 +53,13 @@ class SingleMessage:
             logging.debug(f'bot is mentioned in msg: {self.raw_msg}')
             return False
         return True
+
+    @property
+    def reply_to_message_id(self):
+        if self.is_private:
+            # if it is private chat, then reply to the message without inline msg
+            reply_to_message_id = None
+        else:
+            # if it is group chat, then reply to the message with inline msg
+            reply_to_message_id = self.message_id
+        return reply_to_message_id

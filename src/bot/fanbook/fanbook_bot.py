@@ -67,6 +67,7 @@ class FanbookBot(Bot):
     async def handle_push(self, obj):
         is_bot = obj.get('data', {}).get('author', {}).get('bot')
         is_test_bot = obj.get('data', {}).get('user_id') == TEST_BOT_ID
+        logging.debug(f'handle_push(): is_bot: {is_bot}, is_test_bot: {is_test_bot}')
 
         if is_bot and not is_test_bot:
             return
@@ -86,8 +87,7 @@ class FanbookBot(Bot):
 
         send_msg_start = time.perf_counter()
         response = requests.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)
-        SEND_MSG_LATENCY_METRICS.labels(len(msg) // 10 * 10).observe(
-            time.perf_counter() - send_msg_start)
+        SEND_MSG_LATENCY_METRICS.labels(len(msg) // 10 * 10).observe(time.perf_counter() - send_msg_start)
         logging.debug(f'send_msg(): {response.json()}')
         return response.json()
 
@@ -104,8 +104,7 @@ class FanbookBot(Bot):
         async with httpx.AsyncClient() as client:
             send_msg_start = time.perf_counter()
             response = await client.post(FANBOOK_SEND_MSG_URL, data=json.dumps(payload), headers=headers)
-            SEND_MSG_LATENCY_METRICS.labels(len(msg) // 10 * 10).observe(
-                time.perf_counter() - send_msg_start)
+            SEND_MSG_LATENCY_METRICS.labels(len(msg) // 10 * 10).observe(time.perf_counter() - send_msg_start)
 
         logging.info(f'send_msg(): {response.json()}')
         return response.json()

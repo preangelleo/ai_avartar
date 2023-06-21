@@ -67,7 +67,7 @@ class FanbookBot(Bot):
     async def handle_push(self, obj):
         is_bot = obj.get('data', {}).get('author', {}).get('bot')
         is_test_bot = obj.get('data', {}).get('user_id') == TEST_BOT_ID
-        logging.info(f'handle_push(): is_bot: {is_bot}, is_test_bot: {is_test_bot}')
+        logging.debug(f'handle_push(): is_bot: {is_bot}, is_test_bot: {is_test_bot}')
 
         if is_bot and not is_test_bot:
             return

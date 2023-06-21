@@ -13,9 +13,6 @@ from langdetect import detect
 from pydub import AudioSegment
 from web3 import Web3
 from sqlalchemy import func
-from src.bot.fanbook.utils.constants import LIMIT_USER_LIST_COUNT
-from database.mysql import ChatHistory
-from src.utils.param_singleton import Params
 
 
 from src.utils.logging_util import logging
@@ -898,7 +895,7 @@ def check_address_token_balance(address, token_address, chain='eth'):
 def user_over_limit() -> bool:
     with Params().Session() as session:
         count = session.query(func.count(ChatHistory.from_id.distinct())).scalar()
-        result = count >= LIMIT_USER_LIST_COUNT
+        result = count >= Params().FANBOOK_MAX_NUM_USER
         return result
 
 

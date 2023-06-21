@@ -19,6 +19,7 @@ from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.utils.prompt_template import inproper_words_list
 from src.database.mysql import *
+from utils.metrics import TOTAL_USERS_GAUGE
 
 
 def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):
@@ -895,6 +896,7 @@ def check_address_token_balance(address, token_address, chain='eth'):
 def user_over_limit() -> bool:
     with Params().Session() as session:
         count = session.query(func.count(ChatHistory.from_id.distinct())).scalar()
+        TOTAL_USERS_GAUGE.set(count)
         result = count >= int(Params().FANBOOK_MAX_NUM_USER)
         return result
 

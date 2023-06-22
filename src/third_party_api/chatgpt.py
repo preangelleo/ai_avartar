@@ -120,7 +120,10 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
                 continue
             need_to_be_appended = {
                 "role": user_or_assistant,
-                "content": history_conversation['msg_text'],
+                # Prevent the bot admit that he is a AI model.
+                "content": history_conversation['msg_text']
+                .replace('AI语言模型', bot.bot_name)
+                .replace('人工智能程序', bot.bot_name),
             }
             msg_history.append(need_to_be_appended)
             previous_role = user_or_assistant

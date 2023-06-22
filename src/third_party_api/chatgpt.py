@@ -1,3 +1,4 @@
+import random
 import time
 
 import openai
@@ -24,7 +25,13 @@ from src.utils.prompt_template import (
     midjourney_user_prompt_fomula,
     midjourney_assistant_prompt_fomula,
 )
-from src.utils.metrics import ERROR_COUNTER, OPENAI_LATENCY_METRICS
+from src.utils.metrics import ERROR_COUNTER, OPENAI_LATENCY_METRICS, OPENAI_FINISH_REASON_COUNTER
+
+
+def get_openai_key():
+    # Select different API key in a Round Robin way.
+    # TODO: ADD more keys to this list for Round Robin.
+    return random.choice([Params().OPENAI_API_KEY])
 
 
 def get_total_content_lenght_from_messages(msg_history):
@@ -36,12 +43,14 @@ def get_total_content_lenght_from_messages(msg_history):
 
 async def get_response_from_chatgpt(model, messages, branch):
     openai_start = time.perf_counter()
-    response = await openai.ChatCompletion.acreate(
-        model=model,
-        messages=messages
-    )
+    response = await openai.ChatCompletion.acreate(model=model, messages=messages)
     OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
-        time.perf_counter() - openai_start)
+        time.perf_counter() - openai_start
+    )
+    if response:
+        reason = response['choices'][0]['finish_reason']
+        OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()
+
     return response
 
 
@@ -63,7 +72,7 @@ async def chat_gpt_full(
         assistant_prompt = "The Los Angeles Dodgers won the World Series in 2020."
 
     # Load your API key from an environment variable or secret management service
-    openai.api_key = chatgpt_key
+    openai.api_key = get_openai_key()
     print(f"DEBUG: {dynamic_model} 正在创作...")
     response = await get_response_from_chatgpt(
         model=dynamic_model,
@@ -73,7 +82,8 @@ async def chat_gpt_full(
             {"role": "assistant", "content": assistant_prompt},
             {"role": "user", "content": prompt},
         ],
-        branch='full')
+        branch='full',
+    )
 
     reply = response['choices'][0]['message']['content']
     reply = reply.strip('\n').strip()
@@ -83,7 +93,7 @@ async def chat_gpt_full(
 
 # Call chatgpt and restore reply and send to chat_id:
 async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
-    openai.api_key = Params().OPENAI_API_KEY
+    openai.api_key = get_openai_key()
     reply = ''
 
     try:
@@ -116,7 +126,9 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             previous_role = user_or_assistant
         msg_history.append({"role": "user", "content": msg_text})
 
-        response = await get_response_from_chatgpt(model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply')
+        response = await get_response_from_chatgpt(
+            model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
+        )
         reply = response['choices'][0]['message']['content']
         reply = reply.strip('\n').strip()
 
@@ -174,7 +186,7 @@ async def chat_gpt_english(prompt, gpt_model=Params().OPENAI_MODEL):
                 # {"role": "assistant", "content": english_assistant_prompt_4},
                 {"role": "user", "content": prompt},
             ],
-            branch='english'
+            branch='english',
         )
         reply = response['choices'][0]['message']['content']
         reply = reply.strip('\n').strip()
@@ -192,9 +204,11 @@ async def chat_gpt_regular(prompt, chatgpt_key=Params().OPENAI_API_KEY, use_mode
         return
 
     # Load your API key from an environment variable or secret management service
-    openai.api_key = chatgpt_key
+    openai.api_key = get_openai_key()
 
-    response = await get_response_from_chatgpt(model=use_model, messages=[{"role": "user", "content": prompt}], branch='regular')
+    response = await get_response_from_chatgpt(
+        model=use_model, messages=[{"role": "user", "content": prompt}], branch='regular'
+    )
 
     reply = response['choices'][0]['message']['content']
     reply = reply.strip('\n').strip()
@@ -215,7 +229,7 @@ async def chat_gpt_write_story(bot, chat_id, from_id, prompt, gpt_model=Params()
                 {"role": "assistant", "content": kids_story_assistant_prompt},
                 {"role": "user", "content": prompt},
             ],
-            branch='story'
+            branch='story',
         )
         story = response['choices'][0]['message']['content']
         story = story.strip('\n').strip()

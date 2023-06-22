@@ -1,7 +1,7 @@
 import time
 
 from src.utils.logging_util import logging
-from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg, check_if_bot_is_mentioned
+from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg
 
 import requests
 from src.bot.bot import Bot

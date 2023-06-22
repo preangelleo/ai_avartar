@@ -16,4 +16,4 @@ scrape_configs:
     scrape_interval: 5s
 
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ['localhost:8000', 'localhost:8001']

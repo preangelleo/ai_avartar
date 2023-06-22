@@ -23,8 +23,7 @@ class ChatHistory(Base):
 class OwnerParameter(Base):
     __tablename__ = 'avatar_owner_parameters'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    parameter_name = Column(String(255))
+    parameter_name = Column(String(255), primary_key=True)
     parameter_value = Column(String(255))
     update_time = Column(DateTime)
 

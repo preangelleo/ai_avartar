@@ -9,38 +9,6 @@ from src.utils.utils import (
 )
 
 
-def initialize_owner_parameters_table():
-    print(f"DEBUG: initialize_owner_parameters_table()")
-
-    # Create a new session
-    with Params().Session() as session:
-        # 清空 avatar_owner_parameters 表
-        session.query(OwnerParameter).delete()
-        session.commit()
-        print(f"avatar_owner_parameters 表已清空!")
-        # Read .env to get the owner's parameters
-        with open('.env', 'r') as f:
-            for line in f.readlines():
-                print(f"DEBUG: line = {line}")
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-
-                parameter_name, parameter_value = line.split('=', 1)
-                parameter_name = parameter_name.strip()
-                parameter_value = parameter_value.strip()
-
-                # Insert the owner's parameters into the table 'avatar_owner_parameters'
-                new_owner_parameter = OwnerParameter(
-                    parameter_name=parameter_name,
-                    parameter_value=parameter_value,
-                    update_time=datetime.now(),
-                )
-                session.add(new_owner_parameter)
-                session.commit()
-    return
-
-
 if __name__ == '__main__':
     make_a_choise = input(
         f"这是系统从镜像 IMAGE 文件启动后的首次初始化还是代码更新后的初始化？\n首次初始化要输入 'first_time_initiate'; \n代码更新后的初始化请直接按回车键: "
@@ -73,7 +41,7 @@ if __name__ == '__main__':
     if is_first_time_initiate:
         print(f"\nSTEP 4: 将 Dialogue Tone 写入数据库表单 ...")
         # 读取 files/dialogue_tone.xls 并插入到 avatar_dialogue_tone 表中
-        insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls')
+        insert_dialogue_tone_from_file(file_path='files/dialogue_tone.csv')
 
     print(f"\nSTEP 5: 读取并打印出 Dialogue Tone ...")
     msg_history = get_system_prompt_and_dialogue_tone()

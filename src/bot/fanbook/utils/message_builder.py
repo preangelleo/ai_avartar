@@ -31,13 +31,16 @@ def build_from_fanbook_msg(obj):
         msg_audio=None,
         msg_sticker=None,
         caption=None,
-        is_mentioned=check_if_bot_is_mentioned(obj.get('data').get('mentions')),
+        is_mentioned=check_if_bot_is_mentioned(data_dict.get('text'), obj.get('data').get('mentions')),
         reply_to_message_text=None,
         message_id=obj.get('data').get('message_id'),
     )
 
 
-def check_if_bot_is_mentioned(mentions: Optional[list]) -> bool:
+def check_if_bot_is_mentioned(raw_text: str, mentions: Optional[list]) -> bool:
+    if f'@{Params().FANBOOK_BOT_NAME}' in raw_text:
+        return True
+
     if not mentions:
         return False
     logging.debug(f'msg mentions: {mentions}')

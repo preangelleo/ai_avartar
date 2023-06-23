@@ -1,3 +1,4 @@
+import random
 import time
 
 import openai
@@ -24,7 +25,14 @@ from src.utils.prompt_template import (
     midjourney_user_prompt_fomula,
     midjourney_assistant_prompt_fomula,
 )
-from src.utils.metrics import ERROR_COUNTER, OPENAI_LATENCY_METRICS, OPENAI_TOKEN_USED_COUNTER
+from src.utils.metrics import ERROR_COUNTER, OPENAI_LATENCY_METRICS, OPENAI_FINISH_REASON_COUNTER
+from src.utils.metrics import OPENAI_TOKEN_USED_COUNTER
+
+
+def get_openai_key():
+    # Select different API key in a Round Robin way.
+    # TODO: ADD more keys to this list for Round Robin.
+    return random.choice([Params().OPENAI_API_KEY])
 
 
 def get_total_content_lenght_from_messages(msg_history):
@@ -42,6 +50,12 @@ async def get_response_from_chatgpt(model, messages, branch):
     )
     token_used = response['usage']['total_tokens']
     OPENAI_TOKEN_USED_COUNTER.labels(branch).inc(token_used)
+    if response:
+        reason = response['choices'][0]['finish_reason']
+        OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()
+
+        time.perf_counter() - openai_start
+
     return response
 
 
@@ -63,7 +77,7 @@ async def chat_gpt_full(
         assistant_prompt = "The Los Angeles Dodgers won the World Series in 2020."
 
     # Load your API key from an environment variable or secret management service
-    openai.api_key = chatgpt_key
+    openai.api_key = get_openai_key()
     print(f"DEBUG: {dynamic_model} 正在创作...")
     response = await get_response_from_chatgpt(
         model=dynamic_model,
@@ -84,7 +98,7 @@ async def chat_gpt_full(
 
 # Call chatgpt and restore reply and send to chat_id:
 async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
-    openai.api_key = Params().OPENAI_API_KEY
+    openai.api_key = get_openai_key()
     reply = ''
 
     try:
@@ -111,7 +125,10 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
                 continue
             need_to_be_appended = {
                 "role": user_or_assistant,
-                "content": history_conversation['msg_text'],
+                # Prevent the bot admit that he is a AI model.
+                "content": history_conversation['msg_text']
+                .replace('AI语言模型', bot.bot_name)
+                .replace('人工智能程序', bot.bot_name),
             }
             msg_history.append(need_to_be_appended)
             previous_role = user_or_assistant
@@ -195,7 +212,7 @@ async def chat_gpt_regular(prompt, chatgpt_key=Params().OPENAI_API_KEY, use_mode
         return
 
     # Load your API key from an environment variable or secret management service
-    openai.api_key = chatgpt_key
+    openai.api_key = get_openai_key()
 
     response = await get_response_from_chatgpt(
         model=use_model, messages=[{"role": "user", "content": prompt}], branch='regular'

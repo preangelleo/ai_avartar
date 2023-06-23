@@ -772,7 +772,10 @@ def insert_dialogue_tone_from_file(file_path='files/dialogue_tone.xls'):
     print(f"DEBUG: insert_dialogue_tone_from_file()")
 
     # Read the dialogue_tone.xls file
-    df = pd.read_excel(file_path, header=None, names=['role', 'content'])
+    if file_path.endswith('xls'):
+        df = pd.read_excel(file_path, header=None, names=['role', 'content'])
+    else:
+        df = pd.read_csv(file_path)
     df = df.dropna()
 
     # Create a new session

@@ -1,10 +1,10 @@
 repos:
 - repo: https://github.com/psf/black
-  rev: stable
+  rev: 23.3.0
   hooks:
   - id: black
     args: [--skip-string-normalization, --line-length=120]
-    language_version: python3.11
+    language_version: python3
     exclude: '\.venv/|\.git/|\.tox/'
 
 

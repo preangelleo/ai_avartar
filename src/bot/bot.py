@@ -291,6 +291,7 @@ class Bot(ABC):
                 logging.debug("上限: %s", (Params().free_user_free_talk_per_month))
                 # Check if the row count exceeds the threshold
                 if (row_count - offset) > Params().free_user_free_talk_per_month:
+                    logging.info(f'{from_id} exceed_free_talk_num')
                     self.send_msg(
                         f"{user_nick_name}, 你这个月跟我聊天的次数太多了, 我看了一下, 已经超过 {Params().free_user_free_talk_per_month}条/月 的聊天记录上限, 你可真能聊, 哈哈哈, 下个月再跟我聊吧。",
                         from_id,

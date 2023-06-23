@@ -64,11 +64,11 @@ def get_hau():
 if __name__ == '__main__':
     start_http_server(8001)
 
-    schedule.every(10).minutes.do(update_dau_metric)
+    schedule.every(60).seconds.do(update_dau_metric)
 
-    schedule.every(5).minutes.do(update_hau_metric)
+    schedule.every(30).seconds.do(update_hau_metric)
 
-    schedule.every(5).minutes.do(update_total_users_metric)
+    schedule.every(30).seconds.do(update_total_users_metric)
 
     # Keep the script running
     while True:

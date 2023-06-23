@@ -325,7 +325,6 @@ class Bot(ABC):
             return
 
         if not user_id_exists(user_id=msg.from_id):
-            NEW_USER_COUNTER.inc()
             if user_over_limit():
                 await self.send_msg_async(
                     msg=user_limit_msg,

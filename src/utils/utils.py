@@ -896,7 +896,6 @@ def check_address_token_balance(address, token_address, chain='eth'):
 def user_over_limit() -> bool:
     with Params().Session() as session:
         count = session.query(func.count(ChatHistory.from_id.distinct())).scalar()
-        TOTAL_USERS_GAUGE.set(count)
         result = count >= int(Params().FANBOOK_MAX_NUM_USER)
         return result
 

@@ -40,6 +40,8 @@ async def get_response_from_chatgpt(model, messages, branch):
     OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
         time.perf_counter() - openai_start
     )
+    token_used = response['usage']['total_tokens']
+    OPENAI_TOKEN_USED_COUNTER.labels('branch').inc(token_used)
     return response
 
 
@@ -119,8 +121,6 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
             model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
         )
         reply = response['choices'][0]['message']['content']
-        token_used = response['usage']['total_tokens']
-        OPENAI_TOKEN_USED_COUNTER.inc(token_used)
         reply = reply.strip('\n').strip()
 
     except Exception as e:

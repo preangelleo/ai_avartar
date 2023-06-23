@@ -375,7 +375,7 @@ class Bot(ABC):
 
         HANDLE_SINGLE_MSG_COUNTER.labels('chatgpt').inc()
         MSG_TEXT_LEN_METRICS.labels('chatgpt').observe(len(msg.msg_text))
-        reply = await local_chatgpt_to_reply(self, msg.msg_text, msg.from_id, msg.chat_id)
+        reply = await local_chatgpt_to_reply(self, msg)
 
         if reply:
             try:

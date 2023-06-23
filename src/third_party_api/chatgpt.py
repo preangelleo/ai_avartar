@@ -4,6 +4,7 @@ import time
 import openai
 import pandas as pd
 
+from src.bot.single_message import SingleMessage
 from database.mysql import ChatHistory
 from src.utils.logging_util import logging
 from src.utils.prompt_template import (
@@ -91,14 +92,14 @@ async def chat_gpt_full(
     return reply
 
 
-# Call chatgpt and restore reply and send to chat_id:
-async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
+# Call chatgpt and restore reply and send to msg.chat_id:
+async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     openai.api_key = get_openai_key()
     reply = ''
 
     try:
         df = pd.read_sql_query(
-            f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC",
+            f"SELECT * FROM (SELECT `id`, `username`, `msg.msg_text` FROM `avatar_chat_history` WHERE `msg.from_id` = '{msg.from_id}' AND `msg.msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC",
             Params().engine,
         )
     except Exception as e:
@@ -116,18 +117,18 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
                 continue
             if i == df.shape[0] - 1 and user_or_assistant == 'user':
                 continue
-            if len(history_conversation['msg_text']) > 1200:
+            if len(history_conversation['msg.msg_text']) > 1200:
                 continue
             need_to_be_appended = {
                 "role": user_or_assistant,
                 # Prevent the bot admit that he is a AI model.
-                "content": history_conversation['msg_text']
+                "content": history_conversation['msg.msg_text']
                 .replace('AI语言模型', bot.bot_name)
                 .replace('人工智能程序', bot.bot_name),
             }
             msg_history.append(need_to_be_appended)
             previous_role = user_or_assistant
-        msg_history.append({"role": "user", "content": msg_text})
+        msg_history.append({"role": "user", "content": msg.msg_text})
 
         response = await get_response_from_chatgpt(
             model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
@@ -150,11 +151,12 @@ async def local_chatgpt_to_reply(bot, msg_text, from_id, chat_id):
                 first_name='ChatGPT',
                 last_name='Bot',
                 username=bot.bot_name,
-                from_id=from_id,
-                chat_id=chat_id,
+                from_id=msg.from_id,
+                chat_id=msg.chat_id,
                 update_time=datetime.now(),
                 msg_text=store_reply,
                 black_list=0,
+                is_private=msg.is_private,
             )
             # Add the new record to the session
             session.add(new_record)

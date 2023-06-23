@@ -41,7 +41,7 @@ async def get_response_from_chatgpt(model, messages, branch):
         time.perf_counter() - openai_start
     )
     token_used = response['usage']['total_tokens']
-    OPENAI_TOKEN_USED_COUNTER.labels('branch').inc(token_used)
+    OPENAI_TOKEN_USED_COUNTER.labels(branch).inc(token_used)
     return response
 
 

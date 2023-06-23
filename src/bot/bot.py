@@ -362,6 +362,7 @@ class Bot(ABC):
 
         try:
             save_avatar_chat_history(
+                msg,
                 msg.msg_text,
                 msg.chat_id,
                 msg.from_id,

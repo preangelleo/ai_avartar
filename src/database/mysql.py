@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime, Column, Integer, String, Text, Float
+from sqlalchemy import DateTime, Column, Integer, String, Text, Float, Boolean
 from sqlalchemy.orm import declarative_base
 
 from datetime import datetime
@@ -10,6 +10,7 @@ class ChatHistory(Base):
     __tablename__ = 'avatar_chat_history'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    message_id = Column(Integer)
     first_name = Column(String(255))
     last_name = Column(String(255))
     username = Column(String(255))
@@ -17,7 +18,10 @@ class ChatHistory(Base):
     chat_id = Column(String(255))
     update_time = Column(DateTime)
     msg_text = Column(Text)
+    raw_msg = Column(Text)
     black_list = Column(Integer, default=0)
+    is_private = Column(Boolean, default=0)
+    is_mentioned = Column(Boolean, default=0)
 
 
 class OwnerParameter(Base):

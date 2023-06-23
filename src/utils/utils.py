@@ -1,4 +1,6 @@
 import base64
+import json
+
 import chardet
 import hashlib
 import os
@@ -14,7 +16,7 @@ from pydub import AudioSegment
 from web3 import Web3
 from sqlalchemy import func
 
-
+from src.bot.single_message import SingleMessage
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.utils.prompt_template import inproper_words_list
@@ -1100,7 +1102,7 @@ def get_user_chat_history(from_id):
     return f'{SAVE_FOLDER}/{from_id}.txt'
 
 
-def save_avatar_chat_history(msg_text, chat_id, from_id, username, first_name, last_name):
+def save_avatar_chat_history(msg: SingleMessage, msg_text, chat_id, from_id, username, first_name, last_name):
     if not chat_id or not msg_text or not from_id:
         return
 
@@ -1111,6 +1113,7 @@ def save_avatar_chat_history(msg_text, chat_id, from_id, username, first_name, l
     try:
         with Params().Session() as session:
             new_record = ChatHistory(
+                message_id=int(msg.message_id) if msg.message_id else None,
                 first_name=first_name,
                 last_name=last_name,
                 username=username,
@@ -1118,7 +1121,10 @@ def save_avatar_chat_history(msg_text, chat_id, from_id, username, first_name, l
                 chat_id=chat_id,
                 update_time=datetime.now(),
                 msg_text=msg_text,
+                raw_msg=json.dumps(msg.raw_msg),
                 black_list=0,
+                is_private=msg.is_private,
+                is_mentioned=msg.is_mentioned,
             )
             session.add(new_record)
             session.commit()

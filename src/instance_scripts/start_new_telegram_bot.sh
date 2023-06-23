@@ -5,4 +5,4 @@ export PYTHONPATH="${PYTHONPATH}:${HOME}/ai_avartar"
 
 cd /root/ai_avartar && conda activate av
 cd /root
-pm2 start ai_avartar/src/bot/fanbook/fanbook_bot.py --name fb --interpreter python3
+pm2 start ai_avartar/src/bot/telegram/telegram_bot.py --name tg --interpreter python3

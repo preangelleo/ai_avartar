@@ -110,7 +110,7 @@ class Params:
         self.OPENAI_API_KEY_POOL = [
             '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',
             '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',
-            'sk-HPE9SpQxqOCstzT36dnGfbN5sl5NkXeYgfAJmflBHdVqQOGK',
+            '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',
         ]
         self.REPLICATE_KEY = owner_parameters_dict.get('REPLICATE_KEY')
         self.STABILITY_API_KEY = owner_parameters_dict.get('STABILITY_API_KEY')

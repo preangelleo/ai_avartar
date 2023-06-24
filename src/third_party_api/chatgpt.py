@@ -108,7 +108,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
 
     try:
         df = pd.read_sql_query(
-            f"SELECT * FROM (SELECT `id`, `username`, `msg.msg_text` FROM `avatar_chat_history` WHERE `msg.from_id` = '{msg.from_id}' AND `msg.msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC",
+            f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{msg.from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC",
             Params().engine,
         )
     except Exception as e:
@@ -116,29 +116,27 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
         return
 
-    try:
-        msg_history = get_system_prompt_and_dialogue_tone()
-        previous_role = 'assistant'
-        for i in range(df.shape[0]):
-            history_conversation = df.iloc[i]
-            user_or_assistant = 'assistant' if history_conversation['username'] in [bot.bot_name] else 'user'
-            if user_or_assistant == previous_role:
-                continue
-            if i == df.shape[0] - 1 and user_or_assistant == 'user':
-                continue
-            if len(history_conversation['msg.msg_text']) > 1200:
-                continue
-            need_to_be_appended = {
-                "role": user_or_assistant,
-                # Prevent the bot admit that he is a AI model.
-                "content": history_conversation['msg.msg_text']
-                .replace('AI语言模型', bot.bot_name)
-                .replace('人工智能程序', bot.bot_name),
-            }
-            msg_history.append(need_to_be_appended)
-            previous_role = user_or_assistant
-        msg_history.append({"role": "user", "content": msg.msg_text})
+    msg_history = get_system_prompt_and_dialogue_tone()
+    previous_role = 'assistant'
+    for i in range(df.shape[0]):
+        history_conversation = df.iloc[i]
+        user_or_assistant = 'assistant' if history_conversation['username'] == bot.bot_name else 'user'
+        if user_or_assistant == previous_role:
+            continue
+        if i == df.shape[0] - 1 and user_or_assistant == 'user':
+            continue
+        if len(history_conversation['msg_text']) > 1200:
+            continue
+        need_to_be_appended = {
+            "role": user_or_assistant,
+            # Prevent the bot admit that he is a AI model.
+            "content": history_conversation['msg_text'].replace('AI语言模型', bot.bot_name).replace('人工智能程序', bot.bot_name),
+        }
+        msg_history.append(need_to_be_appended)
+        previous_role = user_or_assistant
+    msg_history.append({"role": "user", "content": msg.msg_text})
 
+    try:
         response = await get_response_from_chatgpt(
             model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
         )

@@ -26,7 +26,12 @@ from src.utils.prompt_template import (
     midjourney_user_prompt_fomula,
     midjourney_assistant_prompt_fomula,
 )
-from src.utils.metrics import ERROR_COUNTER, OPENAI_LATENCY_METRICS, OPENAI_FINISH_REASON_COUNTER
+from src.utils.metrics import (
+    ERROR_COUNTER,
+    OPENAI_LATENCY_METRICS,
+    OPENAI_FINISH_REASON_COUNTER,
+    OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM,
+)
 from src.utils.metrics import OPENAI_TOKEN_USED_COUNTER
 
 
@@ -50,6 +55,7 @@ async def get_response_from_chatgpt(model, messages, branch):
     )
     token_used = response['usage']['total_tokens']
     OPENAI_TOKEN_USED_COUNTER.labels(branch).inc(token_used)
+    OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM.labels(branch).observe(token_used)
     if response:
         reason = response['choices'][0]['finish_reason']
         OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()

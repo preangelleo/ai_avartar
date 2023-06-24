@@ -79,6 +79,7 @@ class TelegramPhotoBranch(PhotoBranch):
         if beautiful_midjourney_prompt:
             bot.send_msg(beautiful_midjourney_prompt, msg.chat_id)
             save_avatar_chat_history(
+                msg,
                 img_caption,
                 msg.chat_id,
                 msg.from_id,

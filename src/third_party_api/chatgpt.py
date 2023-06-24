@@ -32,8 +32,7 @@ from src.utils.metrics import OPENAI_TOKEN_USED_COUNTER
 
 def get_openai_key():
     # Select different API key in a Round Robin way.
-    # TODO: ADD more keys to this list for Round Robin.
-    return random.choice([Params().OPENAI_API_KEY])
+    return random.choice(Params().OPENAI_API_KEY_POOL)
 
 
 def get_total_content_lenght_from_messages(msg_history):

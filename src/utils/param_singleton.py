@@ -107,6 +107,10 @@ class Params:
         self.UBUNTU_SERVER_IP_ADDRESS = owner_parameters_dict.get('UBUNTU_SERVER_IP_ADDRESS')
         self.DOMAIN_NAME = owner_parameters_dict.get('DOMAIN_NAME')
         self.OPENAI_API_KEY = owner_parameters_dict.get('OPENAI_API_KEY')
+        self.OPENAI_API_KEY_POOL = [
+            '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',
+            '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' 'sk-HPE9SpQxqOCstzT36dnGfbN5sl5NkXeYgfAJmflBHdVqQOGK',
+        ]
         self.REPLICATE_KEY = owner_parameters_dict.get('REPLICATE_KEY')
         self.STABILITY_API_KEY = owner_parameters_dict.get('STABILITY_API_KEY')
         self.OPENAI_MODEL = owner_parameters_dict.get('OPENAI_MODEL')

@@ -27,6 +27,7 @@ from src.utils.prompt_template import (
     midjourney_assistant_prompt_fomula,
 )
 from src.utils.metrics import ERROR_COUNTER, OPENAI_LATENCY_METRICS, OPENAI_FINISH_REASON_COUNTER
+from src.utils.metrics import OPENAI_TOKEN_USED_COUNTER
 
 
 def get_openai_key():
@@ -48,6 +49,8 @@ async def get_response_from_chatgpt(model, messages, branch):
     OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
         time.perf_counter() - openai_start
     )
+    token_used = response['usage']['total_tokens']
+    OPENAI_TOKEN_USED_COUNTER.labels(branch).inc(token_used)
     if response:
         reason = response['choices'][0]['finish_reason']
         OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()

@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Summary, Histogram
+from prometheus_client import Counter, Gauge, Histogram
 
 INF = float('inf')
 
@@ -37,4 +37,8 @@ SEND_MSG_LATENCY_METRICS = Histogram('send_msg_latency_sec', 'Latency of send_ms
 SUCCESS_REPLY_COUNTER = Counter('success_reply_total', 'Total Number of Successful Reply', ['branch'])
 
 ERROR_COUNTER = Counter('error_total', 'Total Number of Error', ['reason', 'branch'])
+TOTAL_USERS_GAUGE = Gauge('total_unique_users', 'Total unique users')
+OPENAI_TOKEN_USED_COUNTER = Counter('openai_tokens_used', 'Number of tokens used by the OpenAI API', ['branch'])
+DAU_GAUGE = Gauge('daily_active_users', 'Daily Active Users')
+HAU_GAUGE = Gauge('hourly_active_users', 'Hourly Active Users')
 OPENAI_FINISH_REASON_COUNTER = Counter('openai_finish_reason_total', 'Total Number of Each Reasons', ['reason'])

@@ -54,8 +54,6 @@ async def get_response_from_chatgpt(model, messages, branch):
         reason = response['choices'][0]['finish_reason']
         OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()
 
-        time.perf_counter() - openai_start
-
     return response
 
 

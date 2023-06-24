@@ -325,15 +325,14 @@ class Bot(ABC):
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
-        if not user_id_exists(user_id=msg.from_id):
-            if user_over_limit():
-                await self.send_msg_async(
-                    msg=user_limit_msg,
-                    chat_id=msg.chat_id,
-                    parse_mode=None,
-                    reply_to_message_id=msg.reply_to_message_id,
-                )
-                return
+        if not user_id_exists(user_id=msg.from_id) and user_over_limit():
+            await self.send_msg_async(
+                msg=user_limit_msg,
+                chat_id=msg.chat_id,
+                parse_mode=None,
+                reply_to_message_id=msg.reply_to_message_id,
+            )
+            return
 
         handle_single_msg_start = time.perf_counter()
         if msg.from_id in self.bot_admin_id_list:

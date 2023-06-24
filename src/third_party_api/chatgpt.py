@@ -31,8 +31,9 @@ from src.utils.metrics import (
     OPENAI_LATENCY_METRICS,
     OPENAI_FINISH_REASON_COUNTER,
     OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM,
+    OPENAI_COMPLETION_TOKEN_USED_COUNTER,
 )
-from src.utils.metrics import OPENAI_TOKEN_USED_COUNTER
+from src.utils.metrics import OPENAI_PROMPT_TOKEN_USED_COUNTER
 
 
 def get_openai_key():
@@ -53,9 +54,9 @@ async def get_response_from_chatgpt(model, messages, branch):
     OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
         time.perf_counter() - openai_start
     )
-    token_used = response['usage']['total_tokens']
-    OPENAI_TOKEN_USED_COUNTER.labels(branch).inc(token_used)
-    OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM.labels(branch).observe(token_used)
+    OPENAI_PROMPT_TOKEN_USED_COUNTER.labels(branch).inc(response['usage']['prompt_tokens'])
+    OPENAI_COMPLETION_TOKEN_USED_COUNTER.labels(branch).inc(response['usage']['completion_tokens'])
+    OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM.labels(branch).observe(response['usage']['total_tokens'])
     if response:
         reason = response['choices'][0]['finish_reason']
         OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()

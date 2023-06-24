@@ -38,7 +38,12 @@ SUCCESS_REPLY_COUNTER = Counter('success_reply_total', 'Total Number of Successf
 
 ERROR_COUNTER = Counter('error_total', 'Total Number of Error', ['reason', 'branch'])
 TOTAL_USERS_GAUGE = Gauge('total_unique_users', 'Total unique users')
-OPENAI_TOKEN_USED_COUNTER = Counter('openai_tokens_used', 'Number of tokens used by the OpenAI API', ['branch'])
+OPENAI_PROMPT_TOKEN_USED_COUNTER = Counter(
+    'openai_prompt_tokens_used', 'Number of prompt tokens used by the OpenAI API', ['branch']
+)
+OPENAI_COMPLETION_TOKEN_USED_COUNTER = Counter(
+    'openai_completion_tokens_used', 'Number of completion tokens used by the OpenAI API', ['branch']
+)
 OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM = Histogram(
     'openai_tokens_per_conversation',
     'Number of tokens used per conversation',

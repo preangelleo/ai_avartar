@@ -116,7 +116,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
         return
 
-    msg_history = get_system_prompt_and_dialogue_tone()
+    msg_history = get_system_prompt_and_dialogue_tone(msg.first_name)
     previous_role = 'assistant'
     for i in range(df.shape[0]):
         history_conversation = df.iloc[i]

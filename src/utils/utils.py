@@ -1114,7 +1114,7 @@ def save_avatar_chat_history(msg: SingleMessage, msg_text, chat_id, from_id, use
     try:
         with Params().Session() as session:
             new_record = ChatHistory(
-                message_id=int(msg.message_id) if msg.message_id else None,
+                message_id=msg.message_id,
                 first_name=first_name,
                 last_name=last_name,
                 username=username,

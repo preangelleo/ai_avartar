@@ -135,7 +135,6 @@ class FanbookBot(Bot):
                             if len(obj.get('data', [])) != 0:
                                 logging.error("Received error: %s", message)
                         elif obj.get('action') == 'push':
-                            logging.info("Received push: %s", message)
                             asyncio.create_task(self.handle_push(obj))
                         else:
                             logging.error("Received message: %s", message)

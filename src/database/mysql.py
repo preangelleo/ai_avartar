@@ -10,7 +10,7 @@ class ChatHistory(Base):
     __tablename__ = 'avatar_chat_history'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    message_id = Column(Integer)
+    message_id = Column(String(255))
     first_name = Column(String(255))
     last_name = Column(String(255))
     username = Column(String(255))

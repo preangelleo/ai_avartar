@@ -93,11 +93,6 @@ class FanbookBot(Bot):
         return response.json()
 
     async def send_msg_async(self, msg: str, chat_id, parse_mode=None, reply_to_message_id=None):
-        if '[JAILBREAK]' in msg:
-            msg = msg.split('[JAILBREAK]')[-1].strip()
-        if '[CLASSIC]' in msg:
-            msg = re.sub(r'.*\[CLASSIC\]', '', msg).strip()
-
         headers = {'Content-type': 'application/json'}
         payload = {
             'chat_id': int(chat_id),

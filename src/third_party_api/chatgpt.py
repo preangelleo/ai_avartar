@@ -143,6 +143,12 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
             model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
         )
         reply = response['choices'][0]['message']['content']
+
+        if '[JAILBREAK]' in msg:
+            reply = reply.split('[JAILBREAK]')[-1].strip()
+        if '[CLASSIC]' in msg:
+            reply = reply.split('[CLASSIC]')[-1].strip()
+
         reply = reply.strip('\n').strip()
 
     except Exception as e:

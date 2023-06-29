@@ -110,7 +110,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
 
     try:
         df = pd.read_sql_query(
-            f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{msg.from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 4) sub ORDER BY `id` ASC",
+            f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{msg.from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC",
             Params().engine,
         )
     except Exception as e:

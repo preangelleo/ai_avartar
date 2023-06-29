@@ -2,6 +2,7 @@ from src.utils.param_singleton import Params
 
 # TODO(kezhang@): implement this im params
 FANBOOK_BOT_NAME = Params().FANBOOK_BOT_NAME
+FANBOOK_BOT_ID = Params().FANBOOK_BOT_ID
 FANBOOK_BOT_OWNER_NAME = Params().FANBOOK_BOT_OWNER_NAME
 FANBOOK_BOT_OWNER_ID = Params().FANBOOK_BOT_OWNER_ID
 FANBOOK_BOT_CREATOR_ID = Params().FANBOOK_BOT_CREATOR_ID

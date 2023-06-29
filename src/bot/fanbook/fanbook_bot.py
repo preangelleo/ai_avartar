@@ -4,7 +4,6 @@ from src.utils.logging_util import logging
 from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg
 
 import requests
-import re
 from src.bot.bot import Bot
 import sentry_sdk
 import json
@@ -25,6 +24,7 @@ from src.bot.fanbook.utils.constants import (
     FANBOOK_VERSION,
     GET_USER_TOKEN_TIMEOUT_COUNT,
     TEST_BOT_ID,
+    FANBOOK_BOT_ID,
 )
 from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
 from prometheus_client import start_http_server
@@ -67,10 +67,11 @@ class FanbookBot(Bot):
 
     async def handle_push(self, obj):
         is_bot = obj.get('data', {}).get('author', {}).get('bot')
-        is_test_bot = obj.get('data', {}).get('user_id') == TEST_BOT_ID
-        logging.debug(f'handle_push(): is_bot: {is_bot}, is_test_bot: {is_test_bot}')
+        from_id = obj.get('data', {}).get('user_id')
+        logging.debug(f'handle_push(): is_bot: {is_bot}, is_test_bot: {from_id == TEST_BOT_ID}')
 
-        if is_bot and not is_test_bot:
+        # Ignore self message and allow test message from test_bot.
+        if is_bot and (from_id == FANBOOK_BOT_ID or from_id != TEST_BOT_ID):
             return
         channel_id = obj.get('data', {}).get('channel_id')
         author = obj.get('data', {}).get('author', {}).get('nickname')

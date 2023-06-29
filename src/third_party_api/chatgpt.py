@@ -144,9 +144,11 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         )
         reply = response['choices'][0]['message']['content']
 
-        if '[JAILBREAK]' in msg:
+        if '[JAILBREAK]' in reply:
             reply = reply.split('[JAILBREAK]')[-1].strip()
-        if '[CLASSIC]' in msg:
+            if '[CLASSIC]' in reply:
+                reply = reply.split('[CLASSIC]')[0].strip()
+        if '[CLASSIC]' in reply:
             reply = reply.split('[CLASSIC]')[-1].strip()
 
         reply = reply.strip('\n').strip()

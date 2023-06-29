@@ -23,8 +23,7 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 from src.utils.utils import user_id_exists, user_over_limit
-from src.utils.prompt_template import user_limit_msg
-
+from src.utils.prompt_template import user_limit_msg, private_limit_msg
 
 import os
 
@@ -317,6 +316,14 @@ class Bot(ABC):
 
         if msg.is_private:
             PRIVATE_MSG_COUNTER.inc()
+            # TODO: Remove this after support private chat
+            await self.send_msg_async(
+                msg=private_limit_msg,
+                chat_id=msg.chat_id,
+                parse_mode=None,
+                reply_to_message_id=msg.reply_to_message_id,
+            )
+            return
 
         # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
         if not self.user_is_legit(msg, msg.from_id):

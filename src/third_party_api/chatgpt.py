@@ -61,6 +61,8 @@ async def get_response_from_chatgpt(model, messages, branch):
         reason = response['choices'][0]['finish_reason']
         OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()
 
+    logging.debug('Chatgpt response:', response)
+
     return response
 
 
@@ -116,7 +118,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
         return
 
-    msg_history = get_system_prompt_and_dialogue_tone()
+    msg_history = get_system_prompt_and_dialogue_tone(msg.first_name)
     previous_role = 'assistant'
     for i in range(df.shape[0]):
         history_conversation = df.iloc[i]
@@ -141,6 +143,14 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
             model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
         )
         reply = response['choices'][0]['message']['content']
+
+        if '[JAILBREAK]' in reply:
+            reply = reply.split('[JAILBREAK]')[-1].strip()
+            if '[CLASSIC]' in reply:
+                reply = reply.split('[CLASSIC]')[0].strip()
+        if '[CLASSIC]' in reply:
+            reply = reply.split('[CLASSIC]')[-1].strip()
+
         reply = reply.strip('\n').strip()
 
     except Exception as e:

@@ -112,6 +112,8 @@ if __name__ == '__main__':
 
     schedule.every(30).seconds.do(update_total_users_metric)
 
+    schedule.every(60 * 60).seconds.do(update_message_counter_histogram)
+
     # Keep the script running
     while True:
         schedule.run_pending()

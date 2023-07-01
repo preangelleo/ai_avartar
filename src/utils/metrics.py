@@ -53,3 +53,9 @@ OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM = Histogram(
 DAU_GAUGE = Gauge('daily_active_users', 'Daily Active Users')
 HAU_GAUGE = Gauge('hourly_active_users', 'Hourly Active Users')
 OPENAI_FINISH_REASON_COUNTER = Counter('openai_finish_reason_total', 'Total Number of Each Reasons', ['reason'])
+MESSAGE_HISTOGRAM = Histogram(
+    'chat_messages_count',
+    'Histogram of messages count',
+    ['is_private'],
+    buckets=(1, 10, 50, 100, 200, 300, 400, 500, 750, 1000, 1500, 2000, float("inf")),
+)

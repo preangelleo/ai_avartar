@@ -1,12 +1,15 @@
 from prometheus_client import start_http_server
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, text
 from datetime import datetime
 import time
 import schedule
 from src.utils.param_singleton import Params
 from database.mysql import ChatHistory
 from src.utils.metrics import DAU_GAUGE
-from src.utils.metrics import HAU_GAUGE, TOTAL_USERS_GAUGE
+from src.utils.metrics import HAU_GAUGE, TOTAL_USERS_GAUGE, MESSAGE_HISTOGRAM
+
+
+FETCH_CHAT_MESSAGE_BATCH_SIZE = 100
 
 
 def get_dau():
@@ -59,6 +62,45 @@ def get_hau():
         )
 
     return unique_users
+
+
+def get_messages_data():
+    query = text(
+        """
+        SELECT first_name, is_private, COUNT(*) AS num_msg
+        FROM avatar_chat_history
+        WHERE first_name != 'ChatGPT'
+        GROUP BY first_name, is_private
+        ORDER BY is_private DESC, num_msg DESC
+    """
+    )
+
+    # Batch size
+    batch_size = FETCH_CHAT_MESSAGE_BATCH_SIZE
+    data = []
+
+    # Execute the query
+    with Params().engine.connect() as connection:
+        result = connection.execute(query)
+
+        # Fetch results in batches
+        while True:
+            batch = result.fetchmany(batch_size)
+            if not batch:
+                break
+
+            for row in batch:
+                # Process each row in the batch
+                # For example, print it:
+                data.append(row)
+    return data
+
+
+def update_message_counter_histogram():
+    data = get_messages_data()
+    for first_name, is_private, number_of_messages in data:
+        is_private_str = 'true' if is_private == 1 else 'false'
+        MESSAGE_HISTOGRAM.labels(is_private=is_private_str).observe(number_of_messages)
 
 
 if __name__ == '__main__':

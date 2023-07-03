@@ -110,7 +110,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
 
     try:
         df = pd.read_sql_query(
-            f"SELECT * FROM (SELECT `id`, `username`, `msg_text` FROM `avatar_chat_history` WHERE `from_id` = '{msg.from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC",
+            f"SELECT * FROM (SELECT `id`, `username`, `msg_text`, `image_description` FROM `avatar_chat_history` WHERE `from_id` = '{msg.from_id}' AND `msg_text` IS NOT NULL ORDER BY `id` DESC LIMIT 10) sub ORDER BY `id` ASC",
             Params().engine,
         )
     except Exception as e:
@@ -129,10 +129,14 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
             continue
         if len(history_conversation['msg_text']) > 1200:
             continue
+        content = history_conversation['msg_text']
+        # Add image_description to the context if it is assistant.
+        if user_or_assistant == 'assistant':
+            content = (history_conversation['image_description'] or '') + '.' + content
         need_to_be_appended = {
             "role": user_or_assistant,
             # Prevent the bot admit that he is a AI model.
-            "content": history_conversation['msg_text'].replace('AI语言模型', bot.bot_name).replace('人工智能程序', bot.bot_name),
+            "content": content.replace('AI语言模型', bot.bot_name).replace('人工智能程序', bot.bot_name),
         }
         msg_history.append(need_to_be_appended)
         previous_role = user_or_assistant

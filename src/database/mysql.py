@@ -22,6 +22,11 @@ class ChatHistory(Base):
     black_list = Column(Integer, default=0)
     is_private = Column(Boolean, default=0)
     is_mentioned = Column(Boolean, default=0)
+    is_replied = Column(Boolean, default=0)
+    branch = Column(String(255), default='local_chatgpt')
+    replied_message_id = Column(String(255))
+    image_description = Column(Text)
+    comma_separated_image_url = Column(Text)
 
 
 class OwnerParameter(Base):

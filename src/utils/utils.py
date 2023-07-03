@@ -21,7 +21,7 @@ from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.utils.prompt_template import inproper_words_list
 from src.database.mysql import *
-from src.utils.metrics import TOTAL_USERS_GAUGE
+from src.utils.metrics import IMAGE_GENERATION_COUNTER
 
 
 def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):
@@ -319,6 +319,7 @@ def stability_generate_image(
         os.makedirs(working_folder)
 
     for i, image in enumerate(data["artifacts"]):
+        IMAGE_GENERATION_COUNTER.labels('dream_studio').inc()
         current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         filename = hashlib.md5((text_prompts + '_' + str(i) + '_' + str(current_timestamp)).encode()).hexdigest()
         filename_txt = filename + '.txt'

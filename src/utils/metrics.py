@@ -39,6 +39,7 @@ SUCCESS_REPLY_COUNTER = Counter('success_reply_total', 'Total Number of Successf
 
 ERROR_COUNTER = Counter('error_total', 'Total Number of Error', ['reason', 'branch'])
 TOTAL_USERS_GAUGE = Gauge('total_unique_users', 'Total unique users')
+IMAGE_GENERATION_COUNTER = Counter('image_generated', 'Number image generated with given method.', ['method'])
 OPENAI_PROMPT_TOKEN_USED_COUNTER = Counter(
     'openai_prompt_tokens_used', 'Number of prompt tokens used by the OpenAI API', ['branch']
 )

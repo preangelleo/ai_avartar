@@ -386,7 +386,7 @@ class Bot(ABC):
                 if function_name == 'generate_image':
                     function_args = json.loads(response['choices'][0]['message']["function_call"]["arguments"])
                     image_description = function_args['image_description']
-                    text_reply = function_args['response_to_user_message']
+                    text_reply = image_description + function_args['response_to_user_message']
                     logging.info(
                         f"generate_image:\n"
                         f"image_description:{image_description}\n"
@@ -396,10 +396,11 @@ class Bot(ABC):
                     try:
                         file_list = stability_generate_image(text_prompts=image_description)
                     except Exception as e:
+                        send_text_reply = False
                         ERROR_COUNTER.labels('stability_generate_image', 'chatgpt').inc()
                         logging.error(f"stability_generate_image() {e}")
 
-                    if file_list:
+                    if send_text_reply and file_list:
                         for file in file_list:
                             try:
                                 await self.send_img_async(

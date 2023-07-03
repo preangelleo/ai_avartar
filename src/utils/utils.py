@@ -22,6 +22,7 @@ from src.utils.param_singleton import Params
 from src.utils.prompt_template import inproper_words_list
 from src.database.mysql import *
 from src.utils.metrics import IMAGE_GENERATION_COUNTER
+from src.utils.logging_util import measure_execution_time
 
 
 def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):
@@ -281,6 +282,7 @@ def convert_mp3_to_wav(mp3_file_path):
     return wav_file_path
 
 
+@measure_execution_time
 def stability_generate_image(
     text_prompts,
     cfg_scale=7,

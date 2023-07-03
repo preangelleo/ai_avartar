@@ -10,6 +10,7 @@ from src.bot.bot import Bot
 import sentry_sdk
 import json
 import base64
+from src.utils.logging_util import measure_execution_time
 import websockets
 import asyncio
 import httpx
@@ -97,6 +98,7 @@ class FanbookBot(Bot):
         logging.debug(f'send_msg(): {response.json()}')
         return response.json()
 
+    @measure_execution_time
     async def send_msg_async(self, msg: str, chat_id, parse_mode=None, reply_to_message_id=None):
         headers = {'Content-type': 'application/json'}
         payload = {

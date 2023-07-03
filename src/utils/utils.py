@@ -314,7 +314,7 @@ def stability_generate_image(
 
     data = response.json()
     file_path_list = []
-    working_folder = 'files/images/dream_studio'
+    working_folder = '/root/files/images/dream_studio/'
     if not os.path.exists(working_folder):
         os.makedirs(working_folder)
 

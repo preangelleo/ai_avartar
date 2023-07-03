@@ -8,6 +8,13 @@ import pytz
 from urllib.parse import urlencode
 
 import pandas as pd
+import httpx
+import aiofiles
+import asyncio
+import hashlib
+import os
+import base64
+from datetime import datetime
 import replicate
 import requests
 import sqlalchemy
@@ -283,7 +290,7 @@ def convert_mp3_to_wav(mp3_file_path):
 
 
 @measure_execution_time
-def stability_generate_image(
+async def stability_generate_image(
     text_prompts,
     cfg_scale=7,
     clip_guidance_preset="FAST_BLUE",
@@ -293,61 +300,63 @@ def stability_generate_image(
     steps=30,
     engine_id="stable-diffusion-xl-beta-v2-2-2",
 ):
-    response = requests.post(
-        f"{Params().STABILITY_URL}generation/{engine_id}/text-to-image",
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {Params().STABILITY_API_KEY}",
-        },
-        json={
-            "text_prompts": [{"text": text_prompts}],
-            "cfg_scale": cfg_scale,
-            "clip_guidance_preset": clip_guidance_preset,
-            "height": height,
-            "width": width,
-            "samples": samples,
-            "steps": steps,
-        },
-    )
+    timeout = 30
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(
+            f"{Params().STABILITY_URL}generation/{engine_id}/text-to-image",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {Params().STABILITY_API_KEY}",
+            },
+            json={
+                "text_prompts": [{"text": text_prompts}],
+                "cfg_scale": cfg_scale,
+                "clip_guidance_preset": clip_guidance_preset,
+                "height": height,
+                "width": width,
+                "samples": samples,
+                "steps": steps,
+            },
+        )
 
-    if response.status_code != 200:
-        raise Exception("Non-200 response: " + str(response.text))
+        if response.status_code != 200:
+            raise Exception("Non-200 response: " + str(response.text))
 
-    data = response.json()
-    file_path_list = []
-    working_folder = '/root/files/images/dream_studio/'
-    if not os.path.exists(working_folder):
-        os.makedirs(working_folder)
+        data = response.json()
+        file_path_list = []
+        working_folder = '/root/files/images/dream_studio/'
+        if not os.path.exists(working_folder):
+            os.makedirs(working_folder)
 
-    for i, image in enumerate(data["artifacts"]):
-        IMAGE_GENERATION_COUNTER.labels('dream_studio').inc()
-        current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        filename = hashlib.md5((text_prompts + '_' + str(i) + '_' + str(current_timestamp)).encode()).hexdigest()
-        filename_txt = filename + '.txt'
-        filename_pic = filename + '.png'
-        filepath_txt = f'{working_folder}/{filename_txt}'
-        filepath_pic = f'{working_folder}/{filename_pic}'
+        for i, image in enumerate(data["artifacts"]):
+            IMAGE_GENERATION_COUNTER.labels('dream_studio').inc()
+            current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            filename = hashlib.md5((text_prompts + '_' + str(i) + '_' + str(current_timestamp)).encode()).hexdigest()
+            filename_txt = filename + '.txt'
+            filename_pic = filename + '.png'
+            filepath_txt = f'{working_folder}/{filename_txt}'
+            filepath_pic = f'{working_folder}/{filename_pic}'
 
-        with open(filepath_pic, "wb") as f:
-            f.write(base64.b64decode(image["base64"]))
-            file_path_list.append(filepath_pic)
+            async with aiofiles.open(filepath_pic, "wb") as f:
+                await f.write(base64.b64decode(image["base64"]))
+                file_path_list.append(filepath_pic)
 
-        with open(filepath_txt, 'w') as f:
-            f.write(
-                '\n'.join(
-                    [
-                        str(i),
-                        text_prompts,
-                        current_timestamp,
-                        filename,
-                        filepath_txt,
-                        filepath_pic,
-                    ]
+            async with aiofiles.open(filepath_txt, 'w') as f:
+                await f.write(
+                    '\n'.join(
+                        [
+                            str(i),
+                            text_prompts,
+                            current_timestamp,
+                            filename,
+                            filepath_txt,
+                            filepath_pic,
+                        ]
+                    )
                 )
-            )
 
-    return file_path_list
+        return file_path_list
 
 
 def st_find_ranks_for_word(key_word):

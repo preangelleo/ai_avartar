@@ -3,6 +3,8 @@ import time
 from src.utils.logging_util import logging
 from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg
 
+import logging
+from httpx import ReadTimeout
 import requests
 from src.bot.bot import Bot
 import sentry_sdk
@@ -113,25 +115,6 @@ class FanbookBot(Bot):
         logging.info(f'send_msg(): {response.json()}')
         return response.json()
 
-    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
-        headers = {'Content-type': 'application/json'}
-        url = file_path.replace('files/', f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:81/')
-        logging.info(f"local_bot_img_command() prepare to send image {url}")
-        payload = {
-            'chat_id': int(chat_id),
-            'photo': {"Url": url},
-        }
-        if reply_to_message_id:
-            payload['reply_to_message_id'] = int(reply_to_message_id)
-
-        async with httpx.AsyncClient() as client:
-            send_img_start = time.perf_counter()
-            response = await client.post(FANBOOK_SEND_IMAGE_URL, data=json.dumps(payload), headers=headers)
-            SEND_IMAGE_LATENCY_METRICS.observe(time.perf_counter() - send_img_start)
-
-        logging.info(f'send_img(): {response.json()}')
-        return response.json()
-
     def construct_image_server_url(self, file_path, base_dir='/root/files/'):
         import os
 
@@ -141,7 +124,7 @@ class FanbookBot(Bot):
         url = f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:81/{relative_path}'
         return url
 
-    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description='', max_retries=3):
         headers = {'Content-type': 'application/json'}
         url = self.construct_image_server_url(file_path)
         payload = {
@@ -151,12 +134,21 @@ class FanbookBot(Bot):
         if reply_to_message_id:
             payload['reply_to_message_id'] = int(reply_to_message_id)
 
-        async with httpx.AsyncClient() as client:
-            send_img_start = time.perf_counter()
-            response = await client.post(FANBOOK_SEND_IMAGE_URL, data=json.dumps(payload), headers=headers)
-            SEND_IMAGE_LATENCY_METRICS.observe(time.perf_counter() - send_img_start)
+        async with httpx.AsyncClient(timeout=30.0) as client:  # set an explicit timeout
+            for retry in range(max_retries):
+                send_img_start = time.perf_counter()
+                try:
+                    response = await client.post(FANBOOK_SEND_IMAGE_URL, data=json.dumps(payload), headers=headers)
+                    SEND_IMAGE_LATENCY_METRICS.observe(time.perf_counter() - send_img_start)
+                    logging.info(f'send_img(): {response.json()}')
+                    return response.json()
+                except ReadTimeout:
+                    logging.error(f'Request timeout, retry {retry + 1}')
+                except Exception as e:
+                    logging.error(f'An error occurred: {e}')
+                    break  # break out of the loop for any other exception
 
-        logging.info(f'send_img(): {response.json()}')
+        logging.error(f'Failed to send image after {max_retries} retries.')
         return response.json()
 
     async def send_ping(self, ws):

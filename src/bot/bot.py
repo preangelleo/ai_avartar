@@ -2,7 +2,6 @@ import time
 from abc import ABC, abstractmethod
 from datetime import date
 
-from src.bot.single_message import SingleMessage
 from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
 from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import (

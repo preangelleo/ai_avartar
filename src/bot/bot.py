@@ -386,7 +386,7 @@ class Bot(ABC):
                 if function_name == 'generate_image':
                     function_args = json.loads(response['choices'][0]['message']["function_call"]["arguments"])
                     image_description = function_args['image_description']
-                    text_reply = image_description + function_args['response_to_user_message']
+                    text_reply = function_args['response_to_user_message']
                     logging.info(
                         f"generate_image:\n"
                         f"image_description:{image_description}\n"
@@ -430,6 +430,8 @@ class Bot(ABC):
             # If there is any text_reply available we should store and send it
             if text_reply and send_text_reply:
                 store_reply = text_reply.replace("'", "").replace('"', '')
+                if branch == 'generate_image':
+                    store_reply = image_description + store_reply
                 try:
                     with Params().Session() as session:
                         new_record = ChatHistory(

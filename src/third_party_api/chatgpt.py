@@ -141,7 +141,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         msg_history.append(need_to_be_appended)
         previous_role = user_or_assistant
     msg_history.append({"role": "user", "content": msg.msg_text})
-    logging.info("msg_history: ", msg_history)
+    logging.debug("msg_history: ", msg_history)
 
     try:
         response = await get_response_from_chatgpt(

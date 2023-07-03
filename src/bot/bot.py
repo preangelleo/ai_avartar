@@ -389,11 +389,11 @@ class Bot(ABC):
                     )
                     file_list = None
                     try:
-                        file_list = stability_generate_image(text_prompts=image_description)
+                        file_list = await stability_generate_image(text_prompts=image_description)
                     except Exception as e:
                         send_text_reply = False
                         ERROR_COUNTER.labels('stability_generate_image', 'chatgpt').inc()
-                        logging.error(f"stability_generate_image() {e}")
+                        logging.exception(f"stability_generate_image() {e}")
 
                     if send_text_reply and file_list:
                         for file in file_list:

@@ -377,7 +377,8 @@ class Bot(ABC):
         branch = 'local_chatgpt'
 
         if response:
-            send_text_reply = True
+            image_description = None
+            image_url = None
             # If a function call is triggered
             if response['choices'][0]['message'].get("function_call"):
                 branch = 'generate_image'
@@ -391,15 +392,15 @@ class Bot(ABC):
                         f"image_description:{image_description}\n"
                         f"response_to_user_message:{text_reply}"
                     )
-                    file_list = None
                     try:
                         file_list = await stability_generate_image(text_prompts=image_description)
                     except Exception as e:
-                        send_text_reply = False
                         ERROR_COUNTER.labels('stability_generate_image', 'chatgpt').inc()
                         logging.exception(f"stability_generate_image() {e}")
+                        return
 
-                    if send_text_reply and file_list:
+                    if file_list:
+                        image_url = ','.join(file_list)
                         for file in file_list:
                             try:
                                 await self.send_img_async(
@@ -409,13 +410,14 @@ class Bot(ABC):
                                     description=image_description,
                                 )
                             except Exception as e:
-                                send_text_reply = False
                                 ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
                                 logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
+                                return
 
             # If no function call is triggered, and it is a regular reply
             else:
                 text_reply = response['choices'][0]['message']['content']
+                # Potentially remove Jailbreak comments if we used a jailbreak prompt
                 if text_reply:
                     if '[JAILBREAK]' in text_reply:
                         text_reply = text_reply.split('[JAILBREAK]')[-1].strip()
@@ -427,39 +429,10 @@ class Bot(ABC):
                     text_reply = text_reply.strip('\n').strip()
 
             # If there is any text_reply available we should store and send it
-            if text_reply and send_text_reply:
-                store_reply = text_reply.replace("'", "").replace('"', '')
-                if branch == 'generate_image':
-                    store_reply = image_description + store_reply
-                try:
-                    with Params().Session() as session:
-                        new_record = ChatHistory(
-                            first_name='ChatGPT',
-                            last_name='Bot',
-                            username=self.bot_name,
-                            from_id=msg.from_id,
-                            chat_id=msg.chat_id,
-                            update_time=datetime.now(),
-                            msg_text=store_reply,
-                            black_list=0,
-                            is_private=msg.is_private,
-                        )
-                        # Add the new record to the session
-                        session.add(new_record)
-
-                        # Also mark this message as is_replied and update branch
-                        session.query(ChatHistory).filter(ChatHistory.message_id == msg.message_id).update(
-                            {"is_replied": True, "branch": branch}
-                        )
-                        # Commit the session
-                        session.commit()
-                except Exception as e:
-                    ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
-                    return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
-
+            if text_reply:
                 try:
                     REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(text_reply))
-                    await self.send_msg_async(
+                    send_msg_response = await self.send_msg_async(
                         msg=text_reply,
                         chat_id=msg.chat_id,
                         parse_mode=None,
@@ -472,6 +445,43 @@ class Bot(ABC):
                 except Exception as e:
                     ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
                     logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
+                    return
+
+                store_reply = text_reply.replace("'", "").replace('"', '')
+                try:
+                    with Params().Session() as session:
+                        new_record = ChatHistory(
+                            message_id=send_msg_response['result']['message_id'],
+                            first_name='ChatGPT',
+                            last_name='Bot',
+                            username=self.bot_name,
+                            from_id=msg.from_id,
+                            chat_id=msg.chat_id,
+                            update_time=datetime.now(),
+                            msg_text=store_reply,
+                            black_list=0,
+                            is_private=msg.is_private,
+                            branch=branch,
+                            image_description=image_description,
+                            comma_separated_image_url=image_url,
+                        )
+                        # Add the new record to the session
+                        session.add(new_record)
+
+                        # Also mark the previous incoming user message as is_replied and update branch
+                        session.query(ChatHistory).filter(ChatHistory.message_id == msg.message_id).update(
+                            {
+                                "is_replied": True,
+                                "branch": branch,
+                                "replied_message_id": send_msg_response['result']['message_id'],
+                            }
+                        )
+                        # Commit the session
+                        session.commit()
+                except Exception as e:
+                    ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
+                    logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
+                    return
 
         return
 

@@ -3,15 +3,11 @@ from pytz import timezone
 import logging
 import time
 
-# from statsd import StatsClient
+from src.utils.metrics import FUNCTION_CALL_LATENCY_METRICS
 
 
 def timetz(*args):
     return datetime.now(tz).timetuple()
-
-
-# Initialize StatsD client
-# statsd_client = StatsClient(host='localhost', port=8125, prefix='MyApplication')
 
 
 def measure_execution_time(func):
@@ -22,12 +18,7 @@ def measure_execution_time(func):
         # Execute the function
         result = func(*args, **kwargs)
 
-        # Measure execution time
-        execution_time = time.time() - start_time
-
-        # Send execution time to CloudWatch via StatsD
-        # statsd_client.timing('FunctionExecutionTime', execution_time)
-        logging.info(f'Function {func.__name__} executed in {execution_time} seconds')
+        FUNCTION_CALL_LATENCY_METRICS.labels(func.__name__).observe(time.time() - start_time)
 
         return result
 

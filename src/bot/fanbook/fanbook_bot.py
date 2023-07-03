@@ -111,6 +111,52 @@ class FanbookBot(Bot):
         logging.info(f'send_msg(): {response.json()}')
         return response.json()
 
+    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+        headers = {'Content-type': 'application/json'}
+        url = file_path.replace('files/', f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:81/')
+        logging.info(f"local_bot_img_command() prepare to send image {url}")
+        payload = {
+            'chat_id': int(chat_id),
+            'photo': {"Url": url},
+        }
+        if reply_to_message_id:
+            payload['reply_to_message_id'] = int(reply_to_message_id)
+
+        async with httpx.AsyncClient() as client:
+            send_img_start = time.perf_counter()
+            response = await client.post(FANBOOK_SEND_IMAGE_URL, data=json.dumps(payload), headers=headers)
+            SEND_IMAGE_LATENCY_METRICS.observe(time.perf_counter() - send_img_start)
+
+        logging.info(f'send_img(): {response.json()}')
+        return response.json()
+
+    def construct_image_server_url(self, file_path, base_dir='/root/files/'):
+        import os
+
+        # Get relative path
+        relative_path = os.path.relpath(file_path, base_dir)
+        # Construct the URL
+        url = f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:81/{relative_path}'
+        return url
+
+    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+        headers = {'Content-type': 'application/json'}
+        url = self.construct_image_server_url(file_path)
+        payload = {
+            'chat_id': int(chat_id),
+            'photo': {"Url": url},
+        }
+        if reply_to_message_id:
+            payload['reply_to_message_id'] = int(reply_to_message_id)
+
+        async with httpx.AsyncClient() as client:
+            send_img_start = time.perf_counter()
+            response = await client.post(FANBOOK_SEND_IMAGE_URL, data=json.dumps(payload), headers=headers)
+            SEND_IMAGE_LATENCY_METRICS.observe(time.perf_counter() - send_img_start)
+
+        logging.info(f'send_img(): {response.json()}')
+        return response.json()
+
     async def send_ping(self, ws):
         while True:
             await asyncio.sleep(HEAT_BEAT_INTERVAL)

@@ -138,6 +138,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         msg_history.append(need_to_be_appended)
         previous_role = user_or_assistant
     msg_history.append({"role": "user", "content": msg.msg_text})
+    logging.info("msg_history: ", msg_history)
 
     try:
         response = await get_response_from_chatgpt(
@@ -160,7 +161,8 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                                 "1. A portrait of a cyborg in a golden suit, D&D sci-fi, artstation, concept art, highly detailed illustration. "
                                 "2. A full portrait of a beautiful post apocalyptic offworld nanotechnician, intricate, elegant, highly detailed, digital painting, artstation, concept art, smooth, sharp focus, illustration, art by Krenz Cushart and Artem Demura and alphonse mucha. "
                                 "Remember the following when you generate. "
-                                "the audience enjoy japanese anime game, so the prompt should reflect the japanese anima style",
+                                "the audience enjoy japanese anime game, so the prompt should reflect the japanese anima style"
+                                "this image description should be in engligh",
                             },
                             "response_to_user_message": {
                                 "type": "string",

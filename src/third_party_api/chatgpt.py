@@ -140,7 +140,37 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
 
     try:
         response = await get_response_from_chatgpt(
-            model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
+            model=Params().OPENAI_MODEL,
+            messages=msg_history,
+            branch='local_reply',
+            functions=[
+                {
+                    "name": "generate_image",
+                    "description": "Generate an image according to user chat context. Only called when user want to see images",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_description": {
+                                "type": "string",
+                                "description": "The prompt that will be used to feed into stable diffusion model to "
+                                "generate image, infer this from messages. "
+                                "the model is stable-diffusion-xl-beta-v2-2-2."
+                                "Here are some examples: "
+                                "1. A portrait of a cyborg in a golden suit, D&D sci-fi, artstation, concept art, highly detailed illustration. "
+                                "2. A full portrait of a beautiful post apocalyptic offworld nanotechnician, intricate, elegant, highly detailed, digital painting, artstation, concept art, smooth, sharp focus, illustration, art by Krenz Cushart and Artem Demura and alphonse mucha. "
+                                "Remember the following when you generate. "
+                                "the audience enjoy japanese anime game, so the prompt should reflect the japanese anima style",
+                            },
+                            "response_to_user_message": {
+                                "type": "string",
+                                "description": "The response text sent to user after we send this image, it should have the same tone as system prompts.",
+                            },
+                        },
+                        "required": ["image_description", "response_to_user_message"],
+                    },
+                }
+            ],
+            function_call="auto",
         )
         reply = response['choices'][0]['message']['content']
 

@@ -315,8 +315,10 @@ async def stability_generate_image(
                 "clip_guidance_preset": clip_guidance_preset,
                 "height": height,
                 "width": width,
+                "seed": 1,
                 "samples": samples,
                 "steps": steps,
+                'style_preset': 'anime',
             },
         )
 

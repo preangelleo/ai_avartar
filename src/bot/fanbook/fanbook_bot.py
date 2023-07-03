@@ -25,11 +25,13 @@ from src.bot.fanbook.utils.constants import (
     GET_USER_TOKEN_TIMEOUT_COUNT,
     TEST_BOT_ID,
     FANBOOK_BOT_ID,
+    FANBOOK_SEND_IMAGE_URL,
 )
 from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
 from prometheus_client import start_http_server
 
-from src.utils.metrics import SEND_MSG_LATENCY_METRICS
+from src.utils.metrics import SEND_MSG_LATENCY_METRICS, SEND_IMAGE_LATENCY_METRICS
+from src.utils.param_singleton import Params
 
 
 class FanbookBot(Bot):
@@ -109,6 +111,25 @@ class FanbookBot(Bot):
             SEND_MSG_LATENCY_METRICS.labels(len(msg) // 10 * 10).observe(time.perf_counter() - send_msg_start)
 
         logging.info(f'send_msg(): {response.json()}')
+        return response.json()
+
+    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+        headers = {'Content-type': 'application/json'}
+        url = file_path.replace('files/', f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:81/')
+        logging.info(f"local_bot_img_command() prepare to send image {url}")
+        payload = {
+            'chat_id': int(chat_id),
+            'photo': {"Url": url},
+        }
+        if reply_to_message_id:
+            payload['reply_to_message_id'] = int(reply_to_message_id)
+
+        async with httpx.AsyncClient() as client:
+            send_img_start = time.perf_counter()
+            response = await client.post(FANBOOK_SEND_IMAGE_URL, data=json.dumps(payload), headers=headers)
+            SEND_IMAGE_LATENCY_METRICS.observe(time.perf_counter() - send_img_start)
+
+        logging.info(f'send_img(): {response.json()}')
         return response.json()
 
     async def send_ping(self, ws):

@@ -90,6 +90,10 @@ class Bot(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+        raise NotImplementedError
+
+    @abstractmethod
     def send_file(self, chat_id, file_path, description=''):
         raise NotImplementedError
 
@@ -351,6 +355,7 @@ class Bot(ABC):
                     time.perf_counter() - handle_single_msg_start
                 )
 
+        # TODO: migrate following code to text_branch_handler
         try:
             save_avatar_chat_history(
                 msg,
@@ -366,21 +371,105 @@ class Bot(ABC):
 
         HANDLE_SINGLE_MSG_COUNTER.labels('chatgpt').inc()
         MSG_TEXT_LEN_METRICS.labels('chatgpt').observe(len(msg.msg_text))
-        reply = await local_chatgpt_to_reply(self, msg)
 
-        if reply:
-            try:
-                REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(reply))
-                await self.send_msg_async(
-                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.reply_to_message_id
-                )
-                SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
-                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
-                    time.perf_counter() - handle_single_msg_start
-                )
-            except Exception as e:
-                ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
-                logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
+        # Call chatgpt and get response
+        response = await local_chatgpt_to_reply(self, msg)
+        text_reply = None
+        branch = 'local_chatgpt'
+
+        if response:
+            send_text_reply = True
+            # If a function call is triggered
+            if response['choices'][0]['message'].get("function_call"):
+                branch = 'generate_image'
+                function_name = response['choices'][0]['message']["function_call"]["name"]
+                if function_name == 'generate_image':
+                    function_args = json.loads(response['choices'][0]['message']["function_call"]["arguments"])
+                    image_description = function_args['image_description']
+                    text_reply = function_args['response_to_user_message']
+                    logging.info(
+                        f"generate_image:\n"
+                        f"image_description:{image_description}\n"
+                        f"response_to_user_message:{text_reply}"
+                    )
+                    file_list = None
+                    try:
+                        file_list = stability_generate_image(text_prompts=image_description)
+                    except Exception as e:
+                        ERROR_COUNTER.labels('stability_generate_image', 'chatgpt').inc()
+                        logging.error(f"stability_generate_image() {e}")
+
+                    if file_list:
+                        for file in file_list:
+                            try:
+                                await self.send_img_async(
+                                    chat_id=msg.chat_id,
+                                    file_path=file,
+                                    reply_to_message_id=msg.reply_to_message_id,
+                                    description=image_description,
+                                )
+                            except Exception as e:
+                                send_text_reply = False
+                                ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
+                                logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
+
+            # If no function call is triggered, and it is a regular reply
+            else:
+                text_reply = response['choices'][0]['message']['content']
+                if text_reply:
+                    if '[JAILBREAK]' in text_reply:
+                        text_reply = text_reply.split('[JAILBREAK]')[-1].strip()
+                        if '[CLASSIC]' in text_reply:
+                            text_reply = text_reply.split('[CLASSIC]')[0].strip()
+                    if '[CLASSIC]' in text_reply:
+                        text_reply = text_reply.split('[CLASSIC]')[-1].strip()
+
+                    text_reply = text_reply.strip('\n').strip()
+
+            # If there is any text_reply available we should store and send it
+            if text_reply and send_text_reply:
+                store_reply = text_reply.replace("'", "").replace('"', '')
+                try:
+                    with Params().Session() as session:
+                        new_record = ChatHistory(
+                            first_name='ChatGPT',
+                            last_name='Bot',
+                            username=self.bot_name,
+                            from_id=msg.from_id,
+                            chat_id=msg.chat_id,
+                            update_time=datetime.now(),
+                            msg_text=store_reply,
+                            black_list=0,
+                            is_private=msg.is_private,
+                        )
+                        # Add the new record to the session
+                        session.add(new_record)
+
+                        # Also mark this message as is_replied and update branch
+                        session.query(ChatHistory).filter(ChatHistory.message_id == msg.message_id).update(
+                            {"is_replied": True, "branch": branch}
+                        )
+                        # Commit the session
+                        session.commit()
+                except Exception as e:
+                    ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
+                    return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
+
+                try:
+                    REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(text_reply))
+                    await self.send_msg_async(
+                        msg=text_reply,
+                        chat_id=msg.chat_id,
+                        parse_mode=None,
+                        reply_to_message_id=msg.reply_to_message_id,
+                    )
+                    SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
+                    HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
+                        time.perf_counter() - handle_single_msg_start
+                    )
+                except Exception as e:
+                    ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
+                    logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
 
         return
 

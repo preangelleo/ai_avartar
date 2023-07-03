@@ -22,6 +22,8 @@ class ChatHistory(Base):
     black_list = Column(Integer, default=0)
     is_private = Column(Boolean, default=0)
     is_mentioned = Column(Boolean, default=0)
+    is_replied = Column(Boolean, default=0)
+    branch = Column(String(255), default='local_chatgpt')
 
 
 class OwnerParameter(Base):

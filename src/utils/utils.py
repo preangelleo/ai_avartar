@@ -298,9 +298,19 @@ async def stability_generate_image(
     width=512,
     samples=1,
     steps=30,
+    seed=1,
     engine_id="stable-diffusion-xl-beta-v2-2-2",
 ):
     timeout = 30
+    if isinstance(text_prompts, str):
+        text_prompts_hash = text_prompts
+        text_prompts = [{"text": text_prompts}]
+    elif isinstance(text_prompts, list):
+        text_prompts_hash = ''.join([t['text'] for t in text_prompts])
+    else:
+        raise ValueError(f"Wrong text_prompts provided: {text_prompts}")
+
+    logging.info(f"stability_generate_image() text_prompts={text_prompts}")
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(
             f"{Params().STABILITY_URL}generation/{engine_id}/text-to-image",
@@ -310,12 +320,12 @@ async def stability_generate_image(
                 "Authorization": f"Bearer {Params().STABILITY_API_KEY}",
             },
             json={
-                "text_prompts": [{"text": text_prompts}],
+                "text_prompts": text_prompts,
                 "cfg_scale": cfg_scale,
                 "clip_guidance_preset": clip_guidance_preset,
                 "height": height,
                 "width": width,
-                "seed": 1,
+                "seed": seed,
                 "samples": samples,
                 "steps": steps,
                 'style_preset': 'anime',
@@ -327,14 +337,16 @@ async def stability_generate_image(
 
         data = response.json()
         file_path_list = []
-        working_folder = '/root/files/images/dream_studio/'
+        working_folder = '/root/files/images/dream_studio'
         if not os.path.exists(working_folder):
             os.makedirs(working_folder)
 
         for i, image in enumerate(data["artifacts"]):
             IMAGE_GENERATION_COUNTER.labels('dream_studio').inc()
             current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            filename = hashlib.md5((text_prompts + '_' + str(i) + '_' + str(current_timestamp)).encode()).hexdigest()
+            filename = hashlib.md5(
+                (text_prompts_hash + '_' + str(i) + '_' + str(current_timestamp)).encode()
+            ).hexdigest()
             filename_txt = filename + '.txt'
             filename_pic = filename + '.png'
             filepath_txt = f'{working_folder}/{filename_txt}'
@@ -349,7 +361,7 @@ async def stability_generate_image(
                     '\n'.join(
                         [
                             str(i),
-                            text_prompts,
+                            text_prompts_hash,
                             current_timestamp,
                             filename,
                             filepath_txt,

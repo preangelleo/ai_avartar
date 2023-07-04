@@ -413,8 +413,9 @@ class Bot(ABC):
                         file_list = await stability_generate_image(
                             text_prompts=image_description, seed=random.randint(1, 10000)
                         )
+                        SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
                     except Exception as e:
-                        ERROR_COUNTER.labels('stability_generate_image', 'chatgpt').inc()
+                        ERROR_COUNTER.labels('generate_image', 'chatgpt').inc()
                         logging.exception(f"stability_generate_image() {e}")
                         return
 

@@ -1,3 +1,4 @@
+import random
 import time
 from abc import ABC, abstractmethod
 from datetime import date
@@ -22,7 +23,7 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 from src.utils.utils import user_id_exists, user_over_limit
-from src.utils.prompt_template import user_limit_msg, private_limit_msg
+from src.utils.prompt_template import user_limit_msg, private_limit_msg, portrait_description_prompt, magic_post_fix
 
 import os
 
@@ -387,13 +388,31 @@ class Bot(ABC):
                     function_args = json.loads(response['choices'][0]['message']["function_call"]["arguments"])
                     image_description = function_args['image_description']
                     text_reply = function_args['response_to_user_message']
+                    is_bot_pciture = function_args['is_bot_pciture']
                     logging.info(
                         f"generate_image:\n"
                         f"image_description:{image_description}\n"
-                        f"response_to_user_message:{text_reply}"
+                        f"response_to_user_message:{text_reply}\n"
+                        f"is_bot_pciture:{is_bot_pciture}"
                     )
+
+                    # If the user wants to see portrait of bot, we append the system defined image prompt
+                    if is_bot_pciture:
+                        image_description = [
+                            {
+                                "text": image_description + magic_post_fix,
+                                "weight": 0.8,
+                            },
+                            {
+                                "text": portrait_description_prompt + magic_post_fix,
+                                "weight": 0.2,
+                            },
+                        ]
+
                     try:
-                        file_list = await stability_generate_image(text_prompts=image_description)
+                        file_list = await stability_generate_image(
+                            text_prompts=image_description, seed=random.randint(1, 10000)
+                        )
                     except Exception as e:
                         ERROR_COUNTER.labels('stability_generate_image', 'chatgpt').inc()
                         logging.exception(f"stability_generate_image() {e}")

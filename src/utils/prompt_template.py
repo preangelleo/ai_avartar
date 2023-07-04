@@ -499,3 +499,67 @@ eleven_labs_tts_failed_alert = '''
 
 user_limit_msg = '对不起，和我聊天的人太多了所以我暂时处理不过来，等过段时间再试试吧！'
 private_limit_msg = '对不起，我暂时不能私聊，等过段时间再试试，现在请到${#514680459289280512} 里@我吧 ：）'
+
+image_description_prompt = """
+AI绘画的prompt，只能包含英文, 根据用户聊天上下文生成。下面是两个例子
+
+Example 1:
+masterpiece, best quality, ((pure white background)), standing,  long curly hair, cold face, full body, gray casual suit pants, High heel, ((blue tube top)), yellow jacket, (Fashionable clothing:1.3), happy, light effect, soft, super clear, high-definition picture, (front).
+
+这个AI绘画的prompt示例描述了一个穿JK制服的女孩。主要包含以下要素:
+3. 夜景背景
+4. 女孩正视着观众
+5. 白色长发
+6. 摆POSE
+7. 位于东京城市夜景之中
+8. 柔和的灯光效果
+9. 只有一个女孩
+10. 极美的脸部, bust描绘
+11. 放下双手动作
+12. 随机发型,随机表情
+13. 大眼睛
+14. 描绘到下腹部
+15. 穿着JK短袖恤衫,深蓝色JK裙子,以及JK领带
+16. cuteGirlMix4_v10的样式参考
+17. mix4的参考
+所以,这个prompt详细描述了一个穿JK uniform,在夜晚东京街头的美少女画面。
+
+Example 2:
+masterpiece, best quality, (((sky_background))), standing,  long curly hair, cold face, full body, gray casual suit pants, High heel, ((blue tube top)), yellow jacket, (Fashionable clothing:1.3), happy, light effect, soft, super clear, high-definition picture, (front).
+
+这个prompt描述的是一名穿着青色上衣,黄色外套和裤子的卡通风格女孩。主要要素如下:
+1. 高质量的杰作级作品
+2. 天空背景
+3. 站姿
+4. 长卷发
+5. 冷漠的表情
+6. 全身绘制
+7. 灰色休闲西装裤
+8. 高跟鞋
+9. 蓝色吊带背心
+10. 黄色外套
+11. 时尚的服装,比重1.3
+12. 开心的情绪
+13. 淡淡的光影效果
+14. 柔和的质感
+15. 超清晰,高清图片
+16. 前视图
+所以,这个prompt描述的是一个穿着蓝色吊带背心,黄色外套和高跟鞋,有着长卷发和冷峻表情的卡通风女孩。在纯白背景和微微的光影下,表现出开心的情绪。关键是理解不同要素的组合与所表达的整体效果。
+
+你需要给一个和上述两个例子一样格式的prompt,关键是要注重细节,把不同的要素准确表达出来,并做好组合与比重的控制。至少要有10个要素，只能包含英文。
+"""
+
+response_to_user_message_prompt = """The response text sent to user after we send this image, it should have 
+the same tone as system prompts and similar to these:
+（坏笑道）怎么样，是不是很好看？
+ 宝贝，你觉得这张照片怎么样？
+"""
+
+portrait_description_prompt = """anime handsome asian man, masterpiece, best quality, ((pure white background)), standing, tall stature, romantic,
+confident expression, short black hair, sleek waistcoat, (Fashionable clothing:1.1), soft lighting, super clear, soft lighting, 
+artistic style, high-resolution image, cold face(front). digital painting, artstation, concept art, sharp focus, 
+illustration, art by WLOP and greg rutkowski and alphonse mucha and artgerm and yanjun chen"""
+
+magic_post_fix = """, soft lighting, high-resolution image, cold face(front). centered| detailed gorgeous face| anime style| key visual| 
+intricate detail| highly detailed| breathtaking| vibrant| panoramic| cinematic| Carne Griffiths| Conrad Roset| 
+Makoto Shinkai"""

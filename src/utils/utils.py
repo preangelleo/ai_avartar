@@ -28,7 +28,7 @@ from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.utils.prompt_template import inproper_words_list
 from src.database.mysql import *
-from src.utils.metrics import IMAGE_GENERATION_COUNTER
+from src.utils.metrics import IMAGE_GENERATION_COUNTER, ERROR_COUNTER
 from src.utils.logging_util import measure_execution_time
 
 
@@ -328,11 +328,13 @@ async def stability_generate_image(
                 "seed": seed,
                 "samples": samples,
                 "steps": steps,
-                'style_preset': 'anime',
+                # 'style_preset': 'anime',
             },
         )
 
         if response.status_code != 200:
+            ERROR_COUNTER.labels('generate_image_' + json.loads(response.text)["name"], 'chatgpt').inc()
+            logging.error(f'generate_image error: {json.loads(response.text)["name"]}')
             raise Exception("Non-200 response: " + str(response.text))
 
         data = response.json()

@@ -17,6 +17,7 @@ from src.utils.prompt_template import (
     kids_story_assistant_prompt,
     image_description_prompt,
     response_to_user_message_prompt,
+    is_bot_picture_prompt,
 )
 from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story
 from datetime import datetime
@@ -157,9 +158,9 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "is_bot_pciture": {
+                            "is_bot_picture": {
                                 "type": "boolean",
-                                "description": "true if user want to see your picture.",
+                                "description": is_bot_picture_prompt,
                             },
                             "image_description": {
                                 "type": "string",
@@ -170,7 +171,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                                 "description": response_to_user_message_prompt,
                             },
                         },
-                        "required": ["is_bot_pciture", "image_description", "response_to_user_message"],
+                        "required": ["is_bot_picture", "image_description", "response_to_user_message"],
                     },
                 }
             ],

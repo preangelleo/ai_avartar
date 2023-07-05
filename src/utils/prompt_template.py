@@ -555,7 +555,48 @@ the same tone as system prompts and similar to these:
  宝贝，你觉得这张照片怎么样？
 """
 
-portrait_description_prompt = """anime handsome asian man, masterpiece, best quality, ((pure white background)), standing, tall stature, romantic,
+is_bot_picture_prompt = """
+当且仅当用户想看到包含'你'的照片的时候为true. 下面是几个例子：
+
+Example 1:
+用户：想看看大飞机的照片
+返回：false
+
+Example 2:
+用户：想看看你开大飞机的照片
+返回：true
+
+Example 3:
+用户：你长什么样
+返回：true
+
+Example 4:
+用户：来一些美女照片
+返回：false
+
+Example 5:
+用户：想看看你抱着我的照片
+返回：true
+
+Example 6:
+用户：想看你胸肌
+返回：true
+
+Example 6:
+用户：想看你下面
+返回：true
+
+Example 7:
+用户：你觉得最漂亮的女人什么样子
+返回：false
+
+Example 8:
+用户：画一个你觉得最好看的车
+返回：false
+"""
+
+
+portrait_description_prompt = """anime handsome man, masterpiece, best quality, ((pure white background)), standing, tall stature, romantic,
 confident expression, short black hair, sleek waistcoat, (Fashionable clothing:1.1), soft lighting, super clear, soft lighting, 
 artistic style, high-resolution image, cold face(front). digital painting, artstation, concept art, sharp focus, 
 illustration, art by WLOP and greg rutkowski and alphonse mucha and artgerm and yanjun chen"""

@@ -388,26 +388,32 @@ class Bot(ABC):
                     function_args = json.loads(response['choices'][0]['message']["function_call"]["arguments"])
                     image_description = function_args['image_description']
                     text_reply = function_args['response_to_user_message']
-                    is_bot_pciture = function_args['is_bot_pciture']
+                    is_bot_picture = function_args['is_bot_picture']
                     logging.info(
                         f"generate_image:\n"
                         f"image_description:{image_description}\n"
                         f"response_to_user_message:{text_reply}\n"
-                        f"is_bot_pciture:{is_bot_pciture}"
+                        f"is_bot_picture:{is_bot_picture}"
                     )
 
                     # If the user wants to see portrait of bot, we append the system defined image prompt
-                    if is_bot_pciture:
+                    if is_bot_picture:
                         image_description = [
                             {
-                                "text": image_description + magic_post_fix,
+                                "text": 'a detailed manga illustration, a handsome man,'
+                                + image_description
+                                + magic_post_fix,
                                 "weight": 0.8,
                             },
                             {
-                                "text": portrait_description_prompt + magic_post_fix,
+                                "text": 'a detailed manga illustration, a handsome man,'
+                                + portrait_description_prompt
+                                + magic_post_fix,
                                 "weight": 0.2,
                             },
                         ]
+                    else:
+                        image_description = 'a detailed manga illustration,' + image_description + magic_post_fix
 
                     try:
                         file_list = await stability_generate_image(
@@ -415,7 +421,6 @@ class Bot(ABC):
                         )
                         SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
                     except Exception as e:
-                        ERROR_COUNTER.labels('generate_image', 'chatgpt').inc()
                         logging.exception(f"stability_generate_image() {e}")
                         return
 

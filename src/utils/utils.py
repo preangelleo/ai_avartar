@@ -736,6 +736,17 @@ def get_system_prompt():
         return system_prompt.system_prompt
 
 
+def get_judge_prompt():
+    # Create a new session
+    with Params().Session() as session:
+        # Query the table 'avatar_system_prompt' to get the last system_prompt
+        system_prompt = session.query(SystemPrompt).order_by(SystemPrompt.id.desc()).first()
+        # 如果 system_prompt 为空则返回空字符串
+        if not system_prompt:
+            return ''
+        return system_prompt.judge_prompt
+
+
 # Samples of files/dialogue_tone.xls:
 '''
 user	我想你了

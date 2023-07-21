@@ -38,7 +38,6 @@ class SystemPrompt(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     system_prompt = Column(Text)
     update_time = Column(DateTime)
-    judge_prompt = Column(Text)
 
 
 class DialogueTone(Base):

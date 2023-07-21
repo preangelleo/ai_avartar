@@ -16,7 +16,7 @@ from src.utils.prompt_template import (
     kids_story_user_prompt,
     kids_story_assistant_prompt,
 )
-from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story, get_judge_prompt
+from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story
 from datetime import datetime
 
 from src.utils.param_singleton import Params
@@ -25,6 +25,7 @@ from src.utils.prompt_template import (
     midjourney_prompt_1,
     midjourney_user_prompt_fomula,
     midjourney_assistant_prompt_fomula,
+    judge_prompt,
 )
 from src.utils.metrics import (
     ERROR_COUNTER,
@@ -110,7 +111,7 @@ async def refine_reply_with_gpt(user_question, original_response):
         messages=[
             {
                 'role': 'system',
-                'content': get_judge_prompt().format(user_question=user_question, original_response=original_response),
+                'content': judge_prompt.format(user_question=user_question, original_response=original_response),
             }
         ],
     )

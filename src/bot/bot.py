@@ -396,9 +396,7 @@ class Bot(ABC):
                     if is_bot_picture:
                         image_description = [
                             {
-                                "text": 'a detailed manga illustration, a handsome man,'
-                                + image_description
-                                + magic_post_fix,
+                                "text": 'a detailed manga illustration,' + image_description + magic_post_fix,
                                 "weight": 0.8,
                             },
                             {

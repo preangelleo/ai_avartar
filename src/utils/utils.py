@@ -300,6 +300,7 @@ async def stability_generate_image(
     steps=30,
     seed=1,
     engine_id="stable-diffusion-xl-beta-v2-2-2",
+    style_preset=None,
 ):
     timeout = 30
     if isinstance(text_prompts, str):
@@ -328,7 +329,7 @@ async def stability_generate_image(
                 "seed": seed,
                 "samples": samples,
                 "steps": steps,
-                # 'style_preset': 'anime',
+                'style_preset': style_preset,
             },
         )
 

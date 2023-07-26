@@ -48,11 +48,9 @@ def get_total_content_lenght_from_messages(msg_history):
     return res
 
 
-async def get_response_from_chatgpt(model, messages, branch, functions=None, function_call=None):
+async def get_response_from_chatgpt(model, messages, branch):
     openai_start = time.perf_counter()
-    response = await openai.ChatCompletion.acreate(
-        model=model, messages=messages, functions=functions, function_call=function_call
-    )
+    response = await openai.ChatCompletion.acreate(model=model, messages=messages)
     OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
         time.perf_counter() - openai_start
     )
@@ -108,6 +106,7 @@ async def chat_gpt_full(
 # Call chatgpt and restore reply and send to msg.chat_id:
 async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     openai.api_key = get_openai_key()
+    reply = ''
 
     try:
         df = pd.read_sql_query(
@@ -141,42 +140,50 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
 
     try:
         response = await get_response_from_chatgpt(
-            model=Params().OPENAI_MODEL,
-            messages=msg_history,
-            branch='local_reply',
-            functions=[
-                {
-                    "name": "generate_image",
-                    "description": "Generate an image according to user chat context. Only called when user want to see images",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "image_description": {
-                                "type": "string",
-                                "description": "The description of the image that user wants to see, infer this from messages history.",
-                            },
-                            "response_to_user_message": {
-                                "type": "string",
-                                "description": "The response text sent to user after we send this image, it should have the same tone as system prompts.",
-                            },
-                        },
-                        "required": ["image_description", "response_to_user_message"],
-                    },
-                }
-            ],
-            function_call="auto",
+            model=Params().OPENAI_MODEL, messages=msg_history, branch='local_reply'
         )
+        reply = response['choices'][0]['message']['content']
+
+        if '[JAILBREAK]' in reply:
+            reply = reply.split('[JAILBREAK]')[-1].strip()
+            if '[CLASSIC]' in reply:
+                reply = reply.split('[CLASSIC]')[0].strip()
+        if '[CLASSIC]' in reply:
+            reply = reply.split('[CLASSIC]')[-1].strip()
+
+        reply = reply.strip('\n').strip()
 
     except Exception as e:
         ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
         logging.error(f"local_chatgpt_to_reply chat_gpt() failed: \n\n{e}")
+
+    if not reply:
         return
 
-    if not response:
-        return
+    store_reply = reply.replace("'", "")
+    store_reply = store_reply.replace('"', '')
+    try:
+        with Params().Session() as session:
+            new_record = ChatHistory(
+                first_name='ChatGPT',
+                last_name='Bot',
+                username=bot.bot_name,
+                from_id=msg.from_id,
+                chat_id=msg.chat_id,
+                update_time=datetime.now(),
+                msg_text=store_reply,
+                black_list=0,
+                is_private=msg.is_private,
+            )
+            # Add the new record to the session
+            session.add(new_record)
+            # Commit the session
+            session.commit()
+    except Exception as e:
+        ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
+        return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
 
-    logging.info(f"local_chatgpt_to_reply() success: {response}")
-    return response
+    return reply
 
 
 async def chat_gpt_english(prompt, gpt_model=Params().OPENAI_MODEL):

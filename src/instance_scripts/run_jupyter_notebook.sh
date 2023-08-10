@@ -1,7 +1,6 @@
 #!/usr/bin/bash
 
-export PATH="${PATH}:${HOME}/.local/bin:${HOME}/anaconda3/bin"
+export PATH="${PATH}:/home/ubuntu/.local/bin"
 
-cd /root
-jupyter notebook  --allow-root --ip 0.0.0.0  &>> /root/logs/jupyter_notebook/log.txt
-
+cd /home/ubuntu/ai_avartar
+jupyter notebook  --allow-root --ip 0.0.0.0  &>> /home/ubuntu/logs/jupyter_notebook/log.txt

@@ -31,7 +31,7 @@ alias pstg='pm2 stop tg'
 alias pmlgtg='pm2 logs tg'
 
 alias pmfb='pm2 start ai_avartar/src/bot/fanbook/fanbook_bot.py --name fb --interpreter python3'
-alias pmfbmonitor='pm2 start ai_avartar/src/monitoring/fanbook_bot_monitor.py --name fanbook_bot_monitor --interpreter python3'
+alias pmfbmonitor='pm2 start ai_avartar/monitoring/fanbook_bot_monitor.py --name fanbook_bot_monitor --interpreter python3'
 alias prfb='pm2 restart fb'
 alias prfbmonitor='pm2 restart fanbook_bot_monitor'
 alias pdfb='pm2 delete fb'

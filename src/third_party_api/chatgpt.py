@@ -5,7 +5,7 @@ import openai
 import pandas as pd
 
 from src.bot.single_message import SingleMessage
-from database.mysql import ChatHistory
+from src.database.mysql import ChatHistory
 from src.utils.logging_util import logging
 from src.utils.prompt_template import (
     english_system_prompt,

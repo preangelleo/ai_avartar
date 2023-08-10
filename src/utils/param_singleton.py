@@ -1,9 +1,7 @@
 import logging
 import threading
 
-from database.mysql import OwnerParameter
-
-
+from src.database.mysql import OwnerParameter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.utilities.wolfram_alpha import WolframAlphaAPIWrapper

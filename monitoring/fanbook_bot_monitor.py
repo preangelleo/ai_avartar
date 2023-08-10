@@ -4,7 +4,7 @@ from datetime import datetime
 import time
 import schedule
 from src.utils.param_singleton import Params
-from database.mysql import ChatHistory
+from src.database.mysql import ChatHistory
 from src.utils.metrics import DAU_GAUGE
 from src.utils.metrics import HAU_GAUGE, TOTAL_USERS_GAUGE
 

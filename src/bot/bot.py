@@ -318,7 +318,7 @@ class Bot(ABC):
             logging.info("should ignore this msg", msg.raw_msg)
             return
 
-        if msg.is_private:
+        if msg.is_private and msg.from_id not in self.bot_admin_id_list:
             PRIVATE_MSG_COUNTER.inc()
             # TODO: Remove this after support private chat
             await self.send_msg_async(

@@ -39,6 +39,7 @@ FUNCTION_CALL_LATENCY_METRICS = Histogram(
     buckets=(1.0, 2.5, 5.0, 7.5, 10.0, 12.5, 15, 17.5, 20, INF),
 )
 SEND_MSG_LATENCY_METRICS = Histogram('send_msg_latency_sec', 'Latency of send_msg', ['msg_len'])
+SEND_IMAGE_LATENCY_METRICS = Histogram('send_img_latency_sec', 'Latency of send_img')
 
 SUCCESS_REPLY_COUNTER = Counter('success_reply_total', 'Total Number of Successful Reply', ['branch'])
 

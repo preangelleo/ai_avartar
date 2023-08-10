@@ -51,9 +51,11 @@ def get_total_content_lenght_from_messages(msg_history):
     return res
 
 
-async def get_response_from_chatgpt(model, messages, branch):
+async def get_response_from_chatgpt(model, messages, branch, functions=None, function_call=None):
     openai_start = time.perf_counter()
-    response = await openai.ChatCompletion.acreate(model=model, messages=messages)
+    response = await openai.ChatCompletion.acreate(
+        model=model, messages=messages, functions=functions, function_call=function_call
+    )
     OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
         time.perf_counter() - openai_start
     )
@@ -109,7 +111,6 @@ async def chat_gpt_full(
 # Call chatgpt and restore reply and send to msg.chat_id:
 async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     openai.api_key = get_openai_key()
-    reply = ''
 
     try:
         df = pd.read_sql_query(
@@ -177,48 +178,17 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
             ],
             function_call="auto",
         )
-        reply = response['choices'][0]['message']['content']
-
-        if '[JAILBREAK]' in reply:
-            reply = reply.split('[JAILBREAK]')[-1].strip()
-            if '[CLASSIC]' in reply:
-                reply = reply.split('[CLASSIC]')[0].strip()
-        if '[CLASSIC]' in reply:
-            reply = reply.split('[CLASSIC]')[-1].strip()
-
-        reply = reply.strip('\n').strip()
 
     except Exception as e:
         ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
         logging.error(f"local_chatgpt_to_reply chat_gpt() failed: \n\n{e}")
-
-    if not reply:
         return
 
-    store_reply = reply.replace("'", "")
-    store_reply = store_reply.replace('"', '')
-    try:
-        with Params().Session() as session:
-            new_record = ChatHistory(
-                first_name='ChatGPT',
-                last_name='Bot',
-                username=bot.bot_name,
-                from_id=msg.from_id,
-                chat_id=msg.chat_id,
-                update_time=datetime.now(),
-                msg_text=store_reply,
-                black_list=0,
-                is_private=msg.is_private,
-            )
-            # Add the new record to the session
-            session.add(new_record)
-            # Commit the session
-            session.commit()
-    except Exception as e:
-        ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
-        return logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
+    if not response:
+        return
 
-    return reply
+    logging.info(f"local_chatgpt_to_reply() success: {response}")
+    return response
 
 
 async def chat_gpt_english(prompt, gpt_model=Params().OPENAI_MODEL):

@@ -90,6 +90,10 @@ class Bot(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+        raise NotImplementedError
+
+    @abstractmethod
     def send_file(self, chat_id, file_path, description=''):
         raise NotImplementedError
 
@@ -351,6 +355,7 @@ class Bot(ABC):
                     time.perf_counter() - handle_single_msg_start
                 )
 
+        # TODO: migrate following code to text_branch_handler
         try:
             save_avatar_chat_history(
                 msg,
@@ -366,7 +371,6 @@ class Bot(ABC):
 
         HANDLE_SINGLE_MSG_COUNTER.labels('chatgpt').inc()
         MSG_TEXT_LEN_METRICS.labels('chatgpt').observe(len(msg.msg_text))
-        reply = await local_chatgpt_to_reply(self, msg)
 
         # Call chatgpt and get response
         response = await local_chatgpt_to_reply(self, msg)

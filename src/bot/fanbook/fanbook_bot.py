@@ -28,11 +28,13 @@ from src.bot.fanbook.utils.constants import (
     GET_USER_TOKEN_TIMEOUT_COUNT,
     TEST_BOT_ID,
     FANBOOK_BOT_ID,
+    FANBOOK_SEND_IMAGE_URL,
 )
 from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
 from prometheus_client import start_http_server
 
-from src.utils.metrics import SEND_MSG_LATENCY_METRICS
+from src.utils.metrics import SEND_MSG_LATENCY_METRICS, SEND_IMAGE_LATENCY_METRICS
+from src.utils.param_singleton import Params
 
 
 class FanbookBot(Bot):

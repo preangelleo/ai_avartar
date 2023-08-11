@@ -2,6 +2,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import date
 
+from src.database.mysql_utils import init_table_if_needed, check_user_eligible_for_conversation
 from src.bot.single_message import SingleMessage
 from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
@@ -325,16 +326,14 @@ class Bot(ABC):
             )
             return
 
-        # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
-        if not self.user_is_legit(msg, msg.from_id):
-            return
+        init_table_if_needed(user_from_id=msg.from_id)
 
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
-        if not user_id_exists(user_id=msg.from_id) and user_over_limit():
+        if not check_user_eligible_for_conversation(msg.from_id, msg.is_private, usage=False):
             await self.send_msg_async(
-                msg=user_limit_msg,
+                msg=user_limit_msg,  # TODO: change to send url link to allow user to pay.
                 chat_id=msg.chat_id,
                 parse_mode=None,
                 reply_to_message_id=msg.reply_to_message_id,
@@ -374,6 +373,7 @@ class Bot(ABC):
                 await self.send_msg_async(
                     msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.reply_to_message_id
                 )
+                check_user_eligible_for_conversation(msg.from_id, msg.is_private, usage=True)
                 SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
                 HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
                     time.perf_counter() - handle_single_msg_start

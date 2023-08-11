@@ -1,9 +1,64 @@
-from sqlalchemy import DateTime, Column, Integer, String, Text, Float, Boolean
-from sqlalchemy.orm import declarative_base
+from enum import Enum as PyEnum
 
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime, Text
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
 Base = declarative_base()
+
+
+class ServiceType(PyEnum):
+    CONVERSATION = "conversation"
+    DRAWING = "drawing"
+
+
+class PlanType(PyEnum):
+    CREDIT_BASED = "credit_based"
+    SUBSCRIPTION_BASED = "subscription_based"
+
+
+class ChannelType(PyEnum):
+    PUBLIC = "public"
+    UNIVERSAL = "universal"  # universal means both private and public
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    user_from_id = Column(String(255), unique=True)
+    subscriptions = relationship("Subscription", back_populates="user")
+    plan_credits = relationship("PlanCredit", back_populates="user")
+
+
+class Plan(Base):
+    __tablename__ = 'plans'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True)
+    service_type = Column(Enum(ServiceType))
+    plan_type = Column(Enum(PlanType))
+    time_based_plan_duration = Column(Integer)  # in seconds
+    credit_count = Column(Integer)  # for count_based plans
+
+
+class Subscription(Base):
+    __tablename__ = 'subscriptions'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    service_type = Column(Enum(ServiceType))
+    start_date = Column(DateTime, default=datetime.now())
+    end_date = Column(DateTime)
+    user = relationship("User", back_populates="subscriptions")
+
+
+class PlanCredit(Base):
+    __tablename__ = 'plan_credits'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    credit_count = Column(Integer)  # for count_based plans
+    service_type = Column(Enum(ServiceType))  # e.g., 'conversation', 'drawing'
+    chat_type = Column(Enum(ChannelType))  # e.g., 'private', 'public'
+    user = relationship("User", back_populates="plan_credits")
 
 
 class ChatHistory(Base):

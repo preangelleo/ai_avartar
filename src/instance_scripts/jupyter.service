@@ -2,8 +2,8 @@
 Description=Set up Jupyter service upon boot
 
 [Service]
-User=root
-ExecStart=/root/ai_avartar/src/instance_scripts/run_jupyter_notebook.sh
+User=ubuntu
+ExecStart=/home/ubuntu/ai_avartar/src/instance_scripts/run_jupyter_notebook.sh
 
 [Install]
 WantedBy=multi-user.target

@@ -16,7 +16,8 @@ alias rsbyudun='rsync -avz --exclude=".DS_Store" /Users/yudun/ai_avartar/downloa
 请输入目标服务器的 IP 地址: enter the lightsail ip address of new instances
 4. Login to the instance and:
 sudo -i
-pass wd
+passwd
+   ai2023
 change to the one hinted by step 3
 
 Then run:

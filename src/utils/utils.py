@@ -1,35 +1,24 @@
-import base64
-import json
-
-import chardet
 import hashlib
+import json
 import os
-import pytz
 from urllib.parse import urlencode
 
+import chardet
 import pandas as pd
-import httpx
-import aiofiles
-import asyncio
-import hashlib
-import os
-import base64
-from datetime import datetime
+import pytz
 import replicate
 import requests
 import sqlalchemy
 from langdetect import detect
 from pydub import AudioSegment
-from web3 import Web3
 from sqlalchemy import func
+from web3 import Web3
 
 from src.bot.single_message import SingleMessage
+from src.database.mysql import *
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.utils.prompt_template import inproper_words_list
-from src.database.mysql import *
-from src.utils.metrics import IMAGE_GENERATION_COUNTER, ERROR_COUNTER
-from src.utils.logging_util import measure_execution_time
 
 
 def convert_to_local_timezone(timestamp, local_time_zone='America/Los_Angeles'):
@@ -287,93 +276,6 @@ def convert_mp3_to_wav(mp3_file_path):
         parameters=["-f", "wav", "-ac", "1", "-ar", "16000"],
     )
     return wav_file_path
-
-
-@measure_execution_time
-async def stability_generate_image(
-    text_prompts,
-    cfg_scale=7,
-    clip_guidance_preset="FAST_BLUE",
-    height=512,
-    width=512,
-    samples=1,
-    steps=30,
-    seed=1,
-    engine_id="stable-diffusion-xl-beta-v2-2-2",
-    style_preset=None,
-):
-    timeout = 30
-    if isinstance(text_prompts, str):
-        text_prompts_hash = text_prompts
-        text_prompts = [{"text": text_prompts}]
-    elif isinstance(text_prompts, list):
-        text_prompts_hash = ''.join([t['text'] for t in text_prompts])
-    else:
-        raise ValueError(f"Wrong text_prompts provided: {text_prompts}")
-
-    logging.info(f"stability_generate_image() text_prompts={text_prompts}")
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(
-            f"{Params().STABILITY_URL}generation/{engine_id}/text-to-image",
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Authorization": f"Bearer {Params().STABILITY_API_KEY}",
-            },
-            json={
-                "text_prompts": text_prompts,
-                "cfg_scale": cfg_scale,
-                "clip_guidance_preset": clip_guidance_preset,
-                "height": height,
-                "width": width,
-                "seed": seed,
-                "samples": samples,
-                "steps": steps,
-                'style_preset': style_preset,
-            },
-        )
-
-        if response.status_code != 200:
-            ERROR_COUNTER.labels('generate_image_' + json.loads(response.text)["name"], 'chatgpt').inc()
-            logging.error(f'generate_image error: {json.loads(response.text)["name"]}')
-            raise Exception("Non-200 response: " + str(response.text))
-
-        data = response.json()
-        file_path_list = []
-        working_folder = '/root/files/images/dream_studio'
-        if not os.path.exists(working_folder):
-            os.makedirs(working_folder)
-
-        for i, image in enumerate(data["artifacts"]):
-            IMAGE_GENERATION_COUNTER.labels('dream_studio').inc()
-            current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            filename = hashlib.md5(
-                (text_prompts_hash + '_' + str(i) + '_' + str(current_timestamp)).encode()
-            ).hexdigest()
-            filename_txt = filename + '.txt'
-            filename_pic = filename + '.png'
-            filepath_txt = f'{working_folder}/{filename_txt}'
-            filepath_pic = f'{working_folder}/{filename_pic}'
-
-            async with aiofiles.open(filepath_pic, "wb") as f:
-                await f.write(base64.b64decode(image["base64"]))
-                file_path_list.append(filepath_pic)
-
-            async with aiofiles.open(filepath_txt, 'w') as f:
-                await f.write(
-                    '\n'.join(
-                        [
-                            str(i),
-                            text_prompts_hash,
-                            current_timestamp,
-                            filename,
-                            filepath_txt,
-                            filepath_pic,
-                        ]
-                    )
-                )
-
-        return file_path_list
 
 
 def st_find_ranks_for_word(key_word):

@@ -9,7 +9,7 @@ FANBOOK_BOT_CREATOR_ID = Params().FANBOOK_BOT_CREATOR_ID
 FANBOOK_CLIENT_ID = Params().FANBOOK_CLIENT_ID
 
 BASE_URL = 'https://a1.fanbook.mobi/api'
-GET_USER_TOKEN_TIMEOUT_COUNT = 3
+GET_USER_TOKEN_TIMEOUT_COUNT = 60
 FANBOOK_GET_ME_URL = f'{BASE_URL}/bot/{Params().FANBOOK_BOT_TOKEN}/getMe'
 FANBOOK_SEND_MSG_URL = f'https://a1.fanbook.mobi/api/bot/{Params().FANBOOK_BOT_TOKEN}/sendMessage'  # noqa
 FANBOOK_SEND_IMAGE_URL = f'https://a1.fanbook.mobi/api/bot/{Params().FANBOOK_BOT_TOKEN}/sendPhoto'  # noqa

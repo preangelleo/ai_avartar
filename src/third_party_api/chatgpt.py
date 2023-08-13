@@ -1,3 +1,4 @@
+import json
 import random
 import time
 
@@ -18,6 +19,11 @@ from src.utils.prompt_template import (
     image_description_prompt,
     response_to_user_message_prompt,
     is_bot_picture_prompt,
+    system_role_prompt,
+    improve_image_description_prompt,
+    prompt_exposed,
+    prompt_invalid,
+    prompt_low_quality,
 )
 from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story
 from datetime import datetime
@@ -35,8 +41,11 @@ from src.utils.metrics import (
     OPENAI_FINISH_REASON_COUNTER,
     OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM,
     OPENAI_COMPLETION_TOKEN_USED_COUNTER,
+    OPENAI_COST_USD_COUNTER,
+    INITIAL_TEXT_REPLY_CRITIQUE_COUNTER,
 )
 from src.utils.metrics import OPENAI_PROMPT_TOKEN_USED_COUNTER
+from src.utils.constants import OPENAI_PRICE_MAP
 
 
 def get_openai_key():
@@ -51,22 +60,44 @@ def get_total_content_lenght_from_messages(msg_history):
     return res
 
 
-async def get_response_from_chatgpt(model, messages, branch, functions=None, function_call=None):
-    openai_start = time.perf_counter()
-    response = await openai.ChatCompletion.acreate(
-        model=model, messages=messages, functions=functions, function_call=function_call
+def get_cost_from_openai_response(model, response):
+    return (
+        response['usage']['prompt_tokens'] * OPENAI_PRICE_MAP[model]['prompt_tokens']
+        + response['usage']['completion_tokens'] * OPENAI_PRICE_MAP[model]['completion_tokens']
     )
+
+
+def get_text_reply_from_openai_response(response):
+    return response['choices'][0]['message']['content']
+
+
+async def get_response_from_chatgpt(model, messages, branch, functions=None, function_call=None, temperature=1.0):
+    openai_start = time.perf_counter()
+    if functions is not None:
+        response = await openai.ChatCompletion.acreate(
+            model=model, messages=messages, functions=functions, function_call=function_call, temperature=temperature
+        )
+    else:
+        response = await openai.ChatCompletion.acreate(model=model, messages=messages, temperature=temperature)
+
     OPENAI_LATENCY_METRICS.labels(get_total_content_lenght_from_messages(messages) // 10 * 10, branch).observe(
         time.perf_counter() - openai_start
     )
-    OPENAI_PROMPT_TOKEN_USED_COUNTER.labels(branch).inc(response['usage']['prompt_tokens'])
-    OPENAI_COMPLETION_TOKEN_USED_COUNTER.labels(branch).inc(response['usage']['completion_tokens'])
-    OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM.labels(branch).observe(response['usage']['total_tokens'])
     if response:
+        OPENAI_PROMPT_TOKEN_USED_COUNTER.labels(branch).inc(response['usage']['prompt_tokens'])
+        OPENAI_COMPLETION_TOKEN_USED_COUNTER.labels(branch).inc(response['usage']['completion_tokens'])
+        OPENAI_TOKEN_PER_CONVERSATION_HISTOGRAM.labels(branch).observe(response['usage']['total_tokens'])
+
+        cost = get_cost_from_openai_response(model, response)
+        OPENAI_COST_USD_COUNTER.labels(branch).inc(cost)
+
         reason = response['choices'][0]['finish_reason']
         OPENAI_FINISH_REASON_COUNTER.labels(reason).inc()
 
     logging.debug('Chatgpt response:', response)
+
+    if response is None:
+        raise Exception("Empty openai response")
 
     return response
 
@@ -108,7 +139,36 @@ async def chat_gpt_full(
     return reply
 
 
-# Call chatgpt and restore reply and send to msg.chat_id:
+def is_exposed(text: str, user_msg: str) -> bool:
+    exposure_keywords = ["虚拟", "没有身体", "没有真实的身体", "人工智能", "AI", "虚拟助手", "实体接触"]
+    for key in exposure_keywords:
+        if key in text:
+            return True
+    return False
+
+
+def is_invalid(text: str, user_msg: str) -> bool:
+    invalid_keywords = ["无需改进"]
+    for key in invalid_keywords:
+        if key in text:
+            return True
+    return False
+
+
+def is_low_quality(text: str, user_msg: str) -> bool:
+    # TODO: Use a small bert classifier in the future?
+    low_quality_keywords = ["建议", "抱歉"]
+    user_msg_skip_keywords = ["故事", "作文", "论文", "情书"]
+    for key in low_quality_keywords:
+        if key in text:
+            return True
+    for key in user_msg_skip_keywords:
+        if key in user_msg:
+            return False
+    return False
+
+
+# Call chatgpt and get the text response or image description to send to users.
 async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     openai.api_key = get_openai_key()
 
@@ -122,7 +182,8 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
         return
 
-    msg_history = get_system_prompt_and_dialogue_tone(msg.first_name)
+    system_prompt_history = [{"role": "system", "content": system_role_prompt.format(user_name=msg.first_name)}]
+    initial_msg_request = system_prompt_history
     previous_role = 'assistant'
     for i in range(df.shape[0]):
         history_conversation = df.iloc[i]
@@ -139,23 +200,22 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
             content = (history_conversation['image_description'] or '') + '.' + content
         need_to_be_appended = {
             "role": user_or_assistant,
-            # Prevent the bot admit that he is a AI model.
-            "content": content.replace('AI语言模型', bot.bot_name).replace('人工智能程序', bot.bot_name),
+            "content": content,
         }
-        msg_history.append(need_to_be_appended)
+        initial_msg_request.append(need_to_be_appended)
         previous_role = user_or_assistant
-    msg_history.append({"role": "user", "content": msg.msg_text})
-    logging.debug("msg_history: ", msg_history)
+    initial_msg_request.append({"role": "user", "content": msg.msg_text})
+    logging.info(f"initial_msg_request: {initial_msg_request}")
 
     try:
         response = await get_response_from_chatgpt(
-            model=Params().OPENAI_MODEL,
-            messages=msg_history,
+            model='gpt-3.5-turbo-0613',
+            messages=initial_msg_request,
             branch='local_reply',
             functions=[
                 {
                     "name": "generate_image",
-                    "description": "Generate an image according to user chat context. Only called when user want to see images",
+                    "description": "Only called when user explicitly want to see images. Generate an image according to user chat context.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -177,18 +237,123 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                 }
             ],
             function_call="auto",
+            temperature=1.0,
         )
 
+        initial_call_cost = get_cost_from_openai_response('gpt-3.5-turbo-0613', response)
     except Exception as e:
         ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
-        logging.error(f"local_chatgpt_to_reply chat_gpt() failed: \n\n{e}")
+        logging.error(f"initial call chat_gpt() failed: \n\n{e}")
         return
 
-    if not response:
-        return
+    # If the user want to see an image, we returned the comment as well as image description
+    if 'function_call' in response['choices'][0]['message']:
+        function_args = json.loads(response['choices'][0]['message']["function_call"]["arguments"])
+        response_to_user_message = function_args['response_to_user_message']
+        initial_image_description = function_args['image_description']
+        is_bot_picture = function_args['is_bot_picture']
 
-    logging.info(f"local_chatgpt_to_reply() success: {response}")
-    return response
+        logging.info(
+            f"generate_image:\n"
+            f"  image_description:{initial_image_description}\n"
+            f"  response_to_user_message:{response_to_user_message}\n"
+            f"  is_bot_picture:{is_bot_picture}"
+        )
+        image_description = initial_image_description
+        refine_image_description_cost = 0
+        try:
+            # Refine the image description
+            response = await get_response_from_chatgpt(
+                model='gpt-3.5-turbo-0613',
+                messages=system_prompt_history
+                + [{'role': 'user', 'content': msg.msg_text}]
+                + [
+                    {
+                        'role': 'system',
+                        'content': improve_image_description_prompt.replace(
+                            "{image_description}", initial_image_description
+                        ),
+                    }
+                ],
+                branch='local_reply',
+                temperature=0.5,
+            )
+            refine_image_description_cost = get_cost_from_openai_response('gpt-3.5-turbo-0613', response)
+            try:
+                image_description_json = json.loads(get_text_reply_from_openai_response(response).strip())
+                image_description = image_description_json['output']
+                logging.info(f'Improved image_description: {image_description}')
+            except json.JSONDecodeError:
+                logging.info('fallback to use original image_description')
+        except Exception as e:
+            ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
+            logging.error(f"refine image description call chat_gpt() failed: \n\n{e}")
+        return (
+            response_to_user_message,
+            image_description,
+            is_bot_picture,
+            initial_call_cost + refine_image_description_cost,
+        )
+
+    # if no image is request, we need to refine the initial text reply
+    initial_text_reply = get_text_reply_from_openai_response(response).strip()
+    logging.info(f'initial_text_reply: {initial_text_reply}')
+    final_response = initial_text_reply
+    critique_text_cost = 0
+    ############################## Branch and Critique the initial response ##############################
+    template = None
+    for pair in [
+        ('exposed_ai', is_exposed, prompt_exposed),
+        ('invalid_response', is_invalid, prompt_invalid),
+        ('low_quality_response', is_low_quality, prompt_low_quality),
+    ]:
+        if pair[1](initial_text_reply, msg.msg_text):
+            template = pair[2]
+            logging.info(f'critique reason: {pair[0]}')
+            INITIAL_TEXT_REPLY_CRITIQUE_COUNTER.labels(pair[0]).inc()
+            break
+
+    # If we do find something to critique
+    if template:
+        critique_prompt = (
+            template.replace("{user_name}", msg.first_name)
+            .replace("{user_question}", msg.msg_text)
+            .replace("{original_response}", initial_text_reply)
+        )
+        logging.debug(f"critique_prompt: {critique_prompt}")
+        try:
+            response = await get_response_from_chatgpt(
+                model='gpt-3.5-turbo-0613',
+                messages=system_prompt_history
+                + [{'role': 'user', 'content': msg.msg_text}, {'role': 'system', 'content': critique_prompt}],
+                branch='local_reply',
+                temperature=0.5,
+            )
+            critique_text_cost = get_cost_from_openai_response('gpt-3.5-turbo-0613', response)
+            critique_text_reply = get_text_reply_from_openai_response(response).strip()
+            logging.info(f'critique_text_reply: {critique_text_reply}')
+            if "improved_response" in critique_text_reply:
+                improved_response = critique_text_reply.split("improved_response")[1].strip(": \n")
+                if len(improved_response) != 0:
+                    final_response = improved_response
+            elif (
+                "original_response:" in critique_text_reply
+                or "reasoning:" in critique_text_reply
+                or critique_text_reply.startswith("1. ")
+                or "回答" in critique_text_reply
+            ):
+                # If the response tried to reason but without "improved_response", return original as final response
+                pass
+            else:
+                # The LM returns the final response directly without reasoning
+                final_response = critique_text_reply
+
+        except Exception as e:
+            ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
+            logging.error(f"text critique call chat_gpt() failed: \n\n{e}")
+
+    logging.debug(f"local_chatgpt_to_reply() success: {response}")
+    return final_response, None, None, initial_call_cost + critique_text_cost
 
 
 async def chat_gpt_english(prompt, gpt_model=Params().OPENAI_MODEL):

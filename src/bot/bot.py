@@ -1,4 +1,3 @@
-import random
 import time
 from abc import ABC, abstractmethod
 from datetime import date
@@ -23,7 +22,11 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 from src.utils.utils import user_id_exists, user_over_limit
-from src.utils.prompt_template import user_limit_msg, private_limit_msg, portrait_description_prompt, magic_post_fix
+from src.utils.prompt_template import (
+    user_limit_msg,
+    private_limit_msg,
+    negative_stability_ai_prompt,
+)
 
 import os
 
@@ -31,6 +34,7 @@ import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
 from src.utils.metrics import *
+from src.third_party_api.stability_ai import stability_generate_image, process_image_description
 
 
 class Bot(ABC):
@@ -373,138 +377,130 @@ class Bot(ABC):
         MSG_TEXT_LEN_METRICS.labels('chatgpt').observe(len(msg.msg_text))
 
         # Call chatgpt and get response
-        response = await local_chatgpt_to_reply(self, msg)
-        text_reply = None
+        text_reply, image_description, is_bot_picture, cost_usd = await local_chatgpt_to_reply(self, msg)
+        logging.info(f'total openai cost of this call: ${cost_usd}')
         branch = 'local_chatgpt'
+        if not text_reply:
+            return
+        image_url = None
+        raw_image_description = image_description
+        # If generate_image is triggered
+        if image_description is not None:
+            branch = 'generate_image'
 
-        if response:
-            image_description = None
-            image_url = None
-            # If a function call is triggered
-            if response['choices'][0]['message'].get("function_call"):
-                branch = 'generate_image'
-                function_name = response['choices'][0]['message']["function_call"]["name"]
-                if function_name == 'generate_image':
-                    function_args = json.loads(response['choices'][0]['message']["function_call"]["arguments"])
-                    image_description = function_args['image_description']
-                    text_reply = function_args['response_to_user_message']
-                    is_bot_picture = function_args['is_bot_picture']
-                    logging.info(
-                        f"generate_image:\n"
-                        f"image_description:{image_description}\n"
-                        f"response_to_user_message:{text_reply}\n"
-                        f"is_bot_picture:{is_bot_picture}"
-                    )
+            # If the user wants to see portrait of bot, we append the system defined image prompt
+            if is_bot_picture:
+                image_description = [
+                    {
+                        "text": negative_stability_ai_prompt,
+                        "weight": -1,
+                    },
+                    {
+                        "text": 'a handsome man, anime style, soft lighting, high-resolution, Shinkai Makoto, '
+                        + process_image_description(raw_image_description),
+                        "weight": 1,
+                    },
+                ]
+            else:
+                image_description = [
+                    {
+                        "text": negative_stability_ai_prompt,
+                        "weight": -1,
+                    },
+                    {
+                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, ' + raw_image_description,
+                        "weight": 1,
+                    },
+                ]
 
-                    # If the user wants to see portrait of bot, we append the system defined image prompt
-                    if is_bot_picture:
-                        image_description = [
-                            {
-                                "text": 'a detailed manga illustration,' + image_description + magic_post_fix,
-                                "weight": 0.8,
-                            },
-                            {
-                                "text": 'a detailed manga illustration, a handsome man,'
-                                + portrait_description_prompt
-                                + magic_post_fix,
-                                "weight": 0.2,
-                            },
-                        ]
-                    else:
-                        image_description = 'a detailed manga illustration,' + image_description + magic_post_fix
+            try:
+                handle_single_msg_start = time.perf_counter()
+                file_list = await stability_generate_image(
+                    text_prompts=image_description,
+                    height=896,
+                    width=1152,
+                    seed=123456,
+                    engine_id="stable-diffusion-xl-1024-v1-0",
+                    steps=30,
+                    samples=1,
+                )
+                latency = time.perf_counter() - handle_single_msg_start
+                IMAGE_GENERATION_LATENCY_METRICS.labels('chatgpt').observe(latency)
+                logging.info(f'Image latency: {latency}s')
+                SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
+            except Exception as e:
+                logging.exception(f"stability_generate_image() {e}")
+                return
 
+            if file_list:
+                image_url = ','.join(file_list)
+                for file in file_list:
                     try:
-                        file_list = await stability_generate_image(
-                            text_prompts=image_description, seed=random.randint(1, 10000)
+                        await self.send_img_async(
+                            chat_id=msg.chat_id,
+                            file_path=file,
+                            reply_to_message_id=msg.reply_to_message_id,
+                            description=raw_image_description,
                         )
-                        SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
                     except Exception as e:
-                        logging.exception(f"stability_generate_image() {e}")
+                        ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
+                        logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
                         return
 
-                    if file_list:
-                        image_url = ','.join(file_list)
-                        for file in file_list:
-                            try:
-                                await self.send_img_async(
-                                    chat_id=msg.chat_id,
-                                    file_path=file,
-                                    reply_to_message_id=msg.reply_to_message_id,
-                                    description=image_description,
-                                )
-                            except Exception as e:
-                                ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
-                                logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
-                                return
+        # If there is any text_reply available we should store and send it
+        if text_reply:
+            try:
+                REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(text_reply))
+                send_msg_response = await self.send_msg_async(
+                    msg=text_reply,
+                    chat_id=msg.chat_id,
+                    parse_mode=None,
+                    reply_to_message_id=msg.reply_to_message_id,
+                )
+                SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
+                HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
+                    time.perf_counter() - handle_single_msg_start
+                )
+            except Exception as e:
+                ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
+                logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
+                return
 
-            # If no function call is triggered, and it is a regular reply
-            else:
-                text_reply = response['choices'][0]['message']['content']
-                # Potentially remove Jailbreak comments if we used a jailbreak prompt
-                if text_reply:
-                    if '[JAILBREAK]' in text_reply:
-                        text_reply = text_reply.split('[JAILBREAK]')[-1].strip()
-                        if '[CLASSIC]' in text_reply:
-                            text_reply = text_reply.split('[CLASSIC]')[0].strip()
-                    if '[CLASSIC]' in text_reply:
-                        text_reply = text_reply.split('[CLASSIC]')[-1].strip()
-
-                    text_reply = text_reply.strip('\n').strip()
-
-            # If there is any text_reply available we should store and send it
-            if text_reply:
-                try:
-                    REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(text_reply))
-                    send_msg_response = await self.send_msg_async(
-                        msg=text_reply,
+            try:
+                with Params().Session() as session:
+                    new_record = ChatHistory(
+                        message_id=send_msg_response['result']['message_id'],
+                        first_name='ChatGPT',
+                        last_name='Bot',
+                        username=self.bot_name,
+                        from_id=msg.from_id,
                         chat_id=msg.chat_id,
-                        parse_mode=None,
-                        reply_to_message_id=msg.reply_to_message_id,
+                        update_time=datetime.now(),
+                        msg_text=text_reply,
+                        black_list=0,
+                        is_private=msg.is_private,
+                        branch=branch,
+                        image_description=raw_image_description,
+                        comma_separated_image_url=image_url,
+                        cost_usd=cost_usd,
                     )
-                    SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
-                    HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
-                        time.perf_counter() - handle_single_msg_start
+                    # Add the new record to the session
+                    session.add(new_record)
+
+                    # Also mark the previous incoming user message as is_replied and update branch
+                    session.query(ChatHistory).filter(ChatHistory.message_id == msg.message_id).update(
+                        {
+                            "is_replied": True,
+                            "branch": branch,
+                            "replied_message_id": send_msg_response['result']['message_id'],
+                        }
                     )
-                except Exception as e:
-                    ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
-                    logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
-                    return
-
-                store_reply = text_reply.replace("'", "").replace('"', '')
-                try:
-                    with Params().Session() as session:
-                        new_record = ChatHistory(
-                            message_id=send_msg_response['result']['message_id'],
-                            first_name='ChatGPT',
-                            last_name='Bot',
-                            username=self.bot_name,
-                            from_id=msg.from_id,
-                            chat_id=msg.chat_id,
-                            update_time=datetime.now(),
-                            msg_text=store_reply,
-                            black_list=0,
-                            is_private=msg.is_private,
-                            branch=branch,
-                            image_description=image_description,
-                            comma_separated_image_url=image_url,
-                        )
-                        # Add the new record to the session
-                        session.add(new_record)
-
-                        # Also mark the previous incoming user message as is_replied and update branch
-                        session.query(ChatHistory).filter(ChatHistory.message_id == msg.message_id).update(
-                            {
-                                "is_replied": True,
-                                "branch": branch,
-                                "replied_message_id": send_msg_response['result']['message_id'],
-                            }
-                        )
-                        # Commit the session
-                        session.commit()
-                except Exception as e:
-                    ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
-                    logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
-                    return
+                    # Commit the session
+                    session.commit()
+            except Exception as e:
+                ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
+                logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
+                return
 
         return
 

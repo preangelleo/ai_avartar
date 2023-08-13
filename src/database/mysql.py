@@ -27,6 +27,7 @@ class ChatHistory(Base):
     replied_message_id = Column(String(255))
     image_description = Column(Text)
     comma_separated_image_url = Column(Text)
+    cost_usd = Column(Float)
 
 
 class OwnerParameter(Base):

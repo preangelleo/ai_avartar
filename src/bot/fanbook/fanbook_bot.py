@@ -67,7 +67,9 @@ class FanbookBot(Bot):
         self.addr = f'wss://gateway-bot.fanbook.mobi/websocket?id={self.user_token}&dId={DEVICE_ID}&v={FANBOOK_VERSION}&x-super-properties={self.super_str}'  # noqa
 
     def get_user_token(self):
+        logging.info(f'get_user_token request: {FANBOOK_GET_ME_URL}')
         response = requests.get(FANBOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT)
+        logging.info(f"get_user_token response: {response.json()['result']['user_token']}")
         return response.json()['result']['user_token']
 
     async def handle_push(self, obj):
@@ -117,13 +119,13 @@ class FanbookBot(Bot):
         logging.info(f'send_msg(): {response.json()}')
         return response.json()
 
-    def construct_image_server_url(self, file_path, base_dir='/root/files/'):
+    def construct_image_server_url(self, file_path, base_dir='/home/ubuntu/files/'):
         import os
 
         # Get relative path
         relative_path = os.path.relpath(file_path, base_dir)
         # Construct the URL
-        url = f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:81/{relative_path}'
+        url = f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:8889/{relative_path}'
         return url
 
     async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description='', max_retries=3):

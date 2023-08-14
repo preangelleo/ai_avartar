@@ -427,6 +427,8 @@ class Bot(ABC):
                 latency = time.perf_counter() - handle_single_msg_start
                 IMAGE_GENERATION_LATENCY_METRICS.labels('chatgpt').observe(latency)
                 logging.info(f'Image latency: {latency}s')
+                # TODO: formalize the image cost as a function
+                cost_usd += 0.016
                 SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
             except Exception as e:
                 logging.exception(f"stability_generate_image() {e}")

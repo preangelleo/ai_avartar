@@ -17,4 +17,5 @@ OPENAI_PRICE_MAP = {
     'gpt-3.5-turbo-16k': {'prompt_tokens': 0.000003, 'completion_tokens': 0.000004},
     'gpt-3.5-turbo-16k-0613': {'prompt_tokens': 0.000003, 'completion_tokens': 0.000004},
     'gpt-3.5-turbo-0613': {'prompt_tokens': 0.0000015, 'completion_tokens': 0.000002},
+    'gpt-3.5-turbo': {'prompt_tokens': 0.0000015, 'completion_tokens': 0.000002},
 }

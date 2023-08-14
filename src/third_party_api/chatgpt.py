@@ -224,9 +224,14 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
             f"""
                 SELECT * FROM (
                     SELECT 
-                        a.`id`, a.`update_time`, a.`is_replied`, b.`username`, a.`msg_text`, b.`msg_text` as reply_text, b.`image_description`, b.`cost_usd`
-                    FROM `avatar_chat_history` a right outer join `avatar_chat_history` b on (a.`replied_message_id` = b.`message_id`)
-                    WHERE a.`from_id` = {msg.from_id} AND a.`msg_text` IS NOT NULL ORDER BY a.`update_time` DESC LIMIT 5
+                        a.`id`, a.`update_time`, a.`is_replied`, a.`username`, a.`msg_text`, b.`msg_text` as reply_text, b.`image_description`, b.`cost_usd`
+                    FROM (
+                        SELECT * from `avatar_chat_history` 
+                        WHERE NOT (`first_name` = 'ChatGPT' AND `last_name` = 'Bot' )
+                        AND `from_id` = {msg.from_id}
+                        AND `msg_text` IS NOT NULL
+                    ) a left outer join `avatar_chat_history` b on (a.`replied_message_id` = b.`message_id`)
+                    ORDER BY a.`update_time` DESC LIMIT 5
                 ) sub ORDER BY `update_time` ASC
             """,
             Params().engine,
@@ -241,7 +246,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     for i in range(df.shape[0]):
         history_conversation = df.iloc[i]
         initial_msg_request.append({"role": "user", "content": history_conversation['msg_text']})
-        if len(history_conversation['reply_text']) < 500:
+        if history_conversation['reply_text'] is not None and len(history_conversation['reply_text']) < 500:
             image_description = ''
             if history_conversation['image_description'] is not None:
                 image_description = f"I draw a pciture of {history_conversation['image_description']}."
@@ -249,8 +254,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                 {"role": "assistant", "content": image_description + history_conversation['reply_text']}
             )
 
-    initial_msg_request.append({"role": "user", "content": msg.msg_text})
-    logging.debug(f"initial_msg_request: {initial_msg_request}")
+    logging.info(f"initial_msg_request: {initial_msg_request}")
 
     try:
         initial_model_name = 'gpt-3.5-turbo-16k-0613'

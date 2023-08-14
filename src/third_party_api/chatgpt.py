@@ -250,7 +250,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
             )
 
     initial_msg_request.append({"role": "user", "content": msg.msg_text})
-    logging.info(f"initial_msg_request: {initial_msg_request}")
+    logging.debug(f"initial_msg_request: {initial_msg_request}")
 
     try:
         initial_model_name = 'gpt-3.5-turbo-16k-0613'
@@ -351,7 +351,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
 
     # if no image is request, we need to refine the initial text reply
     initial_text_reply = get_text_reply_from_openai_response(response).strip()
-    logging.debug(f'initial_text_reply: {initial_text_reply}')
+    logging.info(f'initial_text_reply: {initial_text_reply}')
     final_response = initial_text_reply
     critique_text_cost = 0
     ############################## Branch and Critique the initial response ##############################

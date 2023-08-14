@@ -1,3 +1,4 @@
+import random
 import time
 from abc import ABC, abstractmethod
 from datetime import date
@@ -419,16 +420,16 @@ class Bot(ABC):
                     text_prompts=image_description,
                     height=896,
                     width=1152,
-                    seed=123456,
+                    seed=random.randint(1, 10000),
                     engine_id="stable-diffusion-xl-1024-v1-0",
-                    steps=30,
+                    steps=50,
                     samples=1,
                 )
                 latency = time.perf_counter() - handle_single_msg_start
                 IMAGE_GENERATION_LATENCY_METRICS.labels('chatgpt').observe(latency)
                 logging.info(f'Image latency: {latency}s')
                 # TODO: formalize the image cost as a function
-                cost_usd += 0.016
+                cost_usd += 0.02
                 SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
             except Exception as e:
                 logging.exception(f"stability_generate_image() {e}")

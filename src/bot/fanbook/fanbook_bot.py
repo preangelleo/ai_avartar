@@ -3,6 +3,7 @@ import time
 from src.utils.logging_util import logging
 from src.bot.fanbook.utils.message_builder import build_from_fanbook_msg
 
+import os
 import logging
 from httpx import ReadTimeout
 import requests
@@ -120,8 +121,6 @@ class FanbookBot(Bot):
         return response.json()
 
     def construct_image_server_url(self, file_path, base_dir='/home/ubuntu/files/'):
-        import os
-
         # Get relative path
         relative_path = os.path.relpath(file_path, base_dir)
         # Construct the URL

@@ -29,6 +29,7 @@ from src.third_party_api.chatgpt import (
 )
 from src.utils.prompt_template import *
 from src.third_party_api.chatgpt import create_midjourney_prompt
+from src.third_party_api.stability_ai import stability_generate_image
 
 
 def create_news_and_audio_from_bing_search(bot, query, chat_id):

@@ -11,3 +11,11 @@ system_prompt_backup_file = f'{system_prompt_backup_folder}/{sys_prompt_file_nam
 user_system_prompt_file = (
     default_system_prompt_file if os.path.isfile(default_system_prompt_file) else system_prompt_backup_file
 )
+
+OPENAI_PRICE_MAP = {
+    'gpt-4-0613': {'prompt_tokens': 0.00003, 'completion_tokens': 0.00006},
+    'gpt-3.5-turbo-16k': {'prompt_tokens': 0.000003, 'completion_tokens': 0.000004},
+    'gpt-3.5-turbo-16k-0613': {'prompt_tokens': 0.000003, 'completion_tokens': 0.000004},
+    'gpt-3.5-turbo-0613': {'prompt_tokens': 0.0000015, 'completion_tokens': 0.000002},
+    'gpt-3.5-turbo': {'prompt_tokens': 0.0000015, 'completion_tokens': 0.000002},
+}

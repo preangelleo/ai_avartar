@@ -182,7 +182,7 @@ async def chat_gpt_full(
 
 
 def is_exposed(text: str, user_msg: str) -> bool:
-    exposure_keywords = ["虚拟", "没有身体", "没有真实的身体", "人工智能", "AI", "虚拟助手", "实体接触"]
+    exposure_keywords = ["虚拟", "没有身体", "没有真实的身体", "人工智能", "AI", "虚拟助手", "实体接触", "语言模型"]
     for key in exposure_keywords:
         if key in text:
             return True
@@ -257,11 +257,10 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     logging.info(f"initial_msg_request: {initial_msg_request}")
 
     try:
-        initial_model_name = 'gpt-3.5-turbo-16k-0613'
-        # initial_model_name = 'gpt-3.5-turbo-0613'
-        # if is_request_long_reply(msg.msg_text):
-        #     logging.info(f"Use 16k model for initial story request")
-        #     initial_model_name = 'gpt-3.5-turbo-16k-0613'
+        initial_model_name = 'gpt-4-0613' if msg.user_is_treatment else 'gpt-3.5-turbo-16k-0613'
+        if is_request_long_reply(msg.msg_text):
+            logging.info(f"Use 16k model for initial story request")
+            initial_model_name = 'gpt-3.5-turbo-16k-0613'
         # elif num_tokens_from_messages(initial_msg_request) > 4000:
         #     logging.info(f"Use 16k model for initial long history request")
         #     initial_model_name = 'gpt-3.5-turbo-16k-0613'
@@ -321,8 +320,9 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         refine_image_description_cost = 0
         try:
             # Refine the image description
+            image_desc_refine_model = 'gpt-3.5-turbo'
             response = await get_response_from_chatgpt(
-                model='gpt-3.5-turbo',
+                model=image_desc_refine_model,
                 messages=system_prompt_history
                 + [{'role': 'user', 'content': msg.msg_text}]
                 + [
@@ -336,7 +336,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                 branch='local_reply',
                 temperature=0.5,
             )
-            refine_image_description_cost = get_cost_from_openai_response('gpt-3.5-turbo', response)
+            refine_image_description_cost = get_cost_from_openai_response(image_desc_refine_model, response)
             try:
                 image_description_json = json.loads(get_text_reply_from_openai_response(response).strip())
                 image_description = image_description_json['output']
@@ -360,11 +360,16 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     critique_text_cost = 0
     ############################## Branch and Critique the initial response ##############################
     template = None
-    for pair in [
-        ('exposed_ai', is_exposed, prompt_exposed),
-        ('invalid_response', is_invalid, prompt_invalid),
-        ('low_quality_response', is_low_quality, prompt_low_quality),
-    ]:
+    if msg.user_is_treatment:
+        template_list = [('exposed_ai', is_exposed, prompt_exposed)]
+    else:
+        template_list = [
+            ('exposed_ai', is_exposed, prompt_exposed),
+            ('invalid_response', is_invalid, prompt_invalid),
+            ('low_quality_response', is_low_quality, prompt_low_quality),
+        ]
+
+    for pair in template_list:
         if pair[1](initial_text_reply, msg.msg_text):
             template = pair[2]
             logging.info(f'critique reason: {pair[0]}')
@@ -380,14 +385,15 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         )
         logging.debug(f"critique_prompt: {critique_prompt}")
         try:
+            critique_model = 'gpt-4-0613' if initial_model_name == 'gpt-4-0613' else 'gpt-3.5-turbo'
             response = await get_response_from_chatgpt(
-                model='gpt-3.5-turbo',
-                messages=system_prompt_history
+                model=critique_model,
+                messages=([] if critique_model == 'gpt-4-0613' else system_prompt_history)
                 + [{'role': 'user', 'content': msg.msg_text}, {'role': 'system', 'content': critique_prompt}],
                 branch='local_reply',
                 temperature=0.5,
             )
-            critique_text_cost = get_cost_from_openai_response('gpt-3.5-turbo', response)
+            critique_text_cost = get_cost_from_openai_response(critique_model, response)
             critique_text_reply = get_text_reply_from_openai_response(response).strip()
             logging.info(f'critique_text_reply: {critique_text_reply}')
             if "improved_response" in critique_text_reply:
@@ -398,7 +404,6 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                 "original_response:" in critique_text_reply
                 or "reasoning:" in critique_text_reply
                 or critique_text_reply.startswith("1. ")
-                or "回答" in critique_text_reply
             ):
                 # If the response tried to reason but without "improved_response", return original as final response
                 pass

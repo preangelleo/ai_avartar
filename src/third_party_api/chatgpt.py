@@ -360,7 +360,8 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     critique_text_cost = 0
     ############################## Branch and Critique the initial response ##############################
     template = None
-    if msg.user_is_treatment:
+    # We don't need to handle low_quality and invalid case in gpt4 as it is powerful enough.
+    if initial_model_name == 'gpt-4-0613':
         template_list = [('exposed_ai', is_exposed, prompt_exposed)]
     else:
         template_list = [

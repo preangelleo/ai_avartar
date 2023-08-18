@@ -1,9 +1,9 @@
+import random
 import time
 from abc import ABC, abstractmethod
 from datetime import date
 
 from src.database.mysql_utils import init_table_if_needed, check_user_eligible_for_conversation
-from src.bot.single_message import SingleMessage
 from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
 from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import (
@@ -24,7 +24,11 @@ from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
 from src.utils.utils import user_id_exists, user_over_limit
-from src.utils.prompt_template import user_limit_msg, private_limit_msg
+from src.utils.prompt_template import (
+    user_limit_msg,
+    private_limit_msg,
+    negative_stability_ai_prompt,
+)
 
 import os
 
@@ -32,6 +36,7 @@ import pandas as pd
 
 from src.third_party_api.chatgpt import local_chatgpt_to_reply
 from src.utils.metrics import *
+from src.third_party_api.stability_ai import stability_generate_image, process_image_description
 
 
 class Bot(ABC):
@@ -88,6 +93,10 @@ class Bot(ABC):
 
     @abstractmethod
     def send_img(self, chat_id, file_path, description=''):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
         raise NotImplementedError
 
     @abstractmethod
@@ -315,7 +324,7 @@ class Bot(ABC):
             logging.info("should ignore this msg", msg.raw_msg)
             return
 
-        if msg.is_private:
+        if msg.is_private and msg.from_id not in self.bot_admin_id_list:
             PRIVATE_MSG_COUNTER.inc()
             # TODO: Remove this after support private chat
             await self.send_msg_async(
@@ -350,6 +359,7 @@ class Bot(ABC):
                     time.perf_counter() - handle_single_msg_start
                 )
 
+        # TODO: migrate following code to text_branch_handler
         try:
             save_avatar_chat_history(
                 msg,
@@ -365,13 +375,89 @@ class Bot(ABC):
 
         HANDLE_SINGLE_MSG_COUNTER.labels('chatgpt').inc()
         MSG_TEXT_LEN_METRICS.labels('chatgpt').observe(len(msg.msg_text))
-        reply = await local_chatgpt_to_reply(self, msg)
 
-        if reply:
+        # Call chatgpt and get response
+        text_reply, image_description, is_bot_picture, cost_usd = await local_chatgpt_to_reply(self, msg)
+        logging.info(f'total openai cost of this call: ${cost_usd}')
+        branch = 'local_chatgpt'
+        if not text_reply:
+            return
+        image_url = None
+        raw_image_description = image_description
+        # If generate_image is triggered
+        if image_description is not None:
+            branch = 'generate_image'
+
+            # If the user wants to see portrait of bot, we append the system defined image prompt
+            if is_bot_picture:
+                image_description = [
+                    {
+                        "text": negative_stability_ai_prompt,
+                        "weight": -1,
+                    },
+                    {
+                        "text": 'a handsome man, anime style, soft lighting, high-resolution, Shinkai Makoto, '
+                        + process_image_description(raw_image_description),
+                        "weight": 1,
+                    },
+                ]
+            else:
+                image_description = [
+                    {
+                        "text": negative_stability_ai_prompt,
+                        "weight": -1,
+                    },
+                    {
+                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, ' + raw_image_description,
+                        "weight": 1,
+                    },
+                ]
+
             try:
-                REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(reply))
-                await self.send_msg_async(
-                    msg=reply, chat_id=msg.chat_id, parse_mode=None, reply_to_message_id=msg.reply_to_message_id
+                handle_single_msg_start = time.perf_counter()
+                file_list = await stability_generate_image(
+                    text_prompts=image_description,
+                    height=896,
+                    width=1152,
+                    seed=random.randint(1, 10000),
+                    engine_id="stable-diffusion-xl-1024-v1-0",
+                    steps=50,
+                    samples=1,
+                )
+                latency = time.perf_counter() - handle_single_msg_start
+                IMAGE_GENERATION_LATENCY_METRICS.labels('chatgpt').observe(latency)
+                logging.info(f'Image latency: {latency}s')
+                # TODO: formalize the image cost as a function
+                cost_usd += 0.02
+                SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
+            except Exception as e:
+                logging.exception(f"stability_generate_image() {e}")
+                return
+
+            if file_list:
+                image_url = ','.join(file_list)
+                for file in file_list:
+                    try:
+                        await self.send_img_async(
+                            chat_id=msg.chat_id,
+                            file_path=file,
+                            reply_to_message_id=msg.reply_to_message_id,
+                            description=raw_image_description,
+                        )
+                    except Exception as e:
+                        ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
+                        logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
+                        return
+
+        # If there is any text_reply available we should store and send it
+        if text_reply:
+            try:
+                REPLY_TEXT_LEN_METRICS.labels('chatgpt').observe(len(text_reply))
+                send_msg_response = await self.send_msg_async(
+                    msg=text_reply,
+                    chat_id=msg.chat_id,
+                    parse_mode=None,
+                    reply_to_message_id=msg.reply_to_message_id,
                 )
                 check_user_eligible_for_conversation(msg.from_id, msg.is_private, usage=True)
                 SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
@@ -381,6 +467,43 @@ class Bot(ABC):
             except Exception as e:
                 ERROR_COUNTER.labels('error_send_msg', 'chatgpt').inc()
                 logging.error(f"local_chatgpt_to_reply() send_msg() failed : {e}")
+                return
+
+            try:
+                with Params().Session() as session:
+                    new_record = ChatHistory(
+                        message_id=send_msg_response['result']['message_id'],
+                        first_name='ChatGPT',
+                        last_name='Bot',
+                        username=self.bot_name,
+                        from_id=msg.from_id,
+                        chat_id=msg.chat_id,
+                        update_time=datetime.now(),
+                        msg_text=text_reply,
+                        black_list=0,
+                        is_private=msg.is_private,
+                        branch=branch,
+                        image_description=raw_image_description,
+                        comma_separated_image_url=image_url,
+                        cost_usd=cost_usd,
+                    )
+                    # Add the new record to the session
+                    session.add(new_record)
+
+                    # Also mark the previous incoming user message as is_replied and update branch
+                    session.query(ChatHistory).filter(ChatHistory.message_id == msg.message_id).update(
+                        {
+                            "is_replied": True,
+                            "branch": branch,
+                            "replied_message_id": send_msg_response['result']['message_id'],
+                        }
+                    )
+                    # Commit the session
+                    session.commit()
+            except Exception as e:
+                ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
+                logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
+                return
 
         return
 

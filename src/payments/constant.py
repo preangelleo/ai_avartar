@@ -1,4 +1,4 @@
-from database.mysql import ServiceType
+from src.database.mysql import ServiceType
 
 PLAN_CONFIG = {
     'token_based_plan_a': {

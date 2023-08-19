@@ -61,6 +61,17 @@ class PlanCredit(Base):
     user = relationship("User", back_populates="plan_credits")
 
 
+class Transaction(Base):
+    __tablename__ = 'transactions'
+    id = Column(Integer, primary_key=True)
+    external_txn_id = Column(String(255), unique=True)
+    subscription_id = Column(Integer, ForeignKey('subscriptions.id'), nullable=True)
+    plan_credit_id = Column(Integer, ForeignKey('plan_credits.id'), nullable=True)
+    subscription = relationship("Subscription")
+    plan_credit = relationship("PlanCredit")
+    # additional fields you may need
+
+
 class ChatHistory(Base):
     __tablename__ = 'avatar_chat_history'
 

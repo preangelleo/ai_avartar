@@ -26,6 +26,7 @@ from src.utils.prompt_template import (
     prompt_invalid,
     prompt_low_quality,
     system_role_gpt4_prompt,
+    role_tone_examples,
 )
 from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story
 from datetime import datetime
@@ -289,7 +290,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     else:
         system_prompt_history = [{"role": "system", "content": system_role_prompt.format(user_name=msg.first_name)}]
 
-    user_history_msg_list = []
+    user_history_msg_list = role_tone_examples
     for i in range(df.shape[0]):
         history_conversation = df.iloc[i]
         user_history_msg_list.append({"role": "user", "content": history_conversation['msg_text']})

@@ -423,7 +423,7 @@ class Bot(ABC):
                     width=1152,
                     seed=random.randint(1, 10000),
                     engine_id="stable-diffusion-xl-1024-v1-0",
-                    steps=50,
+                    steps=30,
                     samples=1,
                 )
                 latency = time.perf_counter() - handle_single_msg_start

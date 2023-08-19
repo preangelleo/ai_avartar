@@ -6,7 +6,7 @@ from src.database.mysql_utils import get_user, find_plan_credit_for_user
 from src.payments.constant import PLAN_CONFIG
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
-from src.database.mysql import Transaction, ServiceType, PlanCredit, ChannelType
+from src.database.mysql import Transaction, ServiceType, PlanCredit, ChannelType, User, Subscription
 
 app = Flask(__name__)
 
@@ -55,7 +55,7 @@ def handle_payment():
 def external_txn_id_exists(external_txn_id) -> bool:
     # Assuming the `external_txn_id` is a column in the `OwnerParameter` table
     with Params().Session() as session:
-        query_result = session.query().filter(external_txn_id == external_txn_id).first()
+        query_result = session.query(Transaction).filter(external_txn_id == external_txn_id).first()
         return query_result is not None
 
 

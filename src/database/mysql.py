@@ -31,16 +31,6 @@ class User(Base):
     plan_credits = relationship("PlanCredit", back_populates="user")
 
 
-class Plan(Base):
-    __tablename__ = 'plans'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255), unique=True)
-    service_type = Column(Enum(ServiceType))
-    plan_type = Column(Enum(PlanType))
-    time_based_plan_duration = Column(Integer)  # in seconds
-    credit_count = Column(Integer)  # for count_based plans
-
-
 class Subscription(Base):
     __tablename__ = 'subscriptions'
     id = Column(Integer, primary_key=True)

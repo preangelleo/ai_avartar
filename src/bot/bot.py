@@ -409,7 +409,8 @@ class Bot(ABC):
                         "weight": -1,
                     },
                     {
-                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, ' + raw_image_description,
+                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, '
+                        + process_image_description(raw_image_description),
                         "weight": 1,
                     },
                 ]

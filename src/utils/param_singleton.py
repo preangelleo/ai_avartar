@@ -70,7 +70,7 @@ class Params:
         self.MORALIS_API = os.getenv('MORALIS_API')
         self.ETHERSCAN_API = os.getenv('ETHERSCAN_API')
         # default to 0.0 if not configured
-        self.MONTHLY_FEE = float(os.getenv('MONTHLY_FEE'))
+        self.MONTHLY_FEE = 0.0  # TODO remove this
 
         self.INFURA = ("https://mainnet.infura.io/v3/" + self.INFURA_KEY) if self.INFURA_KEY else None
         self.web3 = Web3(Web3.HTTPProvider(self.INFURA)) if self.INFURA else None

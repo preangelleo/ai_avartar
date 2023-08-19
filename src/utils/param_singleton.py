@@ -28,19 +28,6 @@ class Params:
     refill_teaser_lock = threading.Lock()
 
     # 读出 avatar_owner_parameters 表中现有的 parameter_name 和 parameter_value, 并返回一个字典
-    def get_owner_parameters(self):
-        print('DEBUG: get_owner_parameters()')
-        # Create a new session
-        with self.Session() as session:
-            # Query the table 'avatar_owner_parameters'
-            owner_parameters = session.query(OwnerParameter).all()
-            # Create a new empty dictionary
-            owner_parameters_dict = {}
-            # Loop through the owner_parameters and add them into the dictionary
-            for owner_parameter in owner_parameters:
-                owner_parameters_dict[owner_parameter.parameter_name] = owner_parameter.parameter_value
-        return owner_parameters_dict
-
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
@@ -204,3 +191,16 @@ class Params:
     def update_refill_teaser(self, new_value):
         with self.refill_teaser_lock:
             self.refill_teaser = new_value
+
+    def get_owner_parameters(self):
+        print('DEBUG: get_owner_parameters()')
+        # Create a new session
+        with self.Session() as session:
+            # Query the table 'avatar_owner_parameters'
+            owner_parameters = session.query(OwnerParameter).all()
+            # Create a new empty dictionary
+            owner_parameters_dict = {}
+            # Loop through the owner_parameters and add them into the dictionary
+            for owner_parameter in owner_parameters:
+                owner_parameters_dict[owner_parameter.parameter_name] = owner_parameter.parameter_value
+        return owner_parameters_dict

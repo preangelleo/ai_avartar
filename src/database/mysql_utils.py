@@ -8,6 +8,18 @@ from datetime import datetime
 from sqlalchemy.orm import joinedload
 
 
+def get_user(user_from_id: str) -> Optional[User]:
+    with Params().Session() as session:
+        user = session.query(User).filter_by(user_from_id=user_from_id).first()
+        return user
+
+
+def find_plan_credit_for_user(user: User, service_type: ServiceType) -> Optional[PlanCredit]:
+    with Params().Session() as session:
+        plan_credit = session.query(PlanCredit).filter_by(user_id=user.id, service_type=service_type.value).first()
+        return plan_credit
+
+
 def init_table_if_needed(user_from_id: str):
     with Params().Session() as session:
         user = session.query(User).filter_by(user_from_id=user_from_id).first()

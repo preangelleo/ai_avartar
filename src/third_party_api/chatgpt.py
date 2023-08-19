@@ -25,6 +25,8 @@ from src.utils.prompt_template import (
     prompt_exposed,
     prompt_invalid,
     prompt_low_quality,
+    system_role_gpt4_prompt,
+    role_tone_examples,
 )
 from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story
 from datetime import datetime
@@ -182,7 +184,7 @@ async def chat_gpt_full(
 
 
 def is_exposed(text: str, user_msg: str) -> bool:
-    exposure_keywords = ["虚拟", "没有身体", "没有真实的身体", "人工智能", "AI", "虚拟助手", "实体接触"]
+    exposure_keywords = ["虚拟", "没有身体", "没有真实的身体", "人工智能", "AI", "虚拟助手", "实体接触", "语言模型", "现实生活", "知识库", "模仿人类", "肉体"]
     for key in exposure_keywords:
         if key in text:
             return True
@@ -204,6 +206,13 @@ def is_request_long_reply(user_msg: str) -> bool:
     return False
 
 
+def is_request_image(user_msg: str) -> bool:
+    for key in ["画", "照片", "图片"]:
+        if key in user_msg:
+            return True
+    return False
+
+
 def is_low_quality(text: str, user_msg: str) -> bool:
     # TODO: Use a small bert classifier in the future?
     low_quality_keywords = ["建议", "抱歉"]
@@ -213,6 +222,22 @@ def is_low_quality(text: str, user_msg: str) -> bool:
     if is_request_long_reply(user_msg):
         return False
     return len(text) > 100
+
+
+def get_improved_text(full_text: str):
+    if "improved_response" in full_text:
+        return full_text.split("improved_response")[1].strip(": \n")
+    elif (
+        "original_response:" in full_text
+        or "first_response:" in full_text
+        or "reasoning:" in full_text
+        or full_text.startswith("1. ")
+    ):
+        # If the response tried to reason but without "improved_response", return None for a final corrective call.
+        return None
+    else:
+        # The LM returns the final response directly without reasoning
+        return full_text
 
 
 # Call chatgpt and get the text response or image description to send to users.
@@ -231,7 +256,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                         AND `from_id` = {msg.from_id}
                         AND `msg_text` IS NOT NULL
                     ) a left outer join `avatar_chat_history` b on (a.`replied_message_id` = b.`message_id`)
-                    ORDER BY a.`update_time` DESC LIMIT 5
+                    ORDER BY a.`update_time` DESC LIMIT 6
                 ) sub ORDER BY `update_time` ASC
             """,
             Params().engine,
@@ -241,61 +266,90 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         logging.error(f"local_chatgpt_to_reply() read_sql_query() failed: \n\n{e}")
         return
 
-    system_prompt_history = [{"role": "system", "content": system_role_prompt.format(user_name=msg.first_name)}]
-    initial_msg_request = system_prompt_history
+    initial_model_name = 'gpt-4-0613' if msg.user_is_treatment else 'gpt-3.5-turbo-16k-0613'
+    if is_request_long_reply(msg.msg_text):
+        logging.info(f"Use 16k model for initial story request")
+        initial_model_name = 'gpt-3.5-turbo-16k-0613'
+    if is_request_image(msg.msg_text):
+        logging.info(f"Use 16k model for initial image request")
+        initial_model_name = 'gpt-3.5-turbo-16k-0613'
+    else:
+        logging.info(
+            f"{'Treatment' if msg.user_is_treatment else 'Control'}: Use {initial_model_name} for initial request"
+        )
+
+    if initial_model_name == 'gpt-4-0613':
+        system_prompt_history = [
+            {
+                "role": "system",
+                "content": system_role_gpt4_prompt.replace("{user_name}", msg.first_name).replace(
+                    "{head_msg}", msg.msg_text
+                ),
+            }
+        ]
+    else:
+        system_prompt_history = [{"role": "system", "content": system_role_prompt.format(user_name=msg.first_name)}]
+
+    user_history_msg_list = role_tone_examples
     for i in range(df.shape[0]):
         history_conversation = df.iloc[i]
-        initial_msg_request.append({"role": "user", "content": history_conversation['msg_text']})
+        user_history_msg_list.append({"role": "user", "content": history_conversation['msg_text']})
         if history_conversation['reply_text'] is not None and len(history_conversation['reply_text']) < 500:
             image_description = ''
             if history_conversation['image_description'] is not None:
-                image_description = f"I draw a pciture of {history_conversation['image_description']}."
-            initial_msg_request.append(
+                image_description = f"I draw a picture of {history_conversation['image_description']}."
+            user_history_msg_list.append(
                 {"role": "assistant", "content": image_description + history_conversation['reply_text']}
             )
+
+    if initial_model_name == 'gpt-4-0613':
+        initial_msg_request = user_history_msg_list[:-1] + system_prompt_history
+    else:
+        initial_msg_request = system_prompt_history + user_history_msg_list
 
     logging.info(f"initial_msg_request: {initial_msg_request}")
 
     try:
-        initial_model_name = 'gpt-3.5-turbo-16k-0613'
-        # initial_model_name = 'gpt-3.5-turbo-0613'
-        # if is_request_long_reply(msg.msg_text):
-        #     logging.info(f"Use 16k model for initial story request")
-        #     initial_model_name = 'gpt-3.5-turbo-16k-0613'
-        # elif num_tokens_from_messages(initial_msg_request) > 4000:
+        # if num_tokens_from_messages(initial_msg_request) > 8000:
         #     logging.info(f"Use 16k model for initial long history request")
         #     initial_model_name = 'gpt-3.5-turbo-16k-0613'
 
+        if initial_model_name == 'gpt-4-0613':
+            function_call_params = {}
+        else:
+            function_call_params = {
+                'functions': [
+                    {
+                        "name": "generate_image",
+                        "description": "Only called when user explicitly want to see images. Generate an image according to user chat context.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "is_bot_picture": {
+                                    "type": "boolean",
+                                    "description": is_bot_picture_prompt,
+                                },
+                                "image_description": {
+                                    "type": "string",
+                                    "description": image_description_prompt,
+                                },
+                                "response_to_user_message": {
+                                    "type": "string",
+                                    "description": response_to_user_message_prompt,
+                                },
+                            },
+                            "required": ["is_bot_picture", "image_description", "response_to_user_message"],
+                        },
+                    }
+                ],
+                'function_call': "auto",
+            }
         response = await get_response_from_chatgpt(
             model=initial_model_name,
             messages=initial_msg_request,
             branch='local_reply',
-            functions=[
-                {
-                    "name": "generate_image",
-                    "description": "Only called when user explicitly want to see images. Generate an image according to user chat context.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "is_bot_picture": {
-                                "type": "boolean",
-                                "description": is_bot_picture_prompt,
-                            },
-                            "image_description": {
-                                "type": "string",
-                                "description": image_description_prompt,
-                            },
-                            "response_to_user_message": {
-                                "type": "string",
-                                "description": response_to_user_message_prompt,
-                            },
-                        },
-                        "required": ["is_bot_picture", "image_description", "response_to_user_message"],
-                    },
-                }
-            ],
-            function_call="auto",
             temperature=1.0,
+            **function_call_params,
         )
 
         initial_call_cost = get_cost_from_openai_response(initial_model_name, response)
@@ -321,8 +375,9 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         refine_image_description_cost = 0
         try:
             # Refine the image description
+            image_desc_refine_model = 'gpt-3.5-turbo'
             response = await get_response_from_chatgpt(
-                model='gpt-3.5-turbo',
+                model=image_desc_refine_model,
                 messages=system_prompt_history
                 + [{'role': 'user', 'content': msg.msg_text}]
                 + [
@@ -336,7 +391,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
                 branch='local_reply',
                 temperature=0.5,
             )
-            refine_image_description_cost = get_cost_from_openai_response('gpt-3.5-turbo', response)
+            refine_image_description_cost = get_cost_from_openai_response(image_desc_refine_model, response)
             try:
                 image_description_json = json.loads(get_text_reply_from_openai_response(response).strip())
                 image_description = image_description_json['output']
@@ -354,17 +409,31 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         )
 
     # if no image is request, we need to refine the initial text reply
-    initial_text_reply = get_text_reply_from_openai_response(response).strip()
+    initial_text_reply = get_text_reply_from_openai_response(response).strip("\"' :")
+    if initial_model_name == 'gpt-4-0613':
+        improved_text = get_improved_text(initial_text_reply)
+        if improved_text is None:
+            ERROR_COUNTER.labels('error_empty_gpt4_initial_response', 'chatgpt').inc()
+            logging.error(f"local_chatgpt_to_reply() gpt4_initial_response failed: {initial_text_reply}")
+            return
+        initial_text_reply = improved_text
+
     logging.info(f'initial_text_reply: {initial_text_reply}')
     final_response = initial_text_reply
     critique_text_cost = 0
     ############################## Branch and Critique the initial response ##############################
     template = None
-    for pair in [
-        ('exposed_ai', is_exposed, prompt_exposed),
-        ('invalid_response', is_invalid, prompt_invalid),
-        ('low_quality_response', is_low_quality, prompt_low_quality),
-    ]:
+    # We don't need to handle low_quality and invalid case in gpt4 as it is powerful enough.
+    if initial_model_name == 'gpt-4-0613':
+        template_list = [('exposed_ai', is_exposed, prompt_exposed)]
+    else:
+        template_list = [
+            ('exposed_ai', is_exposed, prompt_exposed),
+            ('invalid_response', is_invalid, prompt_invalid),
+            ('low_quality_response', is_low_quality, prompt_low_quality),
+        ]
+
+    for pair in template_list:
         if pair[1](initial_text_reply, msg.msg_text):
             template = pair[2]
             logging.info(f'critique reason: {pair[0]}')
@@ -380,35 +449,27 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         )
         logging.debug(f"critique_prompt: {critique_prompt}")
         try:
+            critique_model = 'gpt-4-0613' if initial_model_name == 'gpt-4-0613' else 'gpt-3.5-turbo'
             response = await get_response_from_chatgpt(
-                model='gpt-3.5-turbo',
-                messages=system_prompt_history
+                model=critique_model,
+                messages=([] if critique_model == 'gpt-4-0613' else system_prompt_history)
                 + [{'role': 'user', 'content': msg.msg_text}, {'role': 'system', 'content': critique_prompt}],
                 branch='local_reply',
                 temperature=0.5,
             )
-            critique_text_cost = get_cost_from_openai_response('gpt-3.5-turbo', response)
+            critique_text_cost = get_cost_from_openai_response(critique_model, response)
             critique_text_reply = get_text_reply_from_openai_response(response).strip()
             logging.info(f'critique_text_reply: {critique_text_reply}')
-            if "improved_response" in critique_text_reply:
-                improved_response = critique_text_reply.split("improved_response")[1].strip(": \n")
-                if len(improved_response) != 0:
-                    final_response = improved_response
-            elif (
-                "original_response:" in critique_text_reply
-                or "reasoning:" in critique_text_reply
-                or critique_text_reply.startswith("1. ")
-                or "回答" in critique_text_reply
-            ):
-                # If the response tried to reason but without "improved_response", return original as final response
-                pass
-            else:
-                # The LM returns the final response directly without reasoning
-                final_response = critique_text_reply
+
+            improved_response = get_improved_text(critique_text_reply)
+            if improved_response is not None:
+                final_response = improved_response
 
         except Exception as e:
             ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
             logging.error(f"text critique call chat_gpt() failed: \n\n{e}")
+
+    final_response = final_response.strip("\"'")
 
     logging.debug(f"local_chatgpt_to_reply() success: {response}")
     return final_response, None, None, initial_call_cost + critique_text_cost

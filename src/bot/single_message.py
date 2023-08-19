@@ -63,3 +63,11 @@ class SingleMessage:
             # if it is group chat, then reply to the message with inline msg
             reply_to_message_id = self.message_id
         return reply_to_message_id
+
+    @property
+    def user_hash_mod(self):
+        return hash(self.from_id) % 100
+
+    @property
+    def user_is_treatment(self):
+        return self.user_hash_mod < 50

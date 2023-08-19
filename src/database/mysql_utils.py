@@ -8,9 +8,13 @@ from datetime import datetime
 from sqlalchemy.orm import joinedload
 
 
-def get_user(user_from_id: str) -> Optional[User]:
+def get_user_or_create(user_from_id: str) -> Optional[User]:
     with Params().Session() as session:
         user = session.query(User).filter_by(user_from_id=user_from_id).first()
+        if not user:
+            user = User(user_from_id=user_from_id)
+            session.add(user)
+            session.commit()
         return user
 
 

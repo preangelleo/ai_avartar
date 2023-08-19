@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import hashlib
 import hmac
 
-from src.database.mysql_utils import get_user, find_plan_credit_for_user
+from src.database.mysql_utils import find_plan_credit_for_user, get_user_or_create
 from src.payments.constant import PLAN_CONFIG
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
@@ -25,7 +25,7 @@ def handle_payment():
     # 3. Save the transaction to the database
     product_identifier = data['product']['identifier']
     user_id = data['userId']
-    user = get_user(user_id)
+    user = get_user_or_create(user_id)
     plan_config = PLAN_CONFIG[product_identifier]
     for service_type, credit_count in plan_config.items():
         plan_credit = find_plan_credit_for_user(user, service_type)

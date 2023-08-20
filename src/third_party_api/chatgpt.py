@@ -200,7 +200,7 @@ def is_invalid(text: str, user_msg: str) -> bool:
 
 
 def is_request_long_reply(user_msg: str) -> bool:
-    for key in ["故事", "作文", "论文", "情书", "全文", "背诵"]:
+    for key in ["故事", "作文", "论文", "情书", "全文", "背诵", "写一篇", "现代文", "古代文"]:
         if key in user_msg:
             return True
     return False

@@ -33,7 +33,11 @@ import os
 
 import pandas as pd
 
-from src.third_party_api.chatgpt import local_chatgpt_to_reply
+from src.third_party_api.chatgpt import (
+    local_chatgpt_to_reply,
+    get_response_from_chatgpt,
+    get_text_reply_from_openai_response,
+)
 from src.utils.metrics import *
 from src.third_party_api.stability_ai import stability_generate_image, process_image_description
 
@@ -450,6 +454,21 @@ class Bot(ABC):
                         ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
                         logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
                         return
+            else:
+                # If the image list is empty, we want to still return the Chinese description of the image
+                try:
+                    response = await get_response_from_chatgpt(
+                        model='gpt-3.5-turbo',
+                        messages=[{'role': 'system', 'content': f"将下面这段话翻译成中文对一幅画的描述：{raw_image_description}"}],
+                        branch='local_reply',
+                        temperature=1.0,
+                    )
+                    image_description_text_reply = get_text_reply_from_openai_response(response).strip()
+                    text_reply = f'{image_description_text_reply}\n\n{text_reply}'
+                except Exception as e:
+                    ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
+                    logging.error(f"fallback image description reply call chat_gpt() failed: \n\n{e}")
+                    return
 
         # If there is any text_reply available we should store and send it
         if text_reply:

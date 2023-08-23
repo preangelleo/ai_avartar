@@ -324,10 +324,11 @@ class Bot(ABC):
         # 如果是群聊但是没有 at 机器人, 则在此处返回
         if msg.should_be_ignored:
             IGNORED_MSG_COUNTER.inc()
-            logging.info("should ignore this msg", msg.raw_msg)
             return
 
-        if msg.is_private and msg.from_id not in self.bot_admin_id_list:
+        logging.info(f'Received Message: {msg.raw_msg}')
+        # TODO: Better structure the list of admin.
+        if msg.is_private and msg.from_id not in self.bot_admin_id_list + ['501088608544210944']:
             PRIVATE_MSG_COUNTER.inc()
             # TODO: Remove this after support private chat
             await self.send_msg_async(
@@ -428,7 +429,7 @@ class Bot(ABC):
                     seed=random.randint(1, 10000),
                     engine_id="stable-diffusion-xl-1024-v1-0",
                     steps=30,
-                    samples=1,
+                    samples=3,
                 )
                 latency = time.perf_counter() - handle_single_msg_start
                 IMAGE_GENERATION_LATENCY_METRICS.labels('chatgpt').observe(latency)
@@ -442,6 +443,7 @@ class Bot(ABC):
 
             if file_list:
                 image_url = ','.join(file_list)
+                logging.info(f"Num of successful images: {len(file_list)}")
                 for file in file_list:
                     try:
                         await self.send_img_async(
@@ -454,6 +456,8 @@ class Bot(ABC):
                         ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
                         logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
                         return
+                    # For now we only return 1 images even if all of them are not blurred
+                    break
             else:
                 # If the image list is empty, we want to still return the Chinese description of the image
                 try:

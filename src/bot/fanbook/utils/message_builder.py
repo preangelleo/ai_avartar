@@ -38,6 +38,8 @@ def build_from_fanbook_msg(obj):
 
 
 def check_if_bot_is_mentioned(raw_text: str, mentions: Optional[list]) -> bool:
+    if raw_text is None:
+        return False
     if f'@{Params().FANBOOK_BOT_NAME}' in raw_text:
         return True
 
@@ -51,4 +53,6 @@ def check_if_bot_is_mentioned(raw_text: str, mentions: Optional[list]) -> bool:
 
 
 def sanitize_msg_text(msg_text: str) -> str:
+    if not isinstance(msg_text, str):
+        return None
     return re.sub(r'\$\{@![\d]+\}', '', msg_text).strip()

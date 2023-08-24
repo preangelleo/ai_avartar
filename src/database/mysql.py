@@ -57,6 +57,7 @@ class Transaction(Base):
     external_txn_id = Column(String(255), unique=True)
     subscription_id = Column(Integer, ForeignKey('subscriptions.id'), nullable=True)
     plan_credit_id = Column(Integer, ForeignKey('plan_credits.id'), nullable=True)
+    user_id = Column(String(255), ForeignKey('users.user_from_id'))
     subscription = relationship("Subscription")
     plan_credit = relationship("PlanCredit")
     # additional fields you may need

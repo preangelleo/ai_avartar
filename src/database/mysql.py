@@ -34,7 +34,7 @@ class User(Base):
 class Subscription(Base):
     __tablename__ = 'subscriptions'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(String, ForeignKey('users.user_from_id'))
     service_type = Column(Enum(ServiceType))
     start_date = Column(DateTime, default=datetime.now())
     end_date = Column(DateTime)
@@ -44,7 +44,7 @@ class Subscription(Base):
 class PlanCredit(Base):
     __tablename__ = 'plan_credits'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(String, ForeignKey('users.user_from_id'))
     credit_count = Column(Integer)  # for count_based plans
     service_type = Column(Enum(ServiceType))  # e.g., 'conversation', 'drawing'
     chat_type = Column(Enum(ChannelType))  # e.g., 'private', 'public'

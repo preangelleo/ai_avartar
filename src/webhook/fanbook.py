@@ -31,7 +31,7 @@ def handle_payment():
         plan_credit = find_plan_credit_for_user(user, service_type)
         if plan_credit is None:
             plan_credit = PlanCredit(
-                user_id=user.id,
+                user_id=user.user_from_id,
                 service_type=service_type.value,
                 credit_count=credit_count,
                 chat_type=ChannelType.UNIVERSAL.value,

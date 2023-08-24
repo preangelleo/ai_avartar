@@ -55,7 +55,7 @@ def handle_payment():
 def external_txn_id_exists(external_txn_id) -> bool:
     # Assuming the `external_txn_id` is a column in the `OwnerParameter` table
     with Params().Session() as session:
-        query_result = session.query(Transaction).filter(external_txn_id == external_txn_id).first()
+        query_result = session.query(Transaction).filter(Transaction.external_txn_id == external_txn_id).first()
         return query_result is not None
 
 

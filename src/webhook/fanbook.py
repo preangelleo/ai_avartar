@@ -18,13 +18,13 @@ def handle_payment():
     # 2. deduplicate the request
     data = request.json
     external_txn_id = data['orderNo']
+    product_identifier = data['product']['identifier']
+    user_id = data['userId']
     if external_txn_id_exists(external_txn_id):
         logging.info(f'handle_payment(): external_txn_id: {external_txn_id} already exists, skipped')
         return '', 200
 
     # 3. Save the transaction to the database
-    product_identifier = data['product']['identifier']
-    user_id = data['userId']
     user = get_user_or_create(user_id)
     plan_config = PLAN_CONFIG[product_identifier]
     for service_type, credit_count in plan_config.items():

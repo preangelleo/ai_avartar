@@ -15,3 +15,11 @@ PLAN_CONFIG = {
 CREDIT_BASED_PLAN = [CREDIT_PLAN_TIER_A]
 
 SUBSCRIPTION_BASED_PLAN = [SUBSCRIPTION_PLAN]  # they have typo in the callback
+
+PUBLIC_INIT_CHAT_CREDIT = 50
+PUBLIC_INIT_DRAWING_CREDIT = 5
+
+
+class ServiceType:
+    conversation = 'conversation'
+    drawing = 'drawing'

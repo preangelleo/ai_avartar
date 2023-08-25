@@ -497,7 +497,8 @@ eleven_labs_tts_failed_alert = '''
 '''
 
 
-user_limit_msg = '对不起，和我聊天的人太多了所以我暂时处理不过来，等过段时间再试试吧！'
+user_limit_msg = '你好，快去付钱吧'
+payment_url = 'https://bot-test.fanbook.mobi/mp/500840430045609984/boyfriend/pay/?fb_redirect&open_type=mp&view=1&debug'
 private_limit_msg = '对不起，我暂时不能私聊，等过段时间再试试，现在请到${#514680459289280512} 里@我吧 ：）'
 
 

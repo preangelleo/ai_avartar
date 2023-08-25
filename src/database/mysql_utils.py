@@ -1,6 +1,8 @@
+import logging
 from typing import Optional
 from sqlalchemy import and_
 
+from payments.constant import PUBLIC_INIT_CHAT_CREDIT, PUBLIC_INIT_DRAWING_CREDIT, ServiceType
 from src.database.mysql import User, PlanCredit, ChannelType, Subscription
 from src.utils.param_singleton import Params
 from datetime import datetime
@@ -41,77 +43,99 @@ def find_active_subscription_for_user(user: User, time_to_check: datetime, sessi
     return active_subscription
 
 
-def init_table_if_needed(user_from_id: str):
-    return
+def init_credit_table_if_needed(user_from_id: str):
+    user: User = get_user_or_create(user_from_id)
 
-
-#     with Params().Session() as session:
-#         user = session.query(User).filter_by(user_from_id=user_from_id).first()
-#         if user is None:
-#             # If user does not exist, create a new user
-#             user = User(user_from_id=user_from_id)
-#             session.add(user)
-#             # After adding a new User, you need to commit to get the id of the new User
-#             session.commit()
-#
-#             # create a plan credit for the user with conversation type and credit as 500
-#             plan_credit = PlanCredit(
-#                 user_id=user.id,
-#                 service_type=ServiceType.CONVERSATION.value,
-#                 credit_count=500,  # TODO: figure out a initial credit count
-#                 chat_type=ChannelType.PUBLIC.value,
-#             )
-#             session.add(plan_credit)
-#             session.commit()
-#         else:
-#             print(f"User {user_from_id} already exists.")
-
-
-def check_user_eligible_for_conversation(user_from_id: str, is_private: bool, usage: bool) -> bool:
-    # # we are going to always check subscript first
-    # # if user has active subscription, then we don't need to check credits
-    # # if user has credit and usage if true, then we need to reduce the credit by 1
-    #
-    # chat_type = ChannelType.UNIVERSAL if is_private else ChannelType.PUBLIC
-    #
-    # with Params().Session() as session:
-    #     user = (
-    #         session.query(User)
-    #         .options(joinedload(User.subscriptions), joinedload(User.plan_credits))
-    #         .filter_by(user_from_id=user_from_id)
-    #         .first()
-    #     )
-    #     if user is None:
-    #         return False
-    #
-    #     # Check active subscriptions
-    #     for sub in user.subscriptions:
-    #         if sub.service_type == ServiceType.CONVERSATION and sub.start_date <= datetime.now() <= sub.end_date:
-    #             return True
-    #
-    #     # Check available credits
-    #     for credit in user.plan_credits:
-    #         if (
-    #             credit.service_type == ServiceType.CONVERSATION
-    #             and credit.credit_count > 0
-    #             and credit.chat_type == chat_type
-    #         ):
-    #             if usage:
-    #                 # the credit can only go as low as 0
-    #                 credit.credit_count -= 1
-    #                 session.add(credit)
-    #                 session.commit()
-    #             return True
-
-    return False
-
-
-def find_user_with_eligible_plan(user_from_id: str) -> Optional[User]:
     with Params().Session() as session:
-        user = (
-            session.query(User)
-            .options(joinedload(User.subscriptions), joinedload(User.plan_credits))
-            .filter_by(user_from_id=user_from_id)
-            .first()
+        plan_credit = find_plan_credit_for_user(user=user, chat_type=ChannelType.PUBLIC, session=session)
+        if plan_credit is None:
+            # create a plan credit for the user with conversation type and credit as 500
+            plan_credit = PlanCredit(
+                user_id=user.id,
+                conversation_credit_count=PUBLIC_INIT_CHAT_CREDIT,
+                drawing_credit_count=PUBLIC_INIT_DRAWING_CREDIT,
+                chat_type=ChannelType.PUBLIC.value,
+            )
+            session.add(plan_credit)
+            session.commit()
+        else:
+            print(f"User {user_from_id} already exists.")
+
+
+def check_plan_credit_enough_for_service(
+    plan_credit: PlanCredit, service_type: ServiceType, reduce_plan_credit: bool, session: Session
+) -> bool:
+    if service_type == ServiceType.conversation:
+        if plan_credit.conversation_credit_count > 0:
+            if reduce_plan_credit:
+                plan_credit.conversation_credit_count -= 1
+                session.add(plan_credit)
+                session.commit()
+            return True
+        else:
+            return False
+    else:
+        if plan_credit.drawing_credit_count > 0:
+            if reduce_plan_credit:
+                plan_credit.drawing_credit_count -= 1
+                session.add(plan_credit)
+                session.commit()
+            return True
+        else:
+            return False
+
+
+def check_user_eligible_for_service(
+    user_from_id: str, is_private: bool, service_type: ServiceType, reduce_plan_credit: bool
+) -> bool:
+    user: User = get_user_or_create(user_from_id)
+    with Params().Session() as session:
+        # we are going to always check subscript first
+        active_subscription = find_active_subscription_for_user(
+            user=user, time_to_check=datetime.now(), session=session
         )
-        return user
+
+        if active_subscription is not None:
+            logging.info(f"active subscription found for user {user_from_id}, ")
+            return True
+
+        # if no active subscription, then we check the plan credit for universal usage
+        universal_plan_credit = find_plan_credit_for_user(user=user, chat_type=ChannelType.UNIVERSAL, session=session)
+        if universal_plan_credit is not None:
+            if check_plan_credit_enough_for_service(
+                plan_credit=universal_plan_credit,
+                service_type=service_type,
+                reduce_plan_credit=reduce_plan_credit,
+                session=session,
+            ):
+                logging.info(f"universal credit is enough for user {user_from_id}, " f"service type {service_type}")
+                return True
+            else:
+                if is_private:
+                    logging.info(f"user does not have enough credit for private chat")
+                    return False
+                else:
+                    public_plan_credit = find_plan_credit_for_user(
+                        user=user, chat_type=ChannelType.PUBLIC, session=session
+                    )
+                    if public_plan_credit is not None:
+                        if check_plan_credit_enough_for_service(
+                            plan_credit=public_plan_credit,
+                            service_type=service_type,
+                            reduce_plan_credit=reduce_plan_credit,
+                            session=session,
+                        ):
+                            logging.info(
+                                f"public credit is enough for user {user_from_id}, " f"service type {service_type}"
+                            )
+                            return True
+                        else:
+                            logging.info(
+                                f"public credit is not enough for user {user_from_id}," f"service type {service_type}"
+                            )
+                            return False
+                    else:
+                        logging.info(
+                            f"cannot find public plan credit for user {user_from_id}," f"service type {service_type}"
+                        )
+                        return False

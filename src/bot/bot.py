@@ -3,7 +3,8 @@ import time
 from abc import ABC, abstractmethod
 from datetime import date
 
-from src.database.mysql_utils import init_table_if_needed, check_user_eligible_for_conversation
+from payments.constant import ServiceType
+from src.database.mysql_utils import check_user_eligible_for_service, init_credit_table_if_needed
 from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
 from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import (
@@ -324,23 +325,17 @@ class Bot(ABC):
             logging.info("should ignore this msg", msg.raw_msg)
             return
 
-        if msg.is_private and msg.from_id not in self.bot_admin_id_list:
-            PRIVATE_MSG_COUNTER.inc()
-            # TODO: Remove this after support private chat
-            await self.send_msg_async(
-                msg=private_limit_msg,
-                chat_id=msg.chat_id,
-                parse_mode=None,
-                reply_to_message_id=msg.reply_to_message_id,
-            )
-            return
-
-        init_table_if_needed(user_from_id=msg.from_id)
+        init_credit_table_if_needed(user_from_id=msg.from_id)
 
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
-        if not check_user_eligible_for_conversation(msg.from_id, msg.is_private, usage=False):
+        if not check_user_eligible_for_service(
+            user_from_id=msg.from_id,
+            is_private=msg.is_private,
+            service_type=ServiceType.conversation,
+            reduce_plan_credit=False,
+        ):
             await self.send_msg_async(
                 msg=user_limit_msg,  # TODO: change to send url link to allow user to pay.
                 chat_id=msg.chat_id,
@@ -459,7 +454,12 @@ class Bot(ABC):
                     parse_mode=None,
                     reply_to_message_id=msg.reply_to_message_id,
                 )
-                check_user_eligible_for_conversation(msg.from_id, msg.is_private, usage=True)
+                check_user_eligible_for_service(
+                    user_from_id=msg.from_id,
+                    is_private=msg.is_private,
+                    service_type=ServiceType.conversation,
+                    reduce_plan_credit=True,
+                )
                 SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
                 HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
                     time.perf_counter() - handle_single_msg_start

@@ -34,6 +34,7 @@ def handle_payment():
                 handle_subscription_based_plan(user, product_identifier, external_txn_id, session)
         except Exception as e:
             session.rollback()
+            logging.error(f'handle_payment(): {e}, rollback session')
         session.commit()
     logging.info(f'handle_payment(): {request.json}')
     return '', 200

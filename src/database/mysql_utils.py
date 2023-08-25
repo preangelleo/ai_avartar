@@ -51,7 +51,7 @@ def init_credit_table_if_needed(user_from_id: str):
         if plan_credit is None:
             # create a plan credit for the user with conversation type and credit as 500
             plan_credit = PlanCredit(
-                user_id=user.id,
+                user_id=user.user_from_id,
                 conversation_credit_count=PUBLIC_INIT_CHAT_CREDIT,
                 drawing_credit_count=PUBLIC_INIT_DRAWING_CREDIT,
                 chat_type=ChannelType.PUBLIC.value,

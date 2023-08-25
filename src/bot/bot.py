@@ -3,7 +3,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import date
 
-from payments.constant import ServiceType
+from src.payments.constant import ServiceType
 from src.database.mysql_utils import check_user_eligible_for_service, init_credit_table_if_needed
 from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
@@ -24,7 +24,6 @@ from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
-from src.utils.utils import user_id_exists, user_over_limit
 from src.utils.prompt_template import (
     user_limit_msg,
     private_limit_msg,

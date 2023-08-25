@@ -1,8 +1,6 @@
 import datetime
 
 from flask import Flask, request, jsonify
-import hashlib
-import hmac
 
 from src.database.mysql_utils import (
     find_plan_credit_for_user,
@@ -98,10 +96,10 @@ def handle_subscription_based_plan(user, product_identifier, external_txn_id, se
     )
     plan_config = PLAN_CONFIG[product_identifier]
     duration_days = plan_config['plan_duration_days']
-    active_subscription = find_active_subscription_for_user(user=user, session=session)
+    datetime_time_now = datetime.datetime.now()
+    active_subscription = find_active_subscription_for_user(user=user, time_to_check=datetime_time_now, session=session)
     if active_subscription is None:
         logging.info(f'handle_subscription_based_plan(): active_subscription is None, creating a new one')
-        datetime_time_now = datetime.datetime.now()
         active_subscription = Subscription(
             user_id=user.user_from_id,
             start_date=datetime.datetime.now(),

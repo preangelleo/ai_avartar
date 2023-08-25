@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from sqlalchemy import and_
 
-from payments.constant import PUBLIC_INIT_CHAT_CREDIT, PUBLIC_INIT_DRAWING_CREDIT, ServiceType
+from src.payments.constant import PUBLIC_INIT_CHAT_CREDIT, PUBLIC_INIT_DRAWING_CREDIT, ServiceType
 from src.database.mysql import User, PlanCredit, ChannelType, Subscription
 from src.utils.param_singleton import Params
 from datetime import datetime

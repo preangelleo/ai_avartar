@@ -3,7 +3,7 @@ import hashlib
 import hmac
 
 from src.database.mysql_utils import find_plan_credit_for_user, get_user_or_create
-from src.payments.constant import PLAN_CONFIG
+from src.payments.constant import PLAN_CONFIG, CREDIT_BASED_PLAN, SUBSCRIPTION_BASED_PLAN
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.database.mysql import Transaction, ServiceType, PlanCredit, ChannelType, User, Subscription
@@ -26,28 +26,15 @@ def handle_payment():
 
     # 3. Save the transaction to the database
     user = get_user_or_create(user_id)
-    plan_config = PLAN_CONFIG[product_identifier]
-    for service_type, credit_count in plan_config.items():
-        plan_credit = find_plan_credit_for_user(user, service_type)
-        if plan_credit is None:
-            plan_credit = PlanCredit(
-                user_id=user.user_from_id,
-                service_type=service_type.value,
-                credit_count=credit_count,
-                chat_type=ChannelType.UNIVERSAL.value,
-            )
-        else:
-            plan_credit.credit_count += credit_count
-
-        transaction = Transaction(
-            plan_credit_id=plan_credit.id,
-            external_txn_id=external_txn_id,
-        )
-        with Params().Session() as session:
-            session.add(plan_credit)
-            session.add(transaction)
-            session.commit()
-
+    with Params().Session() as session:
+        try:
+            if product_identifier in CREDIT_BASED_PLAN:
+                handle_credit_based_plan(user, product_identifier, external_txn_id, session)
+            else:
+                handle_subscription_based_plan(user, product_identifier, external_txn_id, session)
+        except Exception as e:
+            session.rollback()
+        session.commit()
     logging.info(f'handle_payment(): {request.json}')
     return '', 200
 
@@ -57,6 +44,46 @@ def external_txn_id_exists(external_txn_id) -> bool:
     with Params().Session() as session:
         query_result = session.query(Transaction).filter(Transaction.external_txn_id == external_txn_id).first()
         return query_result is not None
+
+
+def handle_credit_based_plan(user, product_identifier, external_txn_id, session):
+    logging.info(
+        f'handle_credit_based_plan(): user: {user},'
+        f' product_identifier: {product_identifier},'
+        f' external_txn_id: {external_txn_id}'
+    )
+    plan_config = PLAN_CONFIG[product_identifier]
+    for service_type, credit_count in plan_config.items():
+        plan_credit = find_plan_credit_for_user(user, service_type, session)
+        if plan_credit is None:
+            logging.info(f'handle_credit_based_plan(): plan_credit is None, creating a new one')
+            plan_credit = PlanCredit(
+                user_id=user.user_from_id,
+                service_type=service_type.value,
+                credit_count=credit_count,
+                chat_type=ChannelType.UNIVERSAL.value,
+            )
+            logging.info(f'handle_credit_based_plan(): plan_credit.id: {plan_credit.id}')
+            session.add(plan_credit)
+            session.flush()
+        else:
+            logging.info(
+                f'handle_credit_based_plan(): '
+                f'plan_credit is not None, updating the existing one, id: {plan_credit.id}'
+            )
+            plan_credit.credit_count += credit_count
+
+        transaction = Transaction(
+            plan_credit_id=plan_credit.id,
+            external_txn_id=external_txn_id,
+            user_id=user.user_from_id,
+        )
+        session.add(transaction)
+        session.flush()
+
+
+def handle_subscription_based_plan(user, product_identifier, external_txn_id, session):
+    return
 
 
 if __name__ == '__main__':

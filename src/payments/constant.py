@@ -6,3 +6,7 @@ PLAN_CONFIG = {
         ServiceType.DRAWING: 10,
     }
 }
+
+CREDIT_BASED_PLAN = ['token_based_plan_a']
+
+SUBSCRIPTION_BASED_PLAN = []

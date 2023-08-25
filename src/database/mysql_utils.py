@@ -3,6 +3,7 @@ from typing import Optional
 from src.database.mysql import User, PlanCredit, ServiceType, ChannelType
 from src.utils.param_singleton import Params
 from datetime import datetime
+from sqlalchemy.orm import Session
 
 
 from sqlalchemy.orm import joinedload
@@ -18,12 +19,11 @@ def get_user_or_create(user_from_id: str) -> Optional[User]:
         return user
 
 
-def find_plan_credit_for_user(user: User, service_type: ServiceType) -> Optional[PlanCredit]:
-    with Params().Session() as session:
-        plan_credit = (
-            session.query(PlanCredit).filter_by(user_id=user.user_from_id, service_type=service_type.value).first()
-        )
-        return plan_credit
+def find_plan_credit_for_user(user: User, service_type: ServiceType, session: Session) -> Optional[PlanCredit]:
+    plan_credit = (
+        session.query(PlanCredit).filter_by(user_id=user.user_from_id, service_type=service_type.value).first()
+    )
+    return plan_credit
 
 
 def init_table_if_needed(user_from_id: str):

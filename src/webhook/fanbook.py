@@ -1,8 +1,15 @@
+import datetime
+
 from flask import Flask, request, jsonify
 import hashlib
 import hmac
 
-from src.database.mysql_utils import find_plan_credit_for_user, get_user_or_create
+from src.database.mysql_utils import (
+    find_plan_credit_for_user,
+    get_user_or_create,
+    find_subscription_for_user,
+    find_active_subscription_for_user,
+)
 from src.payments.constant import PLAN_CONFIG, CREDIT_BASED_PLAN, SUBSCRIPTION_BASED_PLAN
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
@@ -85,7 +92,41 @@ def handle_credit_based_plan(user, product_identifier, external_txn_id, session)
 
 
 def handle_subscription_based_plan(user, product_identifier, external_txn_id, session):
-    return
+    logging.info(
+        f'handle_subscription_based_plan(): user: {user},'
+        f' product_identifier: {product_identifier},'
+        f' external_txn_id: {external_txn_id}'
+    )
+    plan_config = PLAN_CONFIG[product_identifier]
+    duration_days = plan_config['plan_duration_days']
+    active_subscription = find_active_subscription_for_user(user=user, session=session)
+    if active_subscription is None:
+        logging.info(f'handle_subscription_based_plan(): active_subscription is None, creating a new one')
+        datetime_time_now = datetime.datetime.now()
+        active_subscription = Subscription(
+            user_id=user.user_from_id,
+            start_date=datetime.datetime.now(),
+            end_date=datetime_time_now + datetime.timedelta(days=duration_days),
+        )
+        session.add(active_subscription)
+        session.flush()
+        logging.info(f'handle_subscription_based_plan(): subscription.id: {active_subscription.id}')
+    else:
+        logging.info(
+            f'handle_subscription_based_plan(): '
+            'active_subscription is not None, updating the existing one, id: '
+            f'{active_subscription.id}'
+        )
+
+        active_subscription.end_date += datetime.timedelta(days=duration_days)
+
+    transaction = Transaction(
+        subscription_id=active_subscription.id,
+        external_txn_id=external_txn_id,
+        user_id=user.user_from_id,
+    )
+    session.add(transaction)
+    session.flush()
 
 
 if __name__ == '__main__':

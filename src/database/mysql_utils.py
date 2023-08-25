@@ -1,6 +1,7 @@
 from typing import Optional
+from sqlalchemy import and_
 
-from src.database.mysql import User, PlanCredit, ChannelType
+from src.database.mysql import User, PlanCredit, ChannelType, Subscription
 from src.utils.param_singleton import Params
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -22,6 +23,22 @@ def get_user_or_create(user_from_id: str) -> Optional[User]:
 def find_plan_credit_for_user(user: User, chat_type: ChannelType, session: Session) -> Optional[PlanCredit]:
     plan_credit = session.query(PlanCredit).filter_by(user_id=user.user_from_id, chat_type=chat_type.value).first()
     return plan_credit
+
+
+def find_active_subscription_for_user(user: User, time_to_check: datetime, session: Session) -> Optional[Subscription]:
+    active_subscription = (
+        session.query(Subscription)
+        .filter(
+            and_(
+                Subscription.user_id == user.user_from_id,
+                Subscription.start_date <= time_to_check,
+                (Subscription.end_date >= time_to_check),
+            )
+        )
+        .first()
+    )
+
+    return active_subscription
 
 
 def init_table_if_needed(user_from_id: str):

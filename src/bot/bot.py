@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 
 from src.payments.constant import ServiceType
-from src.database.mysql_utils import check_user_eligible_for_service, init_credit_table_if_needed
+from src.database.mysql_utils import check_user_eligible_for_service, init_credit_table_if_needed, generate_billing_info
 from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
 from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import (
@@ -327,6 +327,17 @@ class Bot(ABC):
         init_credit_table_if_needed(user_from_id=msg.from_id)
 
         if not msg.msg_text or len(msg.msg_text) == 0:
+            return
+
+        if msg.msg_text.startswith('/check_billing'):
+            logging.info(f"check billing: {msg.msg_text}")
+            billing_info = generate_billing_info(msg.from_id)
+            await self.send_msg_async(
+                msg=billing_info,
+                chat_id=msg.chat_id,
+                parse_mode=None,
+                reply_to_message_id=msg.reply_to_message_id,
+            )
             return
 
         if not check_user_eligible_for_service(

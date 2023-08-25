@@ -139,3 +139,33 @@ def check_user_eligible_for_service(
                             f"cannot find public plan credit for user {user_from_id}," f"service type {service_type}"
                         )
                         return False
+
+
+def generate_billing_info(user_id) -> str:
+    user = get_user_or_create(user_id)
+    with Params().Session() as session:
+        # Initialize billing_info string
+        billing_info = f"Billing Info for User: {user.user_from_id}\n"
+
+        # Get the current time
+        current_time = datetime.now()
+
+        # Find active subscription
+        active_subscription = find_active_subscription_for_user(user, current_time, session)
+        if active_subscription:
+            billing_info += f"Active Subscription: Start Date {active_subscription.start_date}, End Date {active_subscription.end_date}\n"
+        else:
+            billing_info += "No active subscription.\n"
+
+        # Find universal and public plan credits
+        for chat_type in [ChannelType.UNIVERSAL, ChannelType.PUBLIC]:
+            plan_credit = find_plan_credit_for_user(user, chat_type, session)
+            if plan_credit:
+                if chat_type == ChannelType.UNIVERSAL:
+                    billing_info += f"Universal Credit Count: {plan_credit.conversation_credit_count} for conversation, {plan_credit.drawing_credit_count} for drawing.\n"
+                else:
+                    billing_info += f"Public Credit Count: {plan_credit.conversation_credit_count} for conversation, {plan_credit.drawing_credit_count} for drawing.\n"
+            else:
+                billing_info += f"No {chat_type.value} credits available.\n"
+
+        return billing_info

@@ -19,10 +19,8 @@ def get_user_or_create(user_from_id: str) -> Optional[User]:
         return user
 
 
-def find_plan_credit_for_user(user: User, service_type: ServiceType, session: Session) -> Optional[PlanCredit]:
-    plan_credit = (
-        session.query(PlanCredit).filter_by(user_id=user.user_from_id, service_type=service_type.value).first()
-    )
+def find_plan_credit_for_user(user: User, chat_type: ChannelType, session: Session) -> Optional[PlanCredit]:
+    plan_credit = session.query(PlanCredit).filter_by(user_id=user.user_from_id, chat_type=chat_type.value).first()
     return plan_credit
 
 

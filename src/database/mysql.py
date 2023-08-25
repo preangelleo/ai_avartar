@@ -8,11 +8,6 @@ from datetime import datetime
 Base = declarative_base()
 
 
-class ServiceType(PyEnum):
-    CONVERSATION = "conversation"
-    DRAWING = "drawing"
-
-
 class PlanType(PyEnum):
     CREDIT_BASED = "credit_based"
     SUBSCRIPTION_BASED = "subscription_based"
@@ -35,7 +30,6 @@ class Subscription(Base):
     __tablename__ = 'subscriptions'
     id = Column(Integer, primary_key=True)
     user_id = Column(String(255), ForeignKey('users.user_from_id'))
-    service_type = Column(Enum(ServiceType))
     start_date = Column(DateTime, default=datetime.now())
     end_date = Column(DateTime)
     user = relationship("User", back_populates="subscriptions")
@@ -45,9 +39,9 @@ class PlanCredit(Base):
     __tablename__ = 'plan_credits'
     id = Column(Integer, primary_key=True)
     user_id = Column(String(255), ForeignKey('users.user_from_id'))
-    credit_count = Column(Integer)  # for count_based plans
-    service_type = Column(Enum(ServiceType))  # e.g., 'conversation', 'drawing'
-    chat_type = Column(Enum(ChannelType))  # e.g., 'private', 'public'
+    conversation_credit_count = Column(Integer)
+    drawing_credit_count = Column(Integer)
+    chat_type = Column(Enum(ChannelType))
     user = relationship("User", back_populates="plan_credits")
 
 

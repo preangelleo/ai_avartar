@@ -6,7 +6,7 @@ from src.database.mysql_utils import find_plan_credit_for_user, get_user_or_crea
 from src.payments.constant import PLAN_CONFIG, CREDIT_BASED_PLAN, SUBSCRIPTION_BASED_PLAN
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
-from src.database.mysql import Transaction, ServiceType, PlanCredit, ChannelType, User, Subscription
+from src.database.mysql import Transaction, PlanCredit, ChannelType, User, Subscription
 
 app = Flask(__name__)
 
@@ -53,33 +53,34 @@ def handle_credit_based_plan(user, product_identifier, external_txn_id, session)
         f' external_txn_id: {external_txn_id}'
     )
     plan_config = PLAN_CONFIG[product_identifier]
-    for service_type, credit_count in plan_config.items():
-        plan_credit = find_plan_credit_for_user(user, service_type, session)
-        if plan_credit is None:
-            logging.info(f'handle_credit_based_plan(): plan_credit is None, creating a new one')
-            plan_credit = PlanCredit(
-                user_id=user.user_from_id,
-                service_type=service_type.value,
-                credit_count=credit_count,
-                chat_type=ChannelType.UNIVERSAL.value,
-            )
-            logging.info(f'handle_credit_based_plan(): plan_credit.id: {plan_credit.id}')
-            session.add(plan_credit)
-            session.flush()
-        else:
-            logging.info(
-                f'handle_credit_based_plan(): '
-                f'plan_credit is not None, updating the existing one, id: {plan_credit.id}'
-            )
-            plan_credit.credit_count += credit_count
-
-        transaction = Transaction(
-            plan_credit_id=plan_credit.id,
-            external_txn_id=external_txn_id,
+    conversation_credit = plan_config['conversation_credit']
+    drawing_credit = plan_config['drawing_credit']
+    plan_credit = find_plan_credit_for_user(user=user, chat_type=ChannelType.UNIVERSAL, session=session)
+    if plan_credit is None:
+        logging.info(f'handle_credit_based_plan(): plan_credit is None, creating a new one')
+        plan_credit = PlanCredit(
             user_id=user.user_from_id,
+            conversation_credit_count=conversation_credit,
+            drawing_credit_count=drawing_credit,
+            chat_type=ChannelType.UNIVERSAL.value,
         )
-        session.add(transaction)
+        session.add(plan_credit)
         session.flush()
+        logging.info(f'handle_credit_based_plan(): plan_credit.id: {plan_credit.id}')
+    else:
+        logging.info(
+            f'handle_credit_based_plan(): ' f'plan_credit is not None, updating the existing one, id: {plan_credit.id}'
+        )
+        plan_credit.conversation_credit_count += conversation_credit
+        plan_credit.drawing_credit_count += drawing_credit
+
+    transaction = Transaction(
+        plan_credit_id=plan_credit.id,
+        external_txn_id=external_txn_id,
+        user_id=user.user_from_id,
+    )
+    session.add(transaction)
+    session.flush()
 
 
 def handle_subscription_based_plan(user, product_identifier, external_txn_id, session):

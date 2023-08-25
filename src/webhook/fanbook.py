@@ -7,7 +7,6 @@ import hmac
 from src.database.mysql_utils import (
     find_plan_credit_for_user,
     get_user_or_create,
-    find_subscription_for_user,
     find_active_subscription_for_user,
 )
 from src.payments.constant import PLAN_CONFIG, CREDIT_BASED_PLAN, SUBSCRIPTION_BASED_PLAN

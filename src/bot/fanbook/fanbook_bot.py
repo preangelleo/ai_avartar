@@ -86,7 +86,6 @@ class FanbookBot(Bot):
         if not channel_id or not author:
             return
 
-        logging.info(f'handle_push(): {obj}')
         with sentry_sdk.start_transaction(op="handle_push", name="handle_single_msg"):
             msg = build_from_fanbook_msg(obj)
             asyncio.create_task(self.handle_single_msg(msg))
@@ -175,8 +174,6 @@ class FanbookBot(Bot):
                                 logging.error("Received error: %s", message)
                         elif obj.get('action') == 'push':
                             asyncio.create_task(self.handle_push(obj))
-                        else:
-                            logging.error("Received message: %s", message)
                     except json.JSONDecodeError as e:
                         logging.error("JSONDecodeError: Invalid JSON format in the received message. Error: %s", e)
                     except ConnectionError as e:

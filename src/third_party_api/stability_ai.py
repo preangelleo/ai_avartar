@@ -88,7 +88,12 @@ async def stability_generate_image(
             os.makedirs(working_folder)
 
         for i, image in enumerate(data["artifacts"]):
-            IMAGE_GENERATION_COUNTER.labels('dream_studio').inc()
+            IMAGE_GENERATION_COUNTER.labels('dream_studio_total').inc()
+            if image['finishReason'] != 'SUCCESS':
+                logging.info(f"stability_generate_image() fail to generate an clear image: {image['finishReason']}")
+                IMAGE_GENERATION_COUNTER.labels('dream_studio_blurred').inc()
+                continue
+
             current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             filename = hashlib.md5(
                 (text_prompts_hash + '_' + str(i) + '_' + str(current_timestamp)).encode()

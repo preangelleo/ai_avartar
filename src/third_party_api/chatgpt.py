@@ -29,7 +29,7 @@ from src.utils.prompt_template import (
     role_tone_examples,
 )
 from src.utils.utils import get_system_prompt_and_dialogue_tone, insert_gpt_story
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.utils.param_singleton import Params
 from src.utils.prompt_template import (
@@ -200,14 +200,14 @@ def is_invalid(text: str, user_msg: str) -> bool:
 
 
 def is_request_long_reply(user_msg: str) -> bool:
-    for key in ["故事", "作文", "论文", "情书", "全文", "背诵"]:
+    for key in ["故事", "作文", "论文", "情书", "全文", "背诵", "写一篇", "现代文", "古代文"]:
         if key in user_msg:
             return True
     return False
 
 
 def is_request_image(user_msg: str) -> bool:
-    for key in ["画", "照片", "图片"]:
+    for key in ["画", "照", "图", "样子"]:
         if key in user_msg:
             return True
     return False
@@ -240,6 +240,23 @@ def get_improved_text(full_text: str):
         return full_text
 
 
+def get_current_time_date_prompt():
+    # 获取当前北京时间
+    beijing_time = datetime.utcnow() + timedelta(hours=8)
+
+    # 星期的中文对应列表
+    weekdays = ["一", "二", "三", "四", "五", "六", "日"]
+    hour = beijing_time.hour
+    time_period = '晚上' if 18 <= hour < 24 else '下午' if 12 <= hour < 18 else '上午'
+
+    # 格式化成所需的字符串
+    return (
+        f"今天是{beijing_time.year}年{beijing_time.month}月{beijing_time.day}日"
+        f"星期{weekdays[beijing_time.weekday()]}"
+        f"，现在时间是{time_period}{beijing_time.hour}点{beijing_time.minute}分"
+    )
+
+
 # Call chatgpt and get the text response or image description to send to users.
 async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     openai.api_key = get_openai_key()
@@ -247,17 +264,31 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     try:
         df = pd.read_sql_query(
             f"""
+            SELECT * FROM (
                 SELECT * FROM (
-                    SELECT 
-                        a.`id`, a.`update_time`, a.`is_replied`, a.`username`, a.`msg_text`, b.`msg_text` as reply_text, b.`image_description`, b.`cost_usd`
-                    FROM (
-                        SELECT * from `avatar_chat_history` 
-                        WHERE NOT (`first_name` = 'ChatGPT' AND `last_name` = 'Bot' )
-                        AND `from_id` = {msg.from_id}
-                        AND `msg_text` IS NOT NULL
-                    ) a left outer join `avatar_chat_history` b on (a.`replied_message_id` = b.`message_id`)
-                    ORDER BY a.`update_time` DESC LIMIT 6
-                ) sub ORDER BY `update_time` ASC
+                    (
+                        SELECT 
+                            a.`id`, a.`update_time`, a.`is_replied`, a.`username`, a.`msg_text`, b.`msg_text` as reply_text, b.`image_description`, b.`cost_usd`
+                        FROM (
+                            SELECT * from `avatar_chat_history` 
+                            WHERE NOT (`first_name` = 'ChatGPT' AND `last_name` = 'Bot' )
+                            AND `from_id` = {msg.from_id}
+                        ) a left join (
+                             SELECT * from `avatar_chat_history` 
+                             WHERE (`first_name` = 'ChatGPT' AND `last_name` = 'Bot' )
+                             AND `from_id` = {msg.from_id}
+                        ) b on (a.`replied_message_id` = b.`message_id` )
+                        ORDER BY a.`update_time` DESC LIMIT 6
+                    )
+                    UNION ALL (
+                        SELECT `id`, `update_time`, TRUE AS is_replied, `username`, NULL AS msg_text, `msg_text` as reply_text, `image_description`, `cost_usd` 
+                        FROM `avatar_chat_history` 
+                        WHERE (`first_name` = 'ChatGPT' AND `last_name` = 'Bot' )
+                        AND `from_id` = {msg.from_id} AND `message_id` is NULL 
+                        ORDER BY `update_time` DESC LIMIT 6
+                    )
+                ) sub ORDER BY `update_time` DESC LIMIT 6
+             ) sub ORDER BY `update_time` ASC
             """,
             Params().engine,
         )
@@ -267,6 +298,8 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         return
 
     initial_model_name = 'gpt-4-0613' if msg.user_is_treatment else 'gpt-3.5-turbo-16k-0613'
+    enable_image = False
+
     if is_request_long_reply(msg.msg_text):
         logging.info(f"Use 16k model for initial story request")
         initial_model_name = 'gpt-3.5-turbo-16k-0613'
@@ -290,10 +323,12 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     else:
         system_prompt_history = [{"role": "system", "content": system_role_prompt.format(user_name=msg.first_name)}]
 
-    user_history_msg_list = role_tone_examples
+    user_history_msg_list = role_tone_examples.copy() + [{"role": "system", "content": get_current_time_date_prompt()}]
+
     for i in range(df.shape[0]):
         history_conversation = df.iloc[i]
-        user_history_msg_list.append({"role": "user", "content": history_conversation['msg_text']})
+        if history_conversation['msg_text'] is not None:
+            user_history_msg_list.append({"role": "user", "content": history_conversation['msg_text']})
         if history_conversation['reply_text'] is not None and len(history_conversation['reply_text']) < 500:
             image_description = ''
             if history_conversation['image_description'] is not None:
@@ -314,7 +349,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         #     logging.info(f"Use 16k model for initial long history request")
         #     initial_model_name = 'gpt-3.5-turbo-16k-0613'
 
-        if initial_model_name == 'gpt-4-0613':
+        if initial_model_name == 'gpt-4-0613' or not enable_image:
             function_call_params = {}
         else:
             function_call_params = {

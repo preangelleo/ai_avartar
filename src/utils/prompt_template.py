@@ -496,9 +496,8 @@ eleven_labs_tts_failed_alert = '''
 对不起, 你的克隆声音语音生成失败了, 请等会儿重新再试试, 或者联系 Eleven Labs 客服, 询问你的订阅状态。
 '''
 
-
-user_limit_msg = '你好，快去付钱吧'
 payment_url = 'https://bot-test.fanbook.mobi/mp/500840430045609984/boyfriend/pay/?fb_redirect&open_type=mp&view=1&debug'
+user_limit_msg = f'你好，快去付钱吧 链接地址: {payment_url}'
 private_limit_msg = '对不起，我暂时不能私聊，等过段时间再试试，现在请到${#514680459289280512} 里@我吧 ：）'
 
 

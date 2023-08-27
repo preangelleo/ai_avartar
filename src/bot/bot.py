@@ -99,7 +99,7 @@ class Bot(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+    async def send_img_async(self, chat_id, file_url: str, reply_to_message_id=None, description=''):
         raise NotImplementedError
 
     @abstractmethod
@@ -402,8 +402,9 @@ class Bot(ABC):
                         "weight": -1,
                     },
                     {
-                        "text": 'a handsome man, anime style, soft lighting, high-resolution, Shinkai Makoto, '
-                        + process_image_description(raw_image_description),
+                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, '
+                        + process_image_description(raw_image_description)
+                        + ', a handsome man',
                         "weight": 1,
                     },
                 ]
@@ -422,7 +423,7 @@ class Bot(ABC):
 
             try:
                 handle_single_msg_start = time.perf_counter()
-                file_list = await stability_generate_image(
+                file_url_list = await stability_generate_image(
                     text_prompts=image_description,
                     height=896,
                     width=1152,
@@ -435,26 +436,26 @@ class Bot(ABC):
                 IMAGE_GENERATION_LATENCY_METRICS.labels('chatgpt').observe(latency)
                 logging.info(f'Image latency: {latency}s')
                 # TODO: formalize the image cost as a function
-                cost_usd += 0.02
+                cost_usd += 0.016
                 SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
             except Exception as e:
                 logging.exception(f"stability_generate_image() {e}")
                 return
 
-            if file_list:
-                image_url = ','.join(file_list)
-                logging.info(f"Num of successful images: {len(file_list)}")
-                for file in file_list:
+            if file_url_list:
+                image_url = ','.join(file_url_list)
+                logging.info(f"Num of successful images: {len(file_url_list)}")
+                for file_url in file_url_list:
                     try:
                         await self.send_img_async(
                             chat_id=msg.chat_id,
-                            file_path=file,
+                            file_url=file_url,
                             reply_to_message_id=msg.reply_to_message_id,
                             description=raw_image_description,
                         )
                     except Exception as e:
                         ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
-                        logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
+                        logging.error(f"local_bot_img_command() send_img({file_url}) FAILED:  {e}")
                         return
                     # For now we only return 1 images even if all of them are not blurred
                     break

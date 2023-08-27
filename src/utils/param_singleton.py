@@ -99,6 +99,11 @@ class Params:
         self.Session = sessionmaker(bind=self.engine)
 
         owner_parameters_dict = self.get_owner_parameters()
+        # Get the AWS Key for IAM role
+        self.AWS_ACCESS_KEY_ID = owner_parameters_dict.get('AWS_ACCESS_KEY_ID')
+        self.AWS_SECRET_ACCESS_KEY = owner_parameters_dict.get('AWS_SECRET_ACCESS_KEY')
+        self.S3_IMAGE_BUCKET_NAME = 'avatado-sdxl'
+        self.S3_REGION = 'ap-northeast-1'
 
         # Get the environment variables
         self.USER_AVATAR_NAME = owner_parameters_dict.get('USER_AVATAR_NAME')

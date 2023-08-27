@@ -298,7 +298,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         return
 
     initial_model_name = 'gpt-4-0613' if msg.user_is_treatment else 'gpt-3.5-turbo-16k-0613'
-    enable_image = False
+    enable_image = True
 
     if is_request_long_reply(msg.msg_text):
         logging.info(f"Use 16k model for initial story request")

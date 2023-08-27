@@ -2,9 +2,8 @@ import base64
 import hashlib
 from datetime import datetime
 import json
-import os
 
-import aiofiles
+import boto3
 import httpx
 
 from src.utils.param_singleton import Params
@@ -23,10 +22,10 @@ def process_image_description(image_description):
     for phase in [' you ', 'You ', ' your ', 'Your ']:
         image_description = image_description.replace(phase, ' a beautiful girl ')
 
-    for phase in ['We ', 'Our ', ' we ', ' our ', ' a couple']:
+    for phase in ['We ', 'Our ', ' we ', ' our ', '  couple']:
         image_description = image_description.replace(phase, ' a handsome man and a beautiful girl ')
 
-    for phase in [' I ', ' my ', 'My ', ' me ', 'Evan ']:
+    for phase in [' I ', ' my ', 'My ', ' me ', 'Evan ', ' guy ']:
         image_description = image_description.replace(phase, ' a handsome man ')
 
     return image_description
@@ -82,10 +81,7 @@ async def stability_generate_image(
             raise Exception("Non-200 response: " + str(response.text))
 
         data = response.json()
-        file_path_list = []
-        working_folder = '/home/ubuntu/files/images/dream_studio'
-        if not os.path.exists(working_folder):
-            os.makedirs(working_folder)
+        file_url_list = []
 
         for i, image in enumerate(data["artifacts"]):
             IMAGE_GENERATION_COUNTER.labels('dream_studio_total').inc()
@@ -98,27 +94,32 @@ async def stability_generate_image(
             filename = hashlib.md5(
                 (text_prompts_hash + '_' + str(i) + '_' + str(current_timestamp)).encode()
             ).hexdigest()
-            filename_txt = filename + '.txt'
-            filename_pic = filename + '.png'
-            filepath_txt = f'{working_folder}/{filename_txt}'
-            filepath_pic = f'{working_folder}/{filename_pic}'
 
-            async with aiofiles.open(filepath_pic, "wb") as f:
-                await f.write(base64.b64decode(image["base64"]))
-                file_path_list.append(filepath_pic)
+            filename_pic = 'stability_ai/' + filename + '.png'
 
-            async with aiofiles.open(filepath_txt, 'w') as f:
-                await f.write(
-                    '\n'.join(
-                        [
-                            str(i),
-                            text_prompts_hash,
-                            current_timestamp,
-                            filename,
-                            filepath_txt,
-                            filepath_pic,
-                        ]
-                    )
-                )
+            s3_resource = boto3.resource(
+                's3',
+                region_name=Params().S3_REGION,
+                aws_access_key_id=Params().AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=Params().AWS_SECRET_ACCESS_KEY,
+            )
+            # Create a new S3 object
+            object = s3_resource.Object(Params().S3_IMAGE_BUCKET_NAME, filename_pic)
+            # Write the image to S3
+            object.put(Body=base64.b64decode(image["base64"]))
 
-        return file_path_list
+            s3_client = boto3.client(
+                's3',
+                region_name=Params().S3_REGION,
+                aws_access_key_id=Params().AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=Params().AWS_SECRET_ACCESS_KEY,
+            )
+            url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': Params().S3_IMAGE_BUCKET_NAME, 'Key': filename_pic},
+                # 30 days
+                ExpiresIn=3600 * 24 * 30,
+            )
+            file_url_list.append(url)
+
+        return file_url_list

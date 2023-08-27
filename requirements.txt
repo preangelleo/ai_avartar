@@ -36,3 +36,4 @@ sentry-sdk==1.25.1
 prometheus-client
 schedule
 tiktoken
+boto3

@@ -126,12 +126,11 @@ class FanbookBot(Bot):
         url = f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:8889/{relative_path}'
         return url
 
-    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description='', max_retries=3):
+    async def send_img_async(self, chat_id, file_url: str, reply_to_message_id=None, description='', max_retries=3):
         headers = {'Content-type': 'application/json'}
-        url = self.construct_image_server_url(file_path)
         payload = {
             'chat_id': int(chat_id),
-            'photo': {"Url": url},
+            'photo': {"Url": file_url},
         }
         if reply_to_message_id:
             payload['reply_to_message_id'] = int(reply_to_message_id)

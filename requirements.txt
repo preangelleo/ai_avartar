@@ -37,3 +37,4 @@ prometheus-client
 schedule
 tiktoken
 boto3
+jupyter

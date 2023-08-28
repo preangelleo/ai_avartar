@@ -132,6 +132,7 @@ async def customized_sd_server_generate_image(prompt, negative_prompt, steps):
             data=json.dumps(payload),
             headers={'Content-type': 'application/json'},
         )
+        IMAGE_GENERATION_COUNTER.labels('customized_server').inc()
         data = response.json()
         return [data['url']]
 

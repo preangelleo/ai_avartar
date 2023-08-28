@@ -342,7 +342,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
     else:
         initial_msg_request = system_prompt_history + user_history_msg_list
 
-    logging.info(f"initial_msg_request: {initial_msg_request}")
+    logging.debug(f"initial_msg_request: {initial_msg_request}")
 
     try:
         # if num_tokens_from_messages(initial_msg_request) > 8000:

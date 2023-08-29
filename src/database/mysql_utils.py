@@ -101,44 +101,40 @@ def check_user_eligible_for_service(
 
         # if no active subscription, then we check the plan credit for universal usage
         universal_plan_credit = find_plan_credit_for_user(user=user, chat_type=ChannelType.UNIVERSAL, session=session)
-        if universal_plan_credit is not None:
+        if universal_plan_credit is not None and check_plan_credit_enough_for_service(
+            plan_credit=universal_plan_credit,
+            service_type=service_type,
+            reduce_plan_credit=reduce_plan_credit,
+            session=session,
+        ):
+            logging.info(f"universal credit is enough for user {user_from_id}, " f"service type {service_type}")
+            return True
+
+        # if user does not have universal plan credit or universal plan credit is not enough,
+        # then we check the plan credit for public usage
+
+        if is_private:
+            logging.info(
+                f"user is requesting private chat but user not eligible for private chat, user: {user_from_id}"
+            )
+            return False
+
+        public_plan_credit = find_plan_credit_for_user(user=user, chat_type=ChannelType.PUBLIC, session=session)
+        if public_plan_credit is not None:
             if check_plan_credit_enough_for_service(
-                plan_credit=universal_plan_credit,
+                plan_credit=public_plan_credit,
                 service_type=service_type,
                 reduce_plan_credit=reduce_plan_credit,
                 session=session,
             ):
-                logging.info(f"universal credit is enough for user {user_from_id}, " f"service type {service_type}")
+                logging.info(f"public credit is enough for user {user_from_id}, " f"service type {service_type}")
                 return True
             else:
-                if is_private:
-                    logging.info(f"user does not have enough credit for private chat")
-                    return False
-                else:
-                    public_plan_credit = find_plan_credit_for_user(
-                        user=user, chat_type=ChannelType.PUBLIC, session=session
-                    )
-                    if public_plan_credit is not None:
-                        if check_plan_credit_enough_for_service(
-                            plan_credit=public_plan_credit,
-                            service_type=service_type,
-                            reduce_plan_credit=reduce_plan_credit,
-                            session=session,
-                        ):
-                            logging.info(
-                                f"public credit is enough for user {user_from_id}, " f"service type {service_type}"
-                            )
-                            return True
-                        else:
-                            logging.info(
-                                f"public credit is not enough for user {user_from_id}," f"service type {service_type}"
-                            )
-                            return False
-                    else:
-                        logging.info(
-                            f"cannot find public plan credit for user {user_from_id}," f"service type {service_type}"
-                        )
-                        return False
+                logging.info(f"public credit is not enough for user {user_from_id}," f"service type {service_type}")
+                return False
+        else:
+            logging.info(f"cannot find public plan credit for user {user_from_id}," f"service type {service_type}")
+            return False
 
 
 def generate_billing_info(user_id) -> str:

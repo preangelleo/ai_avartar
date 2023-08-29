@@ -87,7 +87,6 @@ class FanbookBot(Bot):
         if not channel_id or not author:
             return
 
-        logging.info(f'handle_push(): {obj}')
         with sentry_sdk.start_transaction(op="handle_push", name="handle_single_msg"):
             msg = build_from_fanbook_msg(obj)
             asyncio.create_task(self.handle_single_msg(msg))
@@ -139,10 +138,9 @@ class FanbookBot(Bot):
 
     async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description='', max_retries=3):
         headers = {'Content-type': 'application/json'}
-        url = self.construct_image_server_url(file_path)
         payload = {
             'chat_id': int(chat_id),
-            'photo': {"Url": url},
+            'photo': {"Url": file_url},
         }
         if reply_to_message_id:
             payload['reply_to_message_id'] = int(reply_to_message_id)
@@ -185,8 +183,6 @@ class FanbookBot(Bot):
                                 logging.error("Received error: %s", message)
                         elif obj.get('action') == 'push':
                             asyncio.create_task(self.handle_push(obj))
-                        else:
-                            logging.error("Received message: %s", message)
                     except json.JSONDecodeError as e:
                         logging.error("JSONDecodeError: Invalid JSON format in the received message. Error: %s", e)
                     except ConnectionError as e:

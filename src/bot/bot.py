@@ -35,7 +35,11 @@ import os
 
 import pandas as pd
 
-from src.third_party_api.chatgpt import local_chatgpt_to_reply
+from src.third_party_api.chatgpt import (
+    local_chatgpt_to_reply,
+    get_response_from_chatgpt,
+    get_text_reply_from_openai_response,
+)
 from src.utils.metrics import *
 from src.third_party_api.stability_ai import stability_generate_image, process_image_description
 
@@ -101,7 +105,7 @@ class Bot(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description=''):
+    async def send_img_async(self, chat_id, file_url: str, reply_to_message_id=None, description=''):
         raise NotImplementedError
 
     @abstractmethod
@@ -326,9 +330,9 @@ class Bot(ABC):
         # 如果是群聊但是没有 at 机器人, 则在此处返回
         if msg.should_be_ignored:
             IGNORED_MSG_COUNTER.inc()
-            logging.info("should ignore this msg", msg.raw_msg)
             return
 
+        logging.info(f'Received Message: {msg.raw_msg}')
         init_credit_table_if_needed(user_from_id=msg.from_id)
 
         if not msg.msg_text or len(msg.msg_text) == 0:
@@ -422,8 +426,9 @@ class Bot(ABC):
                         "weight": -1,
                     },
                     {
-                        "text": 'a handsome man, anime style, soft lighting, high-resolution, Shinkai Makoto, '
-                        + process_image_description(raw_image_description),
+                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, '
+                        + process_image_description(raw_image_description)
+                        + ', a handsome man',
                         "weight": 1,
                     },
                 ]
@@ -434,46 +439,65 @@ class Bot(ABC):
                         "weight": -1,
                     },
                     {
-                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, ' + raw_image_description,
+                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, '
+                        + process_image_description(raw_image_description),
                         "weight": 1,
                     },
                 ]
 
             try:
                 handle_single_msg_start = time.perf_counter()
-                file_list = await stability_generate_image(
+                file_url_list = await stability_generate_image(
                     text_prompts=image_description,
                     height=896,
                     width=1152,
                     seed=random.randint(1, 10000),
                     engine_id="stable-diffusion-xl-1024-v1-0",
-                    steps=50,
-                    samples=1,
+                    steps=30,
+                    samples=3,
                 )
                 latency = time.perf_counter() - handle_single_msg_start
                 IMAGE_GENERATION_LATENCY_METRICS.labels('chatgpt').observe(latency)
                 logging.info(f'Image latency: {latency}s')
                 # TODO: formalize the image cost as a function
-                cost_usd += 0.02
+                cost_usd += 0.016
                 SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
             except Exception as e:
                 logging.exception(f"stability_generate_image() {e}")
                 return
 
-            if file_list:
-                image_url = ','.join(file_list)
-                for file in file_list:
+            if file_url_list:
+                image_url = ','.join(file_url_list)
+                logging.info(f"Num of successful images: {len(file_url_list)}")
+                for file_url in file_url_list:
                     try:
                         await self.send_img_async(
                             chat_id=msg.chat_id,
-                            file_path=file,
+                            file_url=file_url,
                             reply_to_message_id=msg.reply_to_message_id,
                             description=raw_image_description,
                         )
                     except Exception as e:
                         ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
-                        logging.error(f"local_bot_img_command() send_img({file}) FAILED:  {e}")
+                        logging.error(f"local_bot_img_command() send_img({file_url}) FAILED:  {e}")
                         return
+                    # For now we only return 1 images even if all of them are not blurred
+                    break
+            else:
+                # If the image list is empty, we want to still return the Chinese description of the image
+                try:
+                    response = await get_response_from_chatgpt(
+                        model='gpt-3.5-turbo',
+                        messages=[{'role': 'system', 'content': f"将下面这段话翻译成中文对一幅画的描述：{raw_image_description}"}],
+                        branch='local_reply',
+                        temperature=1.0,
+                    )
+                    image_description_text_reply = get_text_reply_from_openai_response(response).strip()
+                    text_reply = f'{image_description_text_reply}\n\n{text_reply}'
+                except Exception as e:
+                    ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
+                    logging.error(f"fallback image description reply call chat_gpt() failed: \n\n{e}")
+                    return
 
         # If there is any text_reply available we should store and send it
         if text_reply:

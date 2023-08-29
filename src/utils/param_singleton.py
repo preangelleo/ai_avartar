@@ -99,6 +99,11 @@ class Params:
         self.Session = sessionmaker(bind=self.engine)
 
         owner_parameters_dict = self.get_owner_parameters()
+        # Get the AWS Key for IAM role
+        self.AWS_ACCESS_KEY_ID = owner_parameters_dict.get('AWS_ACCESS_KEY_ID')
+        self.AWS_SECRET_ACCESS_KEY = owner_parameters_dict.get('AWS_SECRET_ACCESS_KEY')
+        self.S3_IMAGE_BUCKET_NAME = 'avatado-sdxl'
+        self.S3_REGION = 'ap-northeast-1'
 
         # Get the environment variables
         self.USER_AVATAR_NAME = owner_parameters_dict.get('USER_AVATAR_NAME')
@@ -106,9 +111,14 @@ class Params:
         self.DOMAIN_NAME = owner_parameters_dict.get('DOMAIN_NAME')
         self.OPENAI_API_KEY = owner_parameters_dict.get('OPENAI_API_KEY')
         self.OPENAI_API_KEY_POOL = [
+            # Ke
             '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',
+            # Shimin
             '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',
+            # Leo
             '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',
+            # Honglu
+            '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',
         ]
         self.REPLICATE_KEY = owner_parameters_dict.get('REPLICATE_KEY')
         self.STABILITY_API_KEY = owner_parameters_dict.get('STABILITY_API_KEY')

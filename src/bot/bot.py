@@ -28,6 +28,7 @@ from src.utils.prompt_template import (
     user_limit_msg,
     private_limit_msg,
     negative_stability_ai_prompt,
+    user_public_warning_msg,
 )
 
 import os
@@ -85,6 +86,10 @@ class Bot(ABC):
 
     @abstractmethod
     async def send_msg_async(self, msg: str, chat_id, parse_mode=None, reply_to_message_id=None):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_private_chat(self, user_id: int):
         raise NotImplementedError
 
     @abstractmethod
@@ -346,12 +351,28 @@ class Bot(ABC):
             service_type=ServiceType.conversation,
             reduce_plan_credit=False,
         ):
-            await self.send_msg_async(
-                msg=user_limit_msg,  # TODO: change to send url link to allow user to pay.
-                chat_id=msg.chat_id,
-                parse_mode=None,
-                reply_to_message_id=msg.reply_to_message_id,
-            )
+            if not msg.is_private:
+                # we need to send user a private msg
+                response = await self.get_private_chat(user_id=int(msg.from_id))
+                private_chat_id = response.json()['result']['id']
+                await self.send_msg_async(
+                    msg=user_public_warning_msg,
+                    chat_id=msg.chat_id,
+                    parse_mode=None,
+                    reply_to_message_id=msg.reply_to_message_id,
+                )
+                await self.send_msg_async(
+                    msg=user_limit_msg,
+                    chat_id=private_chat_id,
+                    parse_mode=None,
+                )
+            else:
+                await self.send_msg_async(
+                    msg=user_limit_msg,  # TODO: change to send url link to allow user to pay.
+                    chat_id=msg.chat_id,
+                    parse_mode=None,
+                    reply_to_message_id=msg.reply_to_message_id,
+                )
             return
 
         handle_single_msg_start = time.perf_counter()

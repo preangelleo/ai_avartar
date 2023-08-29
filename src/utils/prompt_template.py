@@ -498,6 +498,7 @@ eleven_labs_tts_failed_alert = '''
 
 payment_url = 'https://bot-test.fanbook.mobi/mp/500840430045609984/boyfriend/pay/?fb_redirect&open_type=mp&view=1&debug'
 user_limit_msg = f'你好，快去付钱吧 链接地址: {payment_url}'
+user_public_warning_msg = '你好，请查看你的私信。'
 private_limit_msg = '对不起，我暂时不能私聊，等过段时间再试试，现在请到${#514680459289280512} 里@我吧 ：）'
 
 

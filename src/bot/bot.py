@@ -41,7 +41,7 @@ from src.third_party_api.chatgpt import (
     get_text_reply_from_openai_response,
 )
 from src.utils.metrics import *
-from src.third_party_api.stability_ai import stability_generate_image, process_image_description
+from src.third_party_api.stability_ai import generate_image
 
 
 class Bot(ABC):
@@ -407,48 +407,19 @@ class Bot(ABC):
         MSG_TEXT_LEN_METRICS.labels('chatgpt').observe(len(msg.msg_text))
 
         # Call chatgpt and get response
-        text_reply, image_description, is_bot_picture, cost_usd = await local_chatgpt_to_reply(self, msg)
+        text_reply, raw_image_description, is_bot_picture, cost_usd = await local_chatgpt_to_reply(self, msg)
         logging.info(f'total openai cost of this call: ${cost_usd}')
         branch = 'local_chatgpt'
-        if not text_reply:
-            return
         image_url = None
-        raw_image_description = image_description
         # If generate_image is triggered
-        if image_description is not None:
+        if raw_image_description is not None:
             branch = 'generate_image'
-
-            # If the user wants to see portrait of bot, we append the system defined image prompt
-            if is_bot_picture:
-                image_description = [
-                    {
-                        "text": negative_stability_ai_prompt,
-                        "weight": -1,
-                    },
-                    {
-                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, '
-                        + process_image_description(raw_image_description)
-                        + ', a handsome man',
-                        "weight": 1,
-                    },
-                ]
-            else:
-                image_description = [
-                    {
-                        "text": negative_stability_ai_prompt,
-                        "weight": -1,
-                    },
-                    {
-                        "text": 'anime style, soft lighting, high-resolution, Shinkai Makoto, '
-                        + process_image_description(raw_image_description),
-                        "weight": 1,
-                    },
-                ]
 
             try:
                 handle_single_msg_start = time.perf_counter()
-                file_url_list = await stability_generate_image(
-                    text_prompts=image_description,
+                file_url_list = await generate_image(
+                    is_bot_picture=is_bot_picture,
+                    raw_image_description=raw_image_description,
                     height=896,
                     width=1152,
                     seed=random.randint(1, 10000),
@@ -493,7 +464,7 @@ class Bot(ABC):
                         temperature=1.0,
                     )
                     image_description_text_reply = get_text_reply_from_openai_response(response).strip()
-                    text_reply = f'{image_description_text_reply}\n\n{text_reply}'
+                    text_reply = f'{image_description_text_reply}\n\n{text_reply or ""}'
                 except Exception as e:
                     ERROR_COUNTER.labels('error_call_open_ai', 'chatgpt').inc()
                     logging.error(f"fallback image description reply call chat_gpt() failed: \n\n{e}")

@@ -105,6 +105,9 @@ class Params:
         self.S3_IMAGE_BUCKET_NAME = 'avatado-sdxl'
         self.S3_REGION = 'ap-northeast-1'
 
+        self.SD_SERVER_IP = '18.181.24.181'
+        self.SD_IMAGE_THROUGHPUT = 0.1
+
         # Get the environment variables
         self.USER_AVATAR_NAME = owner_parameters_dict.get('USER_AVATAR_NAME')
         self.UBUNTU_SERVER_IP_ADDRESS = owner_parameters_dict.get('UBUNTU_SERVER_IP_ADDRESS')

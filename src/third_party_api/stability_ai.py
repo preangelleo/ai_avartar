@@ -1,8 +1,9 @@
 import base64
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
+import asyncio
 import boto3
 import httpx
 
@@ -10,6 +11,44 @@ from src.utils.param_singleton import Params
 from src.utils.logging_util import measure_execution_time
 from src.utils.logging_util import logging
 from src.utils.metrics import ERROR_COUNTER, IMAGE_GENERATION_COUNTER
+from src.utils.prompt_template import negative_stability_ai_prompt
+
+SD_SERVER_AVAILABLE_TIME_LOCK = asyncio.Lock()
+SD_SERVER_AVAILABLE_TIME = datetime.now()
+
+
+def update_sd_server_available_time():
+    global SD_SERVER_AVAILABLE_TIME
+    SD_SERVER_AVAILABLE_TIME = datetime.now() + timedelta(seconds=1 / Params().SD_IMAGE_THROUGHPUT)
+    logging.info(f'Update SD_SERVER_AVAILABLE_TIME = {SD_SERVER_AVAILABLE_TIME.strftime("%Y-%m-%d %H:%M:%S")}')
+
+
+async def should_use_customized_sd_server():
+    global SD_SERVER_AVAILABLE_TIME
+
+    async with SD_SERVER_AVAILABLE_TIME_LOCK:
+        # If we are allowed to call customized SD server now
+        if datetime.now() >= SD_SERVER_AVAILABLE_TIME:
+            # Check if the customized sd server is alive
+            try:
+                async with httpx.AsyncClient() as client:
+                    client.timeout = 5
+                    response = await client.get(f'http://{Params().SD_SERVER_IP}:8889/heartbeat/')
+                    if response.status_code != 200:
+                        logging.error(f"Customized SD Server is dead: {response}")
+                        return False
+            except Exception as e:
+                logging.error(f"Customized SD Server is dead: {e}")
+                return False
+
+            update_sd_server_available_time()
+            logging.info(
+                f'SD_SERVER_AVAILABLE_TIME={SD_SERVER_AVAILABLE_TIME.strftime("%Y-%m-%d %H:%M:%S")}: Use Customized SD Server'
+            )
+            return True
+
+    logging.info(f'SD_SERVER_AVAILABLE_TIME={SD_SERVER_AVAILABLE_TIME.strftime("%Y-%m-%d %H:%M:%S")}: Use Stability.ai')
+    return False
 
 
 def process_image_description(image_description):
@@ -25,10 +64,77 @@ def process_image_description(image_description):
     for phase in ['We ', 'Our ', ' we ', ' our ', '  couple']:
         image_description = image_description.replace(phase, ' a handsome man and a beautiful girl ')
 
-    for phase in [' I ', ' my ', 'My ', ' me ', 'Evan ', ' guy ']:
+    for phase in [' I ', ' my ', 'My ', ' me ', 'Evan ', ' guy ', ' person ']:
         image_description = image_description.replace(phase, ' a handsome man ')
 
     return image_description
+
+
+async def generate_image(
+    raw_image_description,
+    is_bot_picture,
+    cfg_scale=7,
+    clip_guidance_preset="FAST_BLUE",
+    height=512,
+    width=512,
+    samples=1,
+    steps=30,
+    seed=1,
+    engine_id="stable-diffusion-xl-1024-v1-0",
+    style_preset=None,
+):
+    # If the user wants to see portrait of bot, we append the system defined image prompt
+    if is_bot_picture:
+        prompt = (
+            'anime style, soft lighting, high-resolution, Shinkai Makoto, '
+            + process_image_description(raw_image_description)
+            + ', a handsome man'
+        )
+    else:
+        prompt = 'anime style, soft lighting, high-resolution, Shinkai Makoto, ' + process_image_description(
+            raw_image_description
+        )
+
+    image_description = [
+        {
+            "text": prompt,
+            "weight": 1,
+        },
+        {
+            "text": negative_stability_ai_prompt,
+            "weight": -1,
+        },
+    ]
+
+    if await should_use_customized_sd_server():
+        return await customized_sd_server_generate_image(prompt, negative_stability_ai_prompt, steps)
+    else:
+        return await stability_generate_image(
+            image_description,
+            cfg_scale,
+            clip_guidance_preset,
+            height,
+            width,
+            samples,
+            steps,
+            seed,
+            engine_id,
+            style_preset,
+        )
+
+
+async def customized_sd_server_generate_image(prompt, negative_prompt, steps):
+    async with httpx.AsyncClient() as client:
+        client.timeout = 60
+        payload = {'prompt': prompt, 'negative_prompt': negative_prompt, 'num_inference_steps': steps}
+        response = await client.post(
+            f'http://{Params().SD_SERVER_IP}:8889/text_to_image/',
+            data=json.dumps(payload),
+            headers={'Content-type': 'application/json'},
+        )
+        IMAGE_GENERATION_COUNTER.labels('customized_server').inc()
+        data = response.json()
+        return [data['url']]
 
 
 @measure_execution_time

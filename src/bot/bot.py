@@ -338,8 +338,8 @@ class Bot(ABC):
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
-        if msg.msg_text.startswith('/check_billing'):
-            logging.info(f"check billing: {msg.msg_text}")
+        if msg.msg_text.startswith('/pay'):
+            logging.info(f"pay: {msg.msg_text}")
             billing_info = generate_billing_info(msg.from_id)
             await self.send_msg_async(
                 msg=billing_info,

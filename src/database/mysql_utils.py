@@ -8,8 +8,7 @@ from src.utils.param_singleton import Params
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-
-from sqlalchemy.orm import joinedload
+from src.utils.prompt_template import payment_url
 
 
 def get_user_or_create(user_from_id: str) -> Optional[User]:
@@ -139,6 +138,7 @@ def check_user_eligible_for_service(
 
 def generate_billing_info(user_id) -> str:
     user = get_user_or_create(user_id)
+    payment_intro_str = f"付款链接: {payment_url}\n"
     with Params().Session() as session:
         # Initialize billing_info string
         billing_info = f"\n"
@@ -154,7 +154,7 @@ def generate_billing_info(user_id) -> str:
                 f"订阅起始日期: {active_subscription.start_date}\n,"
                 f"订阅结束日期：{active_subscription.end_date}\n"
             )
-            return billing_info
+            return billing_info + payment_intro_str
 
         # Find universal and public plan credits
         for chat_type in [ChannelType.UNIVERSAL, ChannelType.PUBLIC]:
@@ -162,10 +162,10 @@ def generate_billing_info(user_id) -> str:
             if plan_credit:
                 if chat_type == ChannelType.UNIVERSAL:
                     billing_info += f"您当前是付费用户, 剩余可私聊/公聊的聊天次数为 {plan_credit.conversation_credit_count}\n"
-                    return billing_info
+                    return billing_info + payment_intro_str
                 else:
                     billing_info += f"您当前是免费用户, 剩余可公聊的聊天次数为 {plan_credit.conversation_credit_count}\n"
-                    return billing_info
+                    return billing_info + payment_intro_str
 
         logging.error(f"no billing info found for user {user_id}")
-        return "未找到您的付费信息"
+        return "未找到您的付费信息" + payment_intro_str

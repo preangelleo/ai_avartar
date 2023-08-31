@@ -169,5 +169,6 @@ def generate_billing_info(user_id) -> str:
                     billing_info += (
                         f"您当前是免费用户, 以下是您的剩余公共聊天条数\n" f"剩余可公聊的聊天次数为 {plan_credit.conversation_credit_count}\n"
                     )
+                    return billing_info
 
         return "未找到您的付费信息"

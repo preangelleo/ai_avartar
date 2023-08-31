@@ -136,7 +136,7 @@ class FanbookBot(Bot):
 
         return response
 
-    async def send_img_async(self, chat_id, file_path: str, reply_to_message_id=None, description='', max_retries=3):
+    async def send_img_async(self, chat_id, file_url: str, reply_to_message_id=None, description='', max_retries=3):
         headers = {'Content-type': 'application/json'}
         payload = {
             'chat_id': int(chat_id),

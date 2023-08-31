@@ -29,6 +29,7 @@ from src.utils.prompt_template import (
     private_limit_msg,
     negative_stability_ai_prompt,
     user_public_warning_msg,
+    user_limit_private_msg,
 )
 
 import os
@@ -366,13 +367,13 @@ class Bot(ABC):
                     reply_to_message_id=msg.reply_to_message_id,
                 )
                 await self.send_msg_async(
-                    msg=user_limit_msg,
+                    msg=user_limit_private_msg,
                     chat_id=private_chat_id,
                     parse_mode=None,
                 )
             else:
                 await self.send_msg_async(
-                    msg=user_limit_msg,  # TODO: change to send url link to allow user to pay.
+                    msg=user_limit_msg,
                     chat_id=msg.chat_id,
                     parse_mode=None,
                     reply_to_message_id=msg.reply_to_message_id,
@@ -530,6 +531,8 @@ class Bot(ABC):
                 ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
                 logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
                 return
+        else:
+            NO_TEXT_REPLY_COUNTER.inc()
 
         return
 

@@ -161,14 +161,11 @@ def generate_billing_info(user_id) -> str:
             plan_credit = find_plan_credit_for_user(user, chat_type, session)
             if plan_credit:
                 if chat_type == ChannelType.UNIVERSAL:
-                    billing_info += (
-                        f"您当前是付费用户, 以下是您的剩余聊天条数\n" f"剩余可私聊/公聊的聊天次数为 {plan_credit.conversation_credit_count}\n"
-                    )
+                    billing_info += f"您当前是付费用户, 剩余可私聊/公聊的聊天次数为 {plan_credit.conversation_credit_count}\n"
                     return billing_info
                 else:
-                    billing_info += (
-                        f"您当前是免费用户, 以下是您的剩余公共聊天条数\n" f"剩余可公聊的聊天次数为 {plan_credit.conversation_credit_count}\n"
-                    )
+                    billing_info += f"您当前是免费用户, 剩余可公聊的聊天次数为 {plan_credit.conversation_credit_count}\n"
                     return billing_info
 
+        logging.error(f"no billing info found for user {user_id}")
         return "未找到您的付费信息"

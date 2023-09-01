@@ -207,7 +207,7 @@ def is_request_long_reply(user_msg: str) -> bool:
 
 
 def is_request_image(user_msg: str) -> bool:
-    for key in ["画", "照", "图", "样子"]:
+    for key in ["画", "照", "图", "样子", "像", "想看"]:
         if key in user_msg:
             return True
     return False
@@ -349,7 +349,7 @@ async def local_chatgpt_to_reply(bot, msg: SingleMessage):
         #     logging.info(f"Use 16k model for initial long history request")
         #     initial_model_name = 'gpt-3.5-turbo-16k-0613'
 
-        if initial_model_name == 'gpt-4-0613' or not enable_image:
+        if initial_model_name == 'gpt-4-0613' or not enable_image or not is_request_image(msg.msg_text):
             function_call_params = {}
         else:
             function_call_params = {

@@ -35,7 +35,7 @@ async def should_use_customized_sd_server():
                     client.timeout = 5
                     response = await client.get(f'http://{Params().SD_SERVER_IP}:8889/heartbeat/')
                     if response.status_code != 200:
-                        logging.error(f"Customized SD Server is dead: {response}")
+                        logging.error(f"Customized SD Server is not returning success: {response}")
                         return False
             except Exception as e:
                 logging.error(f"Customized SD Server is dead: {e}")

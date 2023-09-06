@@ -1,6 +1,6 @@
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime, Text, Boolean, Float
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime, Text, Boolean, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -52,7 +52,7 @@ class Transaction(Base):
     subscription_id = Column(Integer, ForeignKey('subscriptions.id'), nullable=True)
     plan_credit_id = Column(Integer, ForeignKey('plan_credits.id'), nullable=True)
     transaction_time = Column(DateTime, default=datetime.now())  # New field for transaction time
-    callback_json = Column(Text)  # New field for storing callback JSON
+    callback_json = Column(JSON)  # New field for storing callback JSON
     user_id = Column(String(255), ForeignKey('users.user_from_id'))
     subscription = relationship("Subscription")
     plan_credit = relationship("PlanCredit")

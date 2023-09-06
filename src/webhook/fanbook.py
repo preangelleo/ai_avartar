@@ -24,7 +24,7 @@ def handle_payment():
     external_txn_id = data['orderNo']
     product_identifier = data['product']['identifier']
     user_id = data['userId']
-    total_amount = data['totalAmount']
+    transaction_amount_minor_units = data['totalAmount']
     if external_txn_id_exists(external_txn_id):
         logging.info(f'handle_payment(): external_txn_id: {external_txn_id} already exists, skipped')
         return '', 200
@@ -34,9 +34,13 @@ def handle_payment():
     with Params().Session() as session:
         try:
             if product_identifier in CREDIT_BASED_PLAN:
-                handle_credit_based_plan(user, product_identifier, external_txn_id, total_amount, session, data)
+                handle_credit_based_plan(
+                    user, product_identifier, external_txn_id, transaction_amount_minor_units, session, data
+                )
             else:
-                handle_subscription_based_plan(user, product_identifier, external_txn_id, total_amount, session, data)
+                handle_subscription_based_plan(
+                    user, product_identifier, external_txn_id, transaction_amount_minor_units, session, data
+                )
         except Exception as e:
             session.rollback()
             logging.error(f'handle_payment(): {e}, rollback session')
@@ -53,7 +57,7 @@ def external_txn_id_exists(external_txn_id) -> bool:
         return query_result is not None
 
 
-def handle_credit_based_plan(user, product_identifier, external_txn_id, total_amount, session, data):
+def handle_credit_based_plan(user, product_identifier, external_txn_id, transaction_amount_minor_units, session, data):
     logging.info(
         f'handle_credit_based_plan(): user: {user},'
         f' product_identifier: {product_identifier},'
@@ -86,13 +90,15 @@ def handle_credit_based_plan(user, product_identifier, external_txn_id, total_am
         external_txn_id=external_txn_id,
         user_id=user.user_from_id,
         callback_json=data,
-        transaction_amount=total_amount,
+        transaction_amount_minor_units=transaction_amount_minor_units,
     )
     session.add(transaction)
     session.flush()
 
 
-def handle_subscription_based_plan(user, product_identifier, external_txn_id, total_amount, session, data):
+def handle_subscription_based_plan(
+    user, product_identifier, external_txn_id, transaction_amount_minor_units, session, data
+):
     logging.info(
         f'handle_subscription_based_plan(): user: {user},'
         f' product_identifier: {product_identifier},'
@@ -126,7 +132,7 @@ def handle_subscription_based_plan(user, product_identifier, external_txn_id, to
         external_txn_id=external_txn_id,
         user_id=user.user_from_id,
         callback_json=data,
-        transaction_amount=total_amount,
+        transaction_amount_minor_units=transaction_amount_minor_units,
     )
     session.add(transaction)
     session.flush()

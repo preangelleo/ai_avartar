@@ -357,7 +357,7 @@ class Bot(ABC):
             reduce_plan_credit=False,
         ):
             if not msg.is_private:
-                # we need to send user a private msg
+                # if user is sending in public channel, we decide to first send one public msg and one private msg
                 response = await self.get_private_chat(user_id=int(msg.from_id))
                 private_chat_id = response.json()['result']['id']
                 await self.send_msg_async(
@@ -367,13 +367,13 @@ class Bot(ABC):
                     reply_to_message_id=msg.reply_to_message_id,
                 )
                 await self.send_msg_async(
-                    msg=user_limit_private_msg,
+                    msg=user_limit_msg,
                     chat_id=private_chat_id,
                     parse_mode=None,
                 )
             else:
                 await self.send_msg_async(
-                    msg=user_limit_msg,
+                    msg=user_limit_private_msg,
                     chat_id=msg.chat_id,
                     parse_mode=None,
                     reply_to_message_id=msg.reply_to_message_id,

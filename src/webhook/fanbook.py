@@ -39,6 +39,7 @@ def handle_payment():
         except Exception as e:
             session.rollback()
             logging.error(f'handle_payment(): {e}, rollback session')
+            return '', 500
         session.commit()
     logging.info(f'handle_payment(): {request.json}')
     return '', 200

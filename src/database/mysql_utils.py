@@ -138,7 +138,7 @@ def check_user_eligible_for_service(
 
 def generate_billing_info(user_id) -> str:
     user = get_user_or_create(user_id)
-    payment_intro_str = f"付款链接: {payment_url}\n"
+    payment_intro_str = f"查看会员详情: {payment_url}\n"
     with Params().Session() as session:
         # Initialize billing_info string
         billing_info = f"\n"

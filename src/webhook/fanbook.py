@@ -83,7 +83,7 @@ def handle_credit_based_plan(user, product_identifier, external_txn_id, session,
         plan_credit_id=plan_credit.id,
         external_txn_id=external_txn_id,
         user_id=user.user_from_id,
-        data=data,
+        callback_json=data,
     )
     session.add(transaction)
     session.flush()
@@ -122,7 +122,7 @@ def handle_subscription_based_plan(user, product_identifier, external_txn_id, se
         subscription_id=active_subscription.id,
         external_txn_id=external_txn_id,
         user_id=user.user_from_id,
-        external_raw_json=data,
+        callback_json=data,
     )
     session.add(transaction)
     session.flush()

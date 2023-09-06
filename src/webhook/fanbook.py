@@ -33,9 +33,9 @@ def handle_payment():
     with Params().Session() as session:
         try:
             if product_identifier in CREDIT_BASED_PLAN:
-                handle_credit_based_plan(user, product_identifier, external_txn_id, session)
+                handle_credit_based_plan(user, product_identifier, external_txn_id, session, data)
             else:
-                handle_subscription_based_plan(user, product_identifier, external_txn_id, session)
+                handle_subscription_based_plan(user, product_identifier, external_txn_id, session, data)
         except Exception as e:
             session.rollback()
             logging.error(f'handle_payment(): {e}, rollback session')
@@ -51,7 +51,7 @@ def external_txn_id_exists(external_txn_id) -> bool:
         return query_result is not None
 
 
-def handle_credit_based_plan(user, product_identifier, external_txn_id, session):
+def handle_credit_based_plan(user, product_identifier, external_txn_id, session, data):
     logging.info(
         f'handle_credit_based_plan(): user: {user},'
         f' product_identifier: {product_identifier},'
@@ -83,12 +83,13 @@ def handle_credit_based_plan(user, product_identifier, external_txn_id, session)
         plan_credit_id=plan_credit.id,
         external_txn_id=external_txn_id,
         user_id=user.user_from_id,
+        data=data,
     )
     session.add(transaction)
     session.flush()
 
 
-def handle_subscription_based_plan(user, product_identifier, external_txn_id, session):
+def handle_subscription_based_plan(user, product_identifier, external_txn_id, session, data):
     logging.info(
         f'handle_subscription_based_plan(): user: {user},'
         f' product_identifier: {product_identifier},'
@@ -121,6 +122,7 @@ def handle_subscription_based_plan(user, product_identifier, external_txn_id, se
         subscription_id=active_subscription.id,
         external_txn_id=external_txn_id,
         user_id=user.user_from_id,
+        external_raw_json=data,
     )
     session.add(transaction)
     session.flush()

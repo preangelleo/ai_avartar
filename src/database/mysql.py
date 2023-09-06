@@ -52,11 +52,11 @@ class Transaction(Base):
     subscription_id = Column(Integer, ForeignKey('subscriptions.id'), nullable=True)
     plan_credit_id = Column(Integer, ForeignKey('plan_credits.id'), nullable=True)
     transaction_time = Column(DateTime, default=datetime.now)  # New field for transaction time
+    transaction_amount = Column(Integer)  # New field for transaction amount
     callback_json = Column(JSON)  # New field for storing callback JSON
     user_id = Column(String(255), ForeignKey('users.user_from_id'))
     subscription = relationship("Subscription")
     plan_credit = relationship("PlanCredit")
-    # additional fields you may need
 
 
 class ChatHistory(Base):

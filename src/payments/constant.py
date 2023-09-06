@@ -9,7 +9,7 @@ PLAN_CONFIG = {
         'drawing_credit': 0,  # we do not differentiate between conversation and drawing credit
     },
     CREDIT_PLAN_TIER_B: {
-        'conversation_credit': 50,
+        'conversation_credit': 110,
         'drawing_credit': 0,  # we do not differentiate between conversation and drawing credit
     },
     SUBSCRIPTION_PLAN_TEST: {

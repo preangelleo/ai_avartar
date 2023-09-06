@@ -9,6 +9,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from src.utils.prompt_template import payment_url
+import pytz
 
 
 def get_user_or_create(user_from_id: str) -> Optional[User]:
@@ -144,15 +145,16 @@ def generate_billing_info(user_id) -> str:
         billing_info = f"\n"
 
         # Get the current time
-        current_time = datetime.now()
+        beijing_tz = pytz.timezone('Asia/Shanghai')
+        current_time = datetime.now(beijing_tz)
 
         # Find active subscription
         active_subscription = find_active_subscription_for_user(user, current_time, session)
         if active_subscription:
+            start_date_str = active_subscription.start_date.astimezone(beijing_tz).strftime('%Y-%m-%d %H:%M:%S')
+            end_date_str = active_subscription.end_date.astimezone(beijing_tz).strftime('%Y-%m-%d %H:%M:%S')
             billing_info += (
-                f"您当前是订阅付费用户，您可以无限制发送聊天，以下是您的订阅详情"
-                f"订阅起始日期: {active_subscription.start_date}\n,"
-                f"订阅结束日期：{active_subscription.end_date}\n"
+                f"您当前是订阅付费用户，您可以无限制发送聊天，以下是您的订阅详情\n" f"订阅起始日期: {start_date_str}\n," f"订阅结束日期：{end_date_str}\n"
             )
             return billing_info + payment_intro_str
 

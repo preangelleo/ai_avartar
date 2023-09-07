@@ -3,6 +3,8 @@ import time
 from abc import ABC, abstractmethod
 from datetime import date
 
+from src.payments.constant import ServiceType
+from src.database.mysql_utils import check_user_eligible_for_service, init_credit_table_if_needed, generate_billing_info
 from src.bot.bot_branch.audio_branch.audio_branch import AudioBranch
 from src.bot.bot_branch.bot_owner_branch.bot_owner_branch import BotOwnerBranch
 from src.bot.bot_branch.coinmarketcap_branch.coinmarketcap_branch import (
@@ -22,10 +24,12 @@ from src.bot.bot_branch.text_branch.text_branch import TextBranch
 from src.bot.bot_branch.voice_branch.voice_branch import VoiceBranch
 from src.utils.utils import *
 from src.utils.logging_util import logging
-from src.utils.utils import user_id_exists, user_over_limit
 from src.utils.prompt_template import (
     user_limit_msg,
     private_limit_msg,
+    negative_stability_ai_prompt,
+    user_public_warning_msg,
+    user_limit_private_msg,
 )
 
 import os
@@ -87,6 +91,10 @@ class Bot(ABC):
 
     @abstractmethod
     async def send_msg_async(self, msg: str, chat_id, parse_mode=None, reply_to_message_id=None):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_private_chat(self, user_id: int):
         raise NotImplementedError
 
     @abstractmethod
@@ -326,32 +334,50 @@ class Bot(ABC):
             return
 
         logging.info(f'Received Message: {msg.raw_msg}')
-        # TODO: Better structure the list of admin.
-        if msg.is_private and msg.from_id not in self.bot_admin_id_list + ['501088608544210944']:
-            PRIVATE_MSG_COUNTER.inc()
-            # TODO: Remove this after support private chat
-            await self.send_msg_async(
-                msg=private_limit_msg,
-                chat_id=msg.chat_id,
-                parse_mode=None,
-                reply_to_message_id=msg.reply_to_message_id,
-            )
-            return
-
-        # 通过 from_id 判断用户的状态, 免费还是付费, 是不是黑名单用户, 是不是过期用户, 是不是 owner, admin, vip
-        if not self.user_is_legit(msg, msg.from_id):
-            return
+        init_credit_table_if_needed(user_from_id=msg.from_id)
 
         if not msg.msg_text or len(msg.msg_text) == 0:
             return
 
-        if not user_id_exists(user_id=msg.from_id) and user_over_limit():
+        if msg.msg_text.startswith('/pay'):
+            logging.info(f"pay: {msg.msg_text}")
+            billing_info = generate_billing_info(msg.from_id)
             await self.send_msg_async(
-                msg=user_limit_msg,
+                msg=billing_info,
                 chat_id=msg.chat_id,
                 parse_mode=None,
                 reply_to_message_id=msg.reply_to_message_id,
             )
+            return
+
+        if not check_user_eligible_for_service(
+            user_from_id=msg.from_id,
+            is_private=msg.is_private,
+            service_type=ServiceType.conversation,
+            reduce_plan_credit=False,
+        ):
+            if not msg.is_private:
+                # if user is sending in public channel, we decide to first send one public msg and one private msg
+                response = await self.get_private_chat(user_id=int(msg.from_id))
+                private_chat_id = response.json()['result']['id']
+                await self.send_msg_async(
+                    msg=user_public_warning_msg,
+                    chat_id=msg.chat_id,
+                    parse_mode=None,
+                    reply_to_message_id=msg.reply_to_message_id,
+                )
+                await self.send_msg_async(
+                    msg=user_limit_msg,
+                    chat_id=private_chat_id,
+                    parse_mode=None,
+                )
+            else:
+                await self.send_msg_async(
+                    msg=user_limit_private_msg,
+                    chat_id=msg.chat_id,
+                    parse_mode=None,
+                    reply_to_message_id=msg.reply_to_message_id,
+                )
             return
 
         handle_single_msg_start = time.perf_counter()
@@ -455,6 +481,12 @@ class Bot(ABC):
                     parse_mode=None,
                     reply_to_message_id=msg.reply_to_message_id,
                 )
+                check_user_eligible_for_service(
+                    user_from_id=msg.from_id,
+                    is_private=msg.is_private,
+                    service_type=ServiceType.conversation,
+                    reduce_plan_credit=True,
+                )
                 SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
                 HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
                     time.perf_counter() - handle_single_msg_start
@@ -499,6 +531,8 @@ class Bot(ABC):
                 ERROR_COUNTER.labels('error_save_avatar_chat_history', 'chatgpt').inc()
                 logging.error(f"local_chatgpt_to_reply() save to avatar_chat_history failed: {e}")
                 return
+        else:
+            NO_TEXT_REPLY_COUNTER.inc()
 
         return
 

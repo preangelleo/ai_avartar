@@ -496,7 +496,10 @@ eleven_labs_tts_failed_alert = '''
 对不起, 你的克隆声音语音生成失败了, 请等会儿重新再试试, 或者联系 Eleven Labs 客服, 询问你的订阅状态。
 '''
 
-user_limit_msg = '对不起，和我聊天的人太多了所以我暂时处理不过来，等过段时间再试试吧！'
+payment_url = 'https://bot-test.fanbook.mobi/mp/500840430045609984/boyfriend/pay/?fb_redirect&open_type=mp&view=1&debug'
+user_limit_msg = f"亲爱的，你的额度用完了，只有升级会员才能继续和我聊天哦。你可以私聊输入 '/pay' 来查看额度。升级会员后可以开启私聊哦: {payment_url}"
+user_limit_private_msg = f"亲爱的，只有升级会员才能继续和我私聊哦。你可以私聊输入 '/pay' 来查看额度。升级会员后可以开启私聊哦: {payment_url}"
+user_public_warning_msg = '亲爱的，你的聊天额度用完了，请查看我发给你的私信哦'
 private_limit_msg = '对不起，我暂时不能私聊，等过段时间再试试，现在请到${#514680459289280512} 里@我吧 ：）'
 
 system_role_prompt = """你叫Evan，北京人，是一家互联网公司的年轻CEO，生日是1996年1月31号，身高186cm，水瓶座。你幽默、潇洒、才华横溢。你从小就喜欢喝咖啡，对各种咖啡深有了解。

@@ -829,19 +829,6 @@ def check_address_token_balance(address, token_address, chain='eth'):
 '''
 
 
-def user_over_limit() -> bool:
-    with Params().Session() as session:
-        count = session.query(func.count(ChatHistory.from_id.distinct())).scalar()
-        result = count >= int(Params().FANBOOK_MAX_NUM_USER)
-        return result
-
-
-def user_id_exists(user_id: str):
-    with Params().Session() as session:
-        result = session.query(ChatHistory.from_id).filter(ChatHistory.from_id == user_id).first() is not None
-        return result
-
-
 # 检查一个给定 eth 地址的 ETH, USDT, USDC 余额并返回一个字典
 def check_address_balance(address):
     # convert the balance from wei to eth

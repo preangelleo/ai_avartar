@@ -1,9 +1,62 @@
-from sqlalchemy import DateTime, Column, Integer, String, Text, Float, Boolean
-from sqlalchemy.orm import declarative_base
+from enum import Enum as PyEnum
 
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime, Text, Boolean, Float, JSON
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
 Base = declarative_base()
+
+
+class PlanType(PyEnum):
+    CREDIT_BASED = "credit_based"
+    SUBSCRIPTION_BASED = "subscription_based"
+
+
+class ChannelType(PyEnum):
+    PUBLIC = "public"
+    UNIVERSAL = "universal"  # universal means both private and public
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    user_from_id = Column(String(255), unique=True)
+    subscriptions = relationship("Subscription", back_populates="user")
+    plan_credits = relationship("PlanCredit", back_populates="user")
+
+
+class Subscription(Base):
+    __tablename__ = 'subscriptions'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String(255), ForeignKey('users.user_from_id'))
+    start_date = Column(DateTime, default=datetime.now)
+    end_date = Column(DateTime)
+    user = relationship("User", back_populates="subscriptions")
+
+
+class PlanCredit(Base):
+    __tablename__ = 'plan_credits'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String(255), ForeignKey('users.user_from_id'))
+    conversation_credit_count = Column(Integer)
+    drawing_credit_count = Column(Integer)
+    chat_type = Column(Enum(ChannelType))
+    user = relationship("User", back_populates="plan_credits")
+
+
+class Transaction(Base):
+    __tablename__ = 'transactions'
+    id = Column(Integer, primary_key=True)
+    external_txn_id = Column(String(255), unique=True)
+    subscription_id = Column(Integer, ForeignKey('subscriptions.id'), nullable=True)
+    plan_credit_id = Column(Integer, ForeignKey('plan_credits.id'), nullable=True)
+    transaction_time = Column(DateTime, default=datetime.now)  # New field for transaction time
+    transaction_amount_minor_units = Column(Integer, nullable=True)  # New field for transaction amount
+    callback_json = Column(JSON)  # New field for storing callback JSON
+    user_id = Column(String(255), ForeignKey('users.user_from_id'))
+    subscription = relationship("Subscription")
+    plan_credit = relationship("PlanCredit")
 
 
 class ChatHistory(Base):

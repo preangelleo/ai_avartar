@@ -32,7 +32,7 @@ async def should_use_customized_sd_server():
             # Check if the customized sd server is alive
             try:
                 async with httpx.AsyncClient() as client:
-                    client.timeout = 5
+                    client.timeout = 3
                     response = await client.get(f'http://{Params().SD_SERVER_IP}:8889/heartbeat/')
                     if response.status_code != 200:
                         logging.error(f"Customized SD Server is not returning success: {response}")

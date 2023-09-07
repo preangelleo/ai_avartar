@@ -30,6 +30,7 @@ from src.bot.fanbook.utils.constants import (
     TEST_BOT_ID,
     FANBOOK_BOT_ID,
     FANBOOK_SEND_IMAGE_URL,
+    FANBOOK_GET_PRIVATE_CHAT_URL,
 )
 from src.bot.bot_branch.no_op_branch.no_op_branch import NoOpBranch
 from prometheus_client import start_http_server
@@ -125,6 +126,15 @@ class FanbookBot(Bot):
         # Construct the URL
         url = f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:8889/{relative_path}'
         return url
+
+    async def get_private_chat(self, user_id: int):
+        headers = {'Content-type': 'application/json'}
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                FANBOOK_GET_PRIVATE_CHAT_URL, data=json.dumps({'user_id': user_id}), headers=headers
+            )
+
+        return response
 
     async def send_img_async(self, chat_id, file_url: str, reply_to_message_id=None, description='', max_retries=3):
         headers = {'Content-type': 'application/json'}

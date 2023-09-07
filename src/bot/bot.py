@@ -412,6 +412,7 @@ class Bot(ABC):
         logging.info(f'total openai cost of this call: ${cost_usd}')
         branch = 'local_chatgpt'
         image_url = None
+        successfully_sent_image = False
         # If generate_image is triggered
         if raw_image_description is not None:
             branch = 'generate_image'
@@ -435,7 +436,8 @@ class Bot(ABC):
                 cost_usd += 0.016
                 SUCCESS_REPLY_COUNTER.labels('generate_image').inc()
             except Exception as e:
-                logging.exception(f"stability_generate_image() {e}")
+                ERROR_COUNTER.labels('generate_image', 'chatgpt').inc()
+                logging.exception(f"generate_image() {e}")
                 return
 
             if file_url_list:
@@ -449,6 +451,7 @@ class Bot(ABC):
                             reply_to_message_id=msg.reply_to_message_id,
                             description=raw_image_description,
                         )
+                        successfully_sent_image = True
                     except Exception as e:
                         ERROR_COUNTER.labels('error_send_img', 'chatgpt').inc()
                         logging.error(f"local_bot_img_command() send_img({file_url}) FAILED:  {e}")
@@ -456,6 +459,7 @@ class Bot(ABC):
                     # For now we only return 1 images even if all of them are not blurred
                     break
             else:
+                ERROR_COUNTER.labels('empty_image_list', 'chatgpt').inc()
                 # If the image list is empty, we want to still return the Chinese description of the image
                 try:
                     response = await get_response_from_chatgpt(
@@ -481,12 +485,13 @@ class Bot(ABC):
                     parse_mode=None,
                     reply_to_message_id=msg.reply_to_message_id,
                 )
-                check_user_eligible_for_service(
-                    user_from_id=msg.from_id,
-                    is_private=msg.is_private,
-                    service_type=ServiceType.conversation,
-                    reduce_plan_credit=True,
-                )
+                if raw_image_description is None or successfully_sent_image:
+                    check_user_eligible_for_service(
+                        user_from_id=msg.from_id,
+                        is_private=msg.is_private,
+                        service_type=ServiceType.conversation,
+                        reduce_plan_credit=True,
+                    )
                 SUCCESS_REPLY_COUNTER.labels('chatgpt').inc()
                 HANDLE_SINGLE_MSG_LATENCY_METRICS.labels(len(msg.msg_text) // 10 * 10, 'chatgpt').observe(
                     time.perf_counter() - handle_single_msg_start

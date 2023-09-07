@@ -94,7 +94,11 @@ class Bot(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_private_chat(self, user_id: int):
+    async def get_private_chat_async(self, user_id: int):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_private_chat(self, user_id: int):
         raise NotImplementedError
 
     @abstractmethod
@@ -358,7 +362,7 @@ class Bot(ABC):
         ):
             if not msg.is_private:
                 # if user is sending in public channel, we decide to first send one public msg and one private msg
-                response = await self.get_private_chat(user_id=int(msg.from_id))
+                response = await self.get_private_chat_async(user_id=int(msg.from_id))
                 private_chat_id = response.json()['result']['id']
                 await self.send_msg_async(
                     msg=user_public_warning_msg,

@@ -40,6 +40,8 @@ from src.utils.param_singleton import Params
 
 
 class FanbookBot(Bot):
+    _instance = None
+
     def send_audio(self, audio_path, chat_id):
         # TODO(kezhang@): implement or leave it as None if you don't want to support this in fanbook
         pass
@@ -52,7 +54,13 @@ class FanbookBot(Bot):
         # TODO(kezhang@): implement or leave it as None if you don't want to support this in fanbook
         pass
 
-    def __init__(self, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(FanbookBot, cls).__new__(cls)
+            cls._instance.__init_once(*args, **kwargs)
+        return cls._instance
+
+    def __init_once(self, *args, **kwargs):
         super(FanbookBot, self).__init__(*args, **kwargs)
         self.fanbook_client_id = FANBOOK_CLIENT_ID
         self.header_map = json.dumps(
@@ -66,7 +74,7 @@ class FanbookBot(Bot):
         )
         self.user_token = self.get_user_token()
         self.super_str = base64.b64encode(self.header_map.encode('utf8')).decode('utf8')  # noqa  # noqa
-        self.addr = f'wss://gateway-bot.fanbook.mobi/websocket?id={self.user_token}&dId={DEVICE_ID}&v={FANBOOK_VERSION}&x-super-properties={self.super_str}'  # noqa
+        self.addr = f'wss://gateway-bot.fanbook.mobi/websocket?id={self.user_token}&dId={DEVICE_ID}&v={FANBOOK_VERSION}&x-super-properties={self.super_str}'
 
     def get_user_token(self):
         logging.info(f'get_user_token request: {FANBOOK_GET_ME_URL}')
@@ -127,12 +135,18 @@ class FanbookBot(Bot):
         url = f'http://{Params().UBUNTU_SERVER_IP_ADDRESS}:8889/{relative_path}'
         return url
 
-    async def get_private_chat(self, user_id: int):
+    async def get_private_chat_async(self, user_id: int):
         headers = {'Content-type': 'application/json'}
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 FANBOOK_GET_PRIVATE_CHAT_URL, data=json.dumps({'user_id': user_id}), headers=headers
             )
+
+        return response
+
+    def get_private_chat(self, user_id: int):
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(FANBOOK_GET_PRIVATE_CHAT_URL, data=json.dumps({'user_id': user_id}), headers=headers)
 
         return response
 

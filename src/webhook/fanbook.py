@@ -2,6 +2,7 @@ import datetime
 
 from flask import Flask, request, jsonify
 
+from src.bot.fanbook.fanbook_bot import FanbookBot
 from src.database.mysql_utils import (
     find_plan_credit_for_user,
     get_user_or_create,
@@ -11,6 +12,7 @@ from src.payments.constant import PLAN_CONFIG, CREDIT_BASED_PLAN, SUBSCRIPTION_B
 from src.utils.logging_util import logging
 from src.utils.param_singleton import Params
 from src.database.mysql import Transaction, PlanCredit, ChannelType, User, Subscription
+from src.utils.prompt_template import confirmation_msg
 
 app = Flask(__name__)
 
@@ -46,8 +48,26 @@ def handle_payment():
             logging.error(f'handle_payment(): {e}, rollback session')
             return '', 500
         session.commit()
+
+    try:
+        logging.info(f'handle_payment(): sending confirmation msg to user: {user.user_from_id}')
+        send_confirmation_msg_to_user(user)
+    except Exception as e:
+        logging.error(f'handle_payment(): {e}, failed to send confirmation msg to user')
+        return '', 200  # still return 200 because we have saved the transaction to the database
     logging.info(f'handle_payment(): {request.json}')
     return '', 200
+
+
+def send_confirmation_msg_to_user(user: User):
+    fanbook_bot = FanbookBot.get_instance()
+    response = fanbook_bot.get_private_chat(user_id=int(user.user_from_id))
+    private_chat_id = response.json()['result']['id']
+    fanbook_bot.send_msg(
+        msg=confirmation_msg,
+        chat_id=private_chat_id,
+        parse_mode=None,
+    )
 
 
 def external_txn_id_exists(external_txn_id) -> bool:

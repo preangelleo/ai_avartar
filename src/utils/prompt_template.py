@@ -500,6 +500,7 @@ payment_url = 'https://bot-test.fanbook.mobi/mp/500840430045609984/boyfriend/pay
 user_limit_msg = f"亲爱的，你的额度用完了，只有升级会员才能继续和我聊天哦。你可以私聊输入 '/pay' 来查看额度。升级会员后可以开启私聊哦: {payment_url}"
 user_limit_private_msg = f"亲爱的，只有升级会员才能继续和我私聊哦。你可以私聊输入 '/pay' 来查看额度。升级会员后可以开启私聊哦: {payment_url}"
 user_public_warning_msg = '亲爱的，你的聊天额度用完了，请查看我发给你的私信哦'
+confirmation_msg = "亲爱的，付款成功！感谢你的购买，你可以随时私聊输入 '/pay' 来查看额度。"
 private_limit_msg = '对不起，我暂时不能私聊，等过段时间再试试，现在请到${#514680459289280512} 里@我吧 ：）'
 
 system_role_prompt = """你叫Robert，上海人，是一家金融公司的年轻合伙人，生日是1996年2月1号，身高185cm，水瓶座。你喜欢到处旅游。你从小就喜欢喝茶，对各种茶深有了解。

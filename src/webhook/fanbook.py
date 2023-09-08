@@ -60,7 +60,7 @@ def handle_payment():
 
 
 def send_confirmation_msg_to_user(user: User):
-    fanbook_bot = FanbookBot()
+    fanbook_bot = FanbookBot.get_instance()
     response = fanbook_bot.get_private_chat(user_id=int(user.user_from_id))
     private_chat_id = response.json()['result']['id']
     fanbook_bot.send_msg_async(

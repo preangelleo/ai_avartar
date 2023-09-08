@@ -76,6 +76,26 @@ class FanbookBot(Bot):
         self.super_str = base64.b64encode(self.header_map.encode('utf8')).decode('utf8')  # noqa  # noqa
         self.addr = f'wss://gateway-bot.fanbook.mobi/websocket?id={self.user_token}&dId={DEVICE_ID}&v={FANBOOK_VERSION}&x-super-properties={self.super_str}'
 
+    @staticmethod
+    def get_instance():
+        return FanbookBot(
+            bot_name=FANBOOK_BOT_NAME,
+            bot_owner_id=FANBOOK_BOT_OWNER_ID,
+            bot_creator_id=FANBOOK_BOT_CREATOR_ID,
+            bot_owner_name=FANBOOK_BOT_OWNER_NAME,
+            document_branch_handler=None,
+            photo_branch_handler=None,
+            voice_branch_handler=None,
+            audio_branch_handler=None,
+            improper_branch_handler=NoOpBranch(),
+            text_branch_handler=NoOpBranch(),
+            payment_branch_handler=NoOpBranch(),
+            check_bill_branch_handler=NoOpBranch(),
+            bot_owner_branch_handler=NoOpBranch(),
+            english_teacher_branch_handler=NoOpBranch(),
+            coinmarketcap_branch_handler=NoOpBranch(),
+        )
+
     def get_user_token(self):
         logging.info(f'get_user_token request: {FANBOOK_GET_ME_URL}')
         response = requests.get(FANBOOK_GET_ME_URL, timeout=GET_USER_TOKEN_TIMEOUT_COUNT)
@@ -225,21 +245,4 @@ if __name__ == '__main__':
         # We recommend adjusting this value in production.
         traces_sample_rate=1.0,
     )
-    FanbookBot(
-        bot_name=FANBOOK_BOT_NAME,
-        bot_owner_id=FANBOOK_BOT_OWNER_ID,
-        bot_creator_id=FANBOOK_BOT_CREATOR_ID,
-        bot_owner_name=FANBOOK_BOT_OWNER_NAME,
-        # TODO(kezhang@): You should either implement these 4 branch for Fanbook or replace them with NoOpBranch
-        document_branch_handler=None,
-        photo_branch_handler=None,
-        voice_branch_handler=None,
-        audio_branch_handler=None,
-        improper_branch_handler=NoOpBranch(),
-        text_branch_handler=NoOpBranch(),
-        payment_branch_handler=NoOpBranch(),
-        check_bill_branch_handler=NoOpBranch(),
-        bot_owner_branch_handler=NoOpBranch(),
-        english_teacher_branch_handler=NoOpBranch(),
-        coinmarketcap_branch_handler=NoOpBranch(),
-    ).run()
+    FanbookBot.get_instance().run()

@@ -70,4 +70,4 @@ class SingleMessage:
 
     @property
     def user_is_treatment(self):
-        return self.user_hash_mod < 0
+        return self.user_hash_mod < 50

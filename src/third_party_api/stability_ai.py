@@ -61,7 +61,7 @@ def process_image_description(image_description):
     for phase in [' you ', 'You ', ' your ', 'Your ']:
         image_description = image_description.replace(phase, ' a beautiful girl ')
 
-    for phase in ['We ', 'Our ', ' we ', ' our ', '  couple']:
+    for phase in ['We ', 'Our ', ' we ', ' our ', ' couple']:
         image_description = image_description.replace(phase, ' a handsome man and a beautiful girl ')
 
     for phase in [' I ', ' my ', 'My ', ' me ', 'Evan ', ' guy ', ' person ']:

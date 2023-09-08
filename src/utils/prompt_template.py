@@ -496,7 +496,7 @@ eleven_labs_tts_failed_alert = '''
 对不起, 你的克隆声音语音生成失败了, 请等会儿重新再试试, 或者联系 Eleven Labs 客服, 询问你的订阅状态。
 '''
 
-payment_url = 'https://bot-test.fanbook.mobi/mp/500840430045609984/boyfriend/pay/?fb_redirect&open_type=mp&view=1&debug'
+payment_url = 'https://bot.fanbook.mobi/mp/500840430045609984/boyfriend/pay/?fb_redirect&open_type=mp&view=1'
 user_limit_msg = f"亲爱的，你的额度用完了，只有升级会员才能继续和我聊天哦。你可以私聊输入 '/pay' 来查看额度。升级会员后可以开启私聊哦: {payment_url}"
 user_limit_private_msg = f"亲爱的，只有升级会员才能继续和我私聊哦。你可以私聊输入 '/pay' 来查看额度。升级会员后可以开启私聊哦: {payment_url}"
 user_public_warning_msg = '亲爱的，你的聊天额度用完了，请查看我发给你的私信哦'

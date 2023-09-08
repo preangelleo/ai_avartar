@@ -63,7 +63,7 @@ def send_confirmation_msg_to_user(user: User):
     fanbook_bot = FanbookBot.get_instance()
     response = fanbook_bot.get_private_chat(user_id=int(user.user_from_id))
     private_chat_id = response.json()['result']['id']
-    fanbook_bot.send_msg_async(
+    fanbook_bot.send_msg(
         msg=confirmation_msg,
         chat_id=private_chat_id,
         parse_mode=None,

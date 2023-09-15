@@ -207,7 +207,7 @@ def is_request_long_reply(user_msg: str) -> bool:
 
 
 def is_request_image(user_msg: str) -> bool:
-    for key in ["画", "照", "图", "样", "像", "看", "瞧"]:
+    for key in ["画", "照", "图", "样", "像", "看", "瞧", "设计", "再来", "重来"]:
         if key in user_msg:
             return True
     return False

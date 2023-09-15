@@ -4,6 +4,7 @@ INF = float('inf')
 
 IGNORED_MSG_COUNTER = Counter('ignored_msg_total', 'Num Ignored Msg')
 PRIVATE_MSG_COUNTER = Counter('private_msg_total', 'Private Msg')
+PAY_MSG_COUNTER = Counter('pay_msg_total', 'pay Msg')
 
 NON_LEGIT_USER_COUNTER = Counter('non_legit_total', 'Num non-legit Msg', ['reason'])
 

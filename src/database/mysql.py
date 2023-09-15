@@ -22,6 +22,7 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     user_from_id = Column(String(255), unique=True)
+    is_admin = Column(Boolean, default=0)
     subscriptions = relationship("Subscription", back_populates="user")
     plan_credits = relationship("PlanCredit", back_populates="user")
 

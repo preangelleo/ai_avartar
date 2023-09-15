@@ -12,14 +12,13 @@ from src.utils.prompt_template import payment_url
 import pytz
 
 
-def get_user_or_create(user_from_id: str) -> Optional[User]:
-    with Params().Session() as session:
-        user = session.query(User).filter_by(user_from_id=user_from_id).first()
-        if not user:
-            user = User(user_from_id=user_from_id)
-            session.add(user)
-            session.commit()
-        return user
+def get_user_or_create(user_from_id: str, session: Session) -> Optional[User]:
+    user = session.query(User).filter_by(user_from_id=user_from_id).first()
+    if not user:
+        user = User(user_from_id=user_from_id)
+        session.add(user)
+        session.commit()
+    return user
 
 
 def find_plan_credit_for_user(user: User, chat_type: ChannelType, session: Session) -> Optional[PlanCredit]:
@@ -44,9 +43,8 @@ def find_active_subscription_for_user(user: User, time_to_check: datetime, sessi
 
 
 def init_credit_table_if_needed(user_from_id: str):
-    user: User = get_user_or_create(user_from_id)
-
     with Params().Session() as session:
+        user: User = get_user_or_create(user_from_id, session)
         plan_credit = find_plan_credit_for_user(user=user, chat_type=ChannelType.PUBLIC, session=session)
         if plan_credit is None:
             # create a plan credit for the user with conversation type and credit as 500
@@ -88,8 +86,12 @@ def check_plan_credit_enough_for_service(
 def check_user_eligible_for_service(
     user_from_id: str, is_private: bool, service_type: ServiceType, reduce_plan_credit: bool
 ) -> bool:
-    user: User = get_user_or_create(user_from_id)
+    # if user.is_admin:
+    #     logging.info(f"Admin user message: {user_from_id}")
+    #     return True
+
     with Params().Session() as session:
+        user: User = get_user_or_create(user_from_id, session)
         # we are going to always check subscript first
         active_subscription = find_active_subscription_for_user(
             user=user, time_to_check=datetime.now(), session=session
@@ -138,9 +140,9 @@ def check_user_eligible_for_service(
 
 
 def generate_billing_info(user_id) -> str:
-    user = get_user_or_create(user_id)
     payment_intro_str = f"查看会员详情: {payment_url}\n"
     with Params().Session() as session:
+        user = get_user_or_create(user_id, session)
         # Initialize billing_info string
         billing_info = f"\n"
 

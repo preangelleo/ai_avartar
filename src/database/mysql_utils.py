@@ -44,9 +44,8 @@ def find_active_subscription_for_user(user: User, time_to_check: datetime, sessi
 
 
 def init_credit_table_if_needed(user_from_id: str):
-    user: User = get_user_or_create(user_from_id)
-
     with Params().Session() as session:
+        user: User = get_user_or_create(user_from_id)
         plan_credit = find_plan_credit_for_user(user=user, chat_type=ChannelType.PUBLIC, session=session)
         if plan_credit is None:
             # create a plan credit for the user with conversation type and credit as 500
@@ -88,13 +87,12 @@ def check_plan_credit_enough_for_service(
 def check_user_eligible_for_service(
     user_from_id: str, is_private: bool, service_type: ServiceType, reduce_plan_credit: bool
 ) -> bool:
-    user: User = get_user_or_create(user_from_id)
-
-    if user.is_admin:
-        logging.info(f"Admin user message: {user_from_id}")
-        return True
+    # if user.is_admin:
+    #     logging.info(f"Admin user message: {user_from_id}")
+    #     return True
 
     with Params().Session() as session:
+        user: User = get_user_or_create(user_from_id)
         # we are going to always check subscript first
         active_subscription = find_active_subscription_for_user(
             user=user, time_to_check=datetime.now(), session=session

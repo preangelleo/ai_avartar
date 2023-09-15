@@ -344,6 +344,7 @@ class Bot(ABC):
             return
 
         if msg.msg_text.startswith('/pay'):
+            PAY_MSG_COUNTER.inc()
             logging.info(f"pay: {msg.msg_text}")
             billing_info = generate_billing_info(msg.from_id)
             await self.send_msg_async(
@@ -353,6 +354,9 @@ class Bot(ABC):
                 reply_to_message_id=msg.reply_to_message_id,
             )
             return
+
+        if msg.is_private:
+            PRIVATE_MSG_COUNTER.inc()
 
         if not check_user_eligible_for_service(
             user_from_id=msg.from_id,

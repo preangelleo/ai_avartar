@@ -89,6 +89,11 @@ def check_user_eligible_for_service(
     user_from_id: str, is_private: bool, service_type: ServiceType, reduce_plan_credit: bool
 ) -> bool:
     user: User = get_user_or_create(user_from_id)
+
+    if user.is_admin:
+        logging.info(f"Admin user message: {user_from_id}")
+        return True
+
     with Params().Session() as session:
         # we are going to always check subscript first
         active_subscription = find_active_subscription_for_user(
